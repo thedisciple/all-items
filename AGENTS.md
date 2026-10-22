@@ -8,5 +8,8 @@
 - Extend the database only through ordered, additive SQL migrations. Keep migrations repeatable and run each with its migration log entry in one transaction.
 - Builds and tests must use isolated databases and must never migrate the user's configured database. Only the explicit `npm run db:migrate` and application startup scripts may migrate configured app data.
 - Validate all server inputs with Zod. Keep domain logic in `src/items`, separate from React components. Keep private sale intent local and unpublished.
+- Consult `docs/product/ux-principles.md` and `docs/product/interaction-patterns.md` before adding interactions. Prefer simple, reliable workflows; keep technical storage formats out of the UI and preserve entered data on recoverable errors.
+- Record useful product research in `docs/product/design-references.md` and `docs/product/opportunity-register.md`. Distinguish verified facts, design inference, and planned features; do not describe future ideas as implemented.
+- Evaluate user-visible changes for keyboard access, visible focus, Russian labels and feedback, 360px layouts, reduced motion, and accessible pending/error states.
 - Before a coherent commit, run `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build`; report any unavailable check accurately.
 - Inspect staged file names and diffs for local data, generated files, and secrets before committing. Use concise conventional commit messages and preserve existing history.
