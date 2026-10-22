@@ -19,7 +19,7 @@ export function ItemEditForm({ itemId, initial, returnTo = "/" }: { itemId: stri
   const [draft, setDraft] = useState(initial);
   const [feedback, action] = useActionState(updateItemAction, idle);
   const router = useRouter();
-  useEffect(() => { if (feedback.status === "success") router.push(`${returnTo}${returnTo.includes("?") ? "&" : "?"}updated=1`); }, [feedback, returnTo, router]);
+  useEffect(() => { if (feedback.status === "success") router.push(returnTo); }, [feedback, returnTo, router]);
   const field = (key: keyof Draft) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setDraft((value) => ({ ...value, [key]: event.target.value }));
 
   return <form action={action} className="detail-panel item-edit-form">

@@ -2,14 +2,15 @@
 
 import Cropper from "react-cropper";
 import type CropperJS from "cropperjs";
-import { RotateCcw, RotateCw } from "lucide-react";
+import { RefreshCw, RotateCw } from "lucide-react";
 import { Component, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { aspectRatioForPreset, getCropperImageMetrics, isValidCropCoordinates, safeZoomTarget } from "@/media/cropper-state";
+import { useI18n } from "@/i18n/provider";
 
 type Props = {
   file: File; sourceUrl: string; onConfirm: (file: File, crop: CropperJS.Data) => void; onCancel: () => void; onUseOriginal: () => void;
   cancelLabel: string; sourceAlt: string; title: string; confirmLabel: string; resetLabel: string; originalLabel: string;
-  zoomLabel: string; aspectLabel: string; aspectFree: string; aspectOriginal: string; previewLabel: string; rotateLabel: string;
+  zoomLabel: string; aspectLabel: string; aspectFree: string; aspectOriginal: string; rotateLabel: string;
   errorLabel: string; smallLabel: string; busyLabel: string; keyboardLabel: string; unavailableLabel: string;
   moveLeft: string; moveRight: string; moveUp: string; moveDown: string;
   moveCropLabel: string; resizeCropLabel: string; shrinkWidth: string; growWidth: string; shrinkHeight: string; growHeight: string;
@@ -37,6 +38,7 @@ class CropperErrorBoundary extends Component<BoundaryProps, BoundaryState> {
 const readyTimeoutMs = 12_000;
 
 export default function PhotoCropperEditor(props: Props) {
+  const { locale } = useI18n();
   const cropper = useRef<CropperJS | null>(null);
   const alive = useRef(true);
   const readyRef = useRef(false);
@@ -68,6 +70,22 @@ export default function PhotoCropperEditor(props: Props) {
     const imageData = instance.getImageData();
     const cropData = instance.getData();
     return getCropperImageMetrics(imageData, cropData.rotate ?? imageData.rotate ?? 0);
+  }
+
+  function fitSource(instance: CropperJS) {
+    const canvas = instance.getCanvasData();
+    const container = instance.getContainerData();
+    if (![canvas.naturalWidth, canvas.naturalHeight, container.width, container.height].every(Number.isFinite)
+      || canvas.naturalWidth <= 0 || canvas.naturalHeight <= 0 || container.width <= 0 || container.height <= 0) return null;
+    const target = Math.min(container.width / canvas.naturalWidth, container.height / canvas.naturalHeight);
+    if (!Number.isFinite(target) || target <= 0) return null;
+    const width = canvas.naturalWidth * target;
+    const height = canvas.naturalHeight * target;
+    instance.setCanvasData({ left: (container.width - width) / 2, top: (container.height - height) / 2, width });
+    fitRatio.current = target;
+    setZoom(1);
+    const fitted = instance.getCanvasData();
+    return fitted;
   }
 
   function onReady(event: CropperJS.ReadyEvent) {
@@ -118,10 +136,21 @@ export default function PhotoCropperEditor(props: Props) {
     const instance = getReadyCropper();
     if (!instance) return;
     try {
+      if (next === "original") {
+        const rotation = instance.getData().rotate;
+        instance.clear();
+        instance.reset();
+        if (Number.isFinite(rotation) && rotation !== 0) instance.rotateTo(rotation);
+      }
       const metrics = getImageMetrics(instance);
-      const aspect = metrics && aspectRatioForPreset(next, metrics);
+      const canvas = next === "original" ? fitSource(instance) : null;
+      const aspect = next === "original" && canvas ? canvas.width / canvas.height : metrics && aspectRatioForPreset(next, metrics);
       if (aspect === null || aspect === undefined) { setError(props.errorLabel); return; }
       instance.setAspectRatio(aspect);
+      if (next === "original" && canvas && [canvas.left, canvas.top, canvas.width, canvas.height, aspect].every(Number.isFinite) && canvas.width > 0 && canvas.height > 0) {
+        instance.crop();
+        instance.setCropBoxData({ left: canvas.left, top: canvas.top, width: canvas.width, height: canvas.height });
+      }
       setRatio(next);
       setError("");
     } catch { setError(props.errorLabel); }
@@ -131,12 +160,19 @@ export default function PhotoCropperEditor(props: Props) {
     const instance = getReadyCropper();
     if (!instance) return;
     try {
-      instance.rotate(90);
       if (ratio === "original") {
-        const metrics = getImageMetrics(instance);
-        const aspect = metrics && aspectRatioForPreset("original", metrics);
-        if (aspect && Number.isFinite(aspect)) instance.setAspectRatio(aspect);
-      }
+        const rotation = instance.getData().rotate + 90;
+        instance.clear();
+        instance.rotateTo(rotation);
+        const canvas = fitSource(instance);
+        if (!canvas) { setError(props.errorLabel); return; }
+        const aspect = canvas.width / canvas.height;
+        if (Number.isFinite(aspect) && aspect > 0) {
+          instance.setAspectRatio(aspect);
+          instance.crop();
+          instance.setCropBoxData({ left: canvas.left, top: canvas.top, width: canvas.width, height: canvas.height });
+        }
+      } else instance.rotate(90);
       setError("");
     } catch { setError(props.errorLabel); }
   }
@@ -233,17 +269,15 @@ export default function PhotoCropperEditor(props: Props) {
           wheelZoomRatio={0.08}
           onInitialized={(instance) => { cropper.current = instance; }}
           ready={onReady}
-          error={onCropperError}
+          onError={onCropperError}
           zoom={onZoom}
-          preview=".crop-output-preview"
         />
         {!isReady && !error ? <p className="crop-load-status" role="status">{props.busyLabel}</p> : null}
         <div className="crop-controls">
           <label className="crop-aspect"><span>{props.aspectLabel}</span><select value={ratio} disabled={!instanceReady || busy} onChange={(event) => updateAspect(event.target.value)}>
             <option value="free">{props.aspectFree}</option><option value="original">{props.aspectOriginal}</option><option value="1:1">1:1</option><option value="4:3">4:3</option><option value="3:2">3:2</option><option value="16:9">16:9</option>
           </select></label>
-          <label className="crop-zoom"><span>{props.zoomLabel}</span><input aria-label={props.zoomLabel} type="range" min="0.25" max="4" step="0.01" value={zoom} disabled={!instanceReady || busy} onChange={(event) => { const value = Number(event.target.value); const target = safeZoomTarget(value, fitRatio.current); if (target) { setZoom(target.zoom); updateZoom(target.zoom); } }}/><output>{zoom.toFixed(2)}×</output></label>
-          <div className="crop-output-preview-wrap"><span>{props.previewLabel}</span><div className="crop-output-preview" aria-label={props.previewLabel}/></div>
+          <label className="crop-zoom"><span>{props.zoomLabel}</span><input aria-label={props.zoomLabel} type="range" min="0.25" max="4" step="0.01" value={zoom} disabled={!instanceReady || busy} onChange={(event) => { const value = Number(event.target.value); const target = safeZoomTarget(value, fitRatio.current); if (target) { setZoom(target.zoom); updateZoom(target.zoom); } }}/><output>× {new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(zoom)}</output></label>
         </div>
         <details className="crop-accessibility-controls" aria-label={props.keyboardLabel}>
           <summary>{props.keyboardLabel}</summary>
@@ -265,7 +299,7 @@ export default function PhotoCropperEditor(props: Props) {
         {error ? <div className="crop-recovery" role="alert"><p>{error}</p><button type="button" className="text-button" disabled={busy} onClick={props.onUseOriginal}>{props.originalLabel}</button></div> : null}
         <div className="crop-toolbar" aria-label={props.title}>
           <button type="button" className="icon-button crop-tool-button" aria-label={props.rotateLabel} title={props.rotateLabel} disabled={!instanceReady || busy} onClick={rotate}><RotateCw size={17} aria-hidden="true"/></button>
-          <button type="button" className="icon-button crop-tool-button" aria-label={props.resetLabel} title={props.resetLabel} disabled={!instanceReady || busy} onClick={reset}><RotateCcw size={17} aria-hidden="true"/></button>
+          <button type="button" className="icon-button crop-tool-button" aria-label={props.resetLabel} title={props.resetLabel} disabled={!instanceReady || busy} onClick={reset}><RefreshCw size={17} aria-hidden="true"/></button>
         </div>
         <div className="dialog-actions crop-actions">
           <button type="button" className="text-button" onClick={props.onCancel}>{props.cancelLabel}</button>

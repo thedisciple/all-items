@@ -7,7 +7,7 @@ import { pathToFileURL } from "node:url";
 import sharp from "sharp";
 import { applyMigrations } from "@/db/migrate";
 import { addItemToCollection, addItemsToCollection, createCollection, deleteCollection, getCollection, listCollectionCoverOptions, listCollections, listItemCollections, removeItemFromCollection, renameCollection, setCollectionCover } from "@/items/collections";
-import { createItem, deleteItem, getItem, listItems, saveStock, updateItem, itemFields, photoFirstItemValues } from "./service";
+import { createItem, deleteItem, getItem, listCategoryValues, listItems, saveStock, updateItem, itemFields, photoFirstItemValues } from "./service";
 import { createItemWithPhoto, deleteItemWithMedia, getNormalizedPhotoForAnalysis, getPrimaryPhoto, MAX_IMAGE_BYTES, readPrimaryPhoto, removePrimaryPhoto, replacePrimaryPhoto } from "@/media/service";
 import { readCollectionCover, replaceCollectionCoverUpload } from "@/media/collection-covers";
 
@@ -69,11 +69,47 @@ describe("M1 inventory", () => {
     expect((await listItems()).map((item) => item.id)).not.toContain(first.id);
   });
 
+  it("matches stable and legacy category values and applies deterministic sort directions", async () => {
+    const stable = await createItem({ name: "M2D-R2 Electronics stable", category: "electronics", trackingMode: "bulk" });
+    const russianLegacy = await createItem({ name: "M2D-R2 Electronics Russian legacy", category: "Электроника", trackingMode: "bulk" });
+    const englishLegacy = await createItem({ name: "M2D-R2 Electronics English legacy", category: "Electronics", trackingMode: "bulk" });
+    const custom = await createItem({ name: "M2D-R2 Custom category", category: "Bench components", trackingMode: "bulk" });
+    expect((await listItems({ category: "electronics" })).map((row) => row.id)).toEqual(expect.arrayContaining([stable.id, russianLegacy.id, englishLegacy.id]));
+    expect((await listItems({ category: "Electronics", search: "English legacy" })).map((row) => row.id)).toContain(englishLegacy.id);
+    expect((await listItems({ category: "Bench components" })).map((row) => row.id)).toContain(custom.id);
+    expect((await listCategoryValues()).filter((value) => value === "Bench components")).toEqual(["Bench components"]);
+    const scoped = await createCollection({ name: "M2D-R2 category scope" });
+    await addItemsToCollection(scoped.id, [stable.id, russianLegacy.id, englishLegacy.id, custom.id]);
+    expect((await listItems({ collectionId: scoped.id, category: "electronics" })).map((row) => row.id)).toEqual(expect.arrayContaining([stable.id, russianLegacy.id]));
+    expect((await listItems({ collectionId: scoped.id, search: "English legacy", category: "electronics" })).map((row) => row.id)).toContain(englishLegacy.id);
+    expect(await listCategoryValues(scoped.id)).toEqual(expect.arrayContaining(["Bench components"]));
+
+    const alpha = await createItem({ name: "M2D-R2 sort fixture Alpha", trackingMode: "bulk" });
+    const beta = await createItem({ name: "M2D-R2 sort fixture Beta", trackingMode: "bulk" });
+    const gamma = await createItem({ name: "M2D-R2 sort fixture Gamma", trackingMode: "bulk" });
+    await saveStock(alpha.id, [{ location: "", quantity: 1 }]);
+    await saveStock(beta.id, [{ location: "", quantity: 9 }]);
+    await saveStock(gamma.id, [{ location: "", quantity: 4 }]);
+    await client.execute({ sql: "UPDATE items SET created_at = ? WHERE id = ?", args: ["2020-01-01T00:00:00.000Z", alpha.id] });
+    await client.execute({ sql: "UPDATE items SET created_at = ? WHERE id = ?", args: ["2022-01-01T00:00:00.000Z", beta.id] });
+    await client.execute({ sql: "UPDATE items SET created_at = ? WHERE id = ?", args: ["2021-01-01T00:00:00.000Z", gamma.id] });
+    expect((await listItems({ search: "M2D-R2 sort fixture", sort: "name" })).map((row) => row.name)).toEqual([
+      "M2D-R2 sort fixture Alpha", "M2D-R2 sort fixture Beta", "M2D-R2 sort fixture Gamma",
+    ]);
+    expect((await listItems({ search: "M2D-R2 sort fixture", sort: "quantity" })).map((row) => row.name)).toEqual([
+      "M2D-R2 sort fixture Beta", "M2D-R2 sort fixture Gamma", "M2D-R2 sort fixture Alpha",
+    ]);
+    expect((await listItems({ search: "M2D-R2 sort fixture", sort: "date" })).map((row) => row.name)).toEqual([
+      "M2D-R2 sort fixture Beta", "M2D-R2 sort fixture Gamma", "M2D-R2 sort fixture Alpha",
+    ]);
+  });
+
   it("allocates distinct sequential inventory numbers during concurrent creates", async () => {
     const created = await Promise.all(Array.from({ length: 8 }, (_, index) => createItem({ name: `Concurrent ${index}`, trackingMode: "bulk" })));
     const numbers = created.map((item) => item.inventoryNumber);
     expect(new Set(numbers).size).toBe(8);
-    expect(numbers.map((value) => Number(value.slice(4))).sort((a,b) => a-b)).toEqual([4,5,6,7,8,9,10,11]);
+    const sequence = numbers.map((value) => Number(value.slice(4))).sort((a,b) => a-b);
+    expect(sequence.slice(1).map((value, index) => value - sequence[index])).toEqual(Array(7).fill(1));
   });
 
   it("applies migrations repeatedly without duplicating schema", async () => {
@@ -155,7 +191,7 @@ describe("collections", () => {
   it("creates, renames, filters, supports multiple memberships, and deletes without deleting items or photos", async () => {
     const source = await sharp({ create: { width: 48, height: 36, channels: 3, background: "#47652e" } }).jpeg().toBuffer();
     const item = await createItemWithPhoto({ name: "Collection fixture" }, new File([new Uint8Array(source)], "collection.jpg", { type: "image/jpeg" }));
-    const first = await createCollection({ name: "  Робототехника  " });
+    const first = await createCollection({ name: "  Робототехника  ", icon: "🤖" });
     const second = await createCollection({ name: "Домашняя мастерская" });
     await expect(createCollection({ name: "робототехника" })).rejects.toThrow("уже есть");
     await addItemToCollection(first.id, item.id);
@@ -169,6 +205,7 @@ describe("collections", () => {
 
     await renameCollection(first.id, { name: "Мои роботы" });
     expect((await getCollection(first.id))?.name).toBe("Мои роботы");
+    expect((await getCollection(first.id))?.icon).toBe("🤖");
     await removeItemFromCollection(first.id, item.id);
     expect((await listItemCollections(item.id)).map((collection) => collection.id)).toEqual([second.id]);
 

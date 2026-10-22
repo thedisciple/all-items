@@ -27,6 +27,6 @@ export function StockEditor({ itemId, initialRows, trackingMode }: { itemId: str
       <button type="button" className="icon-button stock-remove-button" aria-label={t("removeRow", { number: index + 1 })} title={t("removeRow", { number: index + 1 })} disabled={rows.length === 1} onClick={() => setRows((current) => current.filter((_, entryIndex) => entryIndex !== index))}>×</button>
     </div>)}</div>
     <div className="stock-actions"><button type="button" className="text-button" disabled={rows.length >= 50} onClick={() => setRows((current) => [...current, { location: "", quantity: 0 }])}>+ {t("addLocation")}</button><FormSubmitButton pendingLabel={t("savingStock")}>{t("saveStock")}</FormSubmitButton></div>
-    {feedback.message ? <p className={`inline-status ${feedback.status === "error" ? "error-status" : "success-status"}`} role={feedback.status === "error" ? "alert" : "status"}>{feedback.message}</p> : null}
+    {feedback.status === "error" && feedback.message ? <p className="inline-status error-status" role="alert">{feedback.message}</p> : feedback.status === "success" && feedback.message ? <p className="visually-hidden" role="status">{feedback.message}</p> : null}
   </form>;
 }

@@ -1,5 +1,7 @@
 # UX principles
 
+Follow the [design manifesto](design-manifesto.md) for every interface change. Show Save and Cancel only while editing; show success through changed content or a screen-reader announcement, not a persistent banner. Keep visible errors actionable. Search should debounce and filters should apply immediately while preserving URL and Back/Forward state. Destructive operations use the same explicit confirmation pattern, with one final action. A control's icon and styling must match its behavior.
+
 These principles apply to product decisions and code review. They summarize the research in [design references](design-references.md) for All Items rather than copying another product.
 
 1. **Reduce effort.** Make frequent tasks direct: find an item, see its quantity and place, add a photo, or organize it.

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { initializeWorkspace } from "@/db/client";
-import { categoryFilterValues } from "./categories";
+import { categoryFilterValues, categoryKeyForStoredValue } from "./categories";
 
 const optionalText = (max: number) => z.string().trim().max(max).optional().transform((value) => value || null);
 export const itemFields = z.object({
@@ -132,7 +132,7 @@ export async function listItems(filters: { search?: string; category?: string; s
     const match = `%${search}%`; args.push(match, match, match, match, match, match, match, match, match, match);
   }
   if (parsedFilters.category) {
-    const values = categoryFilterValues(parsedFilters.category);
+    const values = categoryFilterValues(categoryKeyForStoredValue(parsedFilters.category) ?? parsedFilters.category);
     clauses.push(`i.category IN (${values.map(() => "?").join(",")})`);
     args.push(...values);
   }
@@ -142,7 +142,7 @@ export async function listItems(filters: { search?: string; category?: string; s
     args.push(parsedFilters.collectionId);
   }
   const order = parsedFilters.sort === "name" ? "i.name" : parsedFilters.sort === "quantity" ? "quantity" : "i.created_at";
-  const direction = parsedFilters.direction === "asc" ? "ASC" : "DESC";
+  const direction = parsedFilters.direction ? parsedFilters.direction === "asc" ? "ASC" : "DESC" : parsedFilters.sort === "name" ? "ASC" : "DESC";
   const result = await db.$client.execute({
     sql: `SELECT i.id, i.name, i.model, i.brand, i.category, i.original_marking, i.inventory_number, i.identification_status, i.tracking_mode, i.created_at AS createdAt, COALESCE(SUM(s.quantity), 0) AS quantity, GROUP_CONCAT(DISTINCT l.name) AS locations,
                  (SELECT m.id FROM media_assets m WHERE m.item_id = i.id AND m.is_primary = 1 LIMIT 1) AS primary_media_id
@@ -150,6 +150,20 @@ export async function listItems(filters: { search?: string; category?: string; s
           WHERE ${clauses.join(" AND ")} GROUP BY i.id ORDER BY ${order} ${direction}, i.id ASC`, args,
   });
   return result.rows.map((row) => rowObject(row as Record<string, unknown>));
+}
+
+export async function listCategoryValues(collectionIdValue?: unknown) {
+  const collectionId = collectionIdValue === undefined ? undefined : z.string().uuid().parse(collectionIdValue);
+  const { db, workspaceId } = await initializeWorkspace();
+  const membership = collectionId
+    ? "AND EXISTS (SELECT 1 FROM item_collection_memberships cm WHERE cm.item_id = i.id AND cm.collection_id = ?)"
+    : "";
+  const args = collectionId ? [workspaceId, collectionId] : [workspaceId];
+  const result = await db.$client.execute({
+    sql: "SELECT DISTINCT i.category FROM items i WHERE i.workspace_id = ? AND i.category IS NOT NULL AND trim(i.category) <> '' " + membership + " ORDER BY lower(i.category), i.category",
+    args,
+  });
+  return result.rows.map((row) => String(row.category));
 }
 
 export async function countItems() {

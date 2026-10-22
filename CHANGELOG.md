@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — M2D-R2
+
+- Corrected Cropper image error handling and added regression coverage for full-image Original mode, presets, rotation, zoom, and saved-photo deletion/re-upload.
+- Made search and filters apply automatically, preserved URL navigation state, normalized legacy category filters, and clarified sort direction.
+- Replaced persistent save notices with accessible announcements; added one keyboard-operable confirmation dialog for photo, item, and collection deletion.
+- Added contextual collection name/icon editing, immediate cover preview, detail-page cover display, and local SVG language flags.
+- Added the permanent minimalist design manifesto and documented a staged multi-photo schema and archive plan; multi-photo support remains future work.
+
 ## Unreleased — M2D
 
 - Kept item text and photo drafts mounted across dialog close/reopen; added explicit discard confirmation and retry-safe, single-submit add behavior.

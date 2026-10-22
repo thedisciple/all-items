@@ -22,6 +22,11 @@ export function PhotoReplacement({ itemId, photoUrl, itemName }: { itemId: strin
     }
   }, [feedback, itemId]);
 
+  useEffect(() => {
+    setSavedUrl(photoUrl);
+    setPreviewUrl(null);
+  }, [photoUrl]);
+
   return <form action={action} className="photo-replacement-form">
     <input type="hidden" name="id" value={itemId}/>
     <div className="item-photo-viewer">
@@ -29,6 +34,6 @@ export function PhotoReplacement({ itemId, photoUrl, itemName }: { itemId: strin
       {previewUrl ? <p className="photo-unsaved-note" role="status">{t("previewUnsaved")}</p> : null}
     </div>
     <PhotoAcquisition name="photo" currentPhotoUrl={savedUrl} autoSubmit savedToken={feedback.status === "success" ? feedback.mediaId : undefined} resultToken={feedback.message} retryReady={feedback.status === "error"} externalPreview onPreviewChange={updatePreview}/>
-    {feedback.message ? <p className={`inline-status ${feedback.status === "error" ? "error-status" : "success-status"}`} role={feedback.status === "error" ? "alert" : "status"}>{feedback.message}</p> : null}
+    {feedback.status === "error" && feedback.message ? <p className="inline-status error-status" role="alert">{feedback.message}</p> : feedback.status === "success" && feedback.message ? <p className="visually-hidden" role="status">{feedback.message}</p> : null}
   </form>;
 }

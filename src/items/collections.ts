@@ -2,10 +2,10 @@ import { z } from "zod";
 import { initializeWorkspace } from "@/db/client";
 
 const collectionIdSchema = z.string().uuid();
-const collectionInputSchema = z.object({ name: z.string().trim().min(1, "Введите название коллекции").max(120, "Название — не более 120 символов") });
 export const collectionIcons = ["🤖", "🪴", "🔧", "📷", "🔌", "💻", "🏺", "📚", "⚽", "📦"] as const;
 const iconSchema = z.enum(collectionIcons).nullable().optional();
 const collectionCreateSchema = z.object({ name: z.string().trim().min(1, "Введите название коллекции").max(120, "Название — не более 120 символов"), icon: z.preprocess((value) => value === "" ? null : value, iconSchema) });
+const collectionInputSchema = collectionCreateSchema;
 const batchItemIdsSchema = z.array(z.string().uuid()).min(1).max(500).refine((ids) => new Set(ids).size === ids.length);
 const coverSelectionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("item_photo"), itemId: z.string().uuid(), mediaId: z.string().uuid() }),
@@ -82,10 +82,13 @@ export async function createCollection(input: unknown) {
 
 export async function renameCollection(idValue: unknown, input: unknown) {
   const id = collectionIdSchema.parse(idValue);
-  const { name } = collectionInputSchema.parse(input);
+  const { name, icon } = collectionInputSchema.parse(input);
+  const iconProvided = typeof input === "object" && input !== null && Object.hasOwn(input, "icon");
   const { db, workspaceId } = await initializeWorkspace();
   try {
-    const result = await db.$client.execute({ sql: "UPDATE collections SET name = ?, normalized_name = ?, updated_at = ? WHERE id = ? AND workspace_id = ?", args: [name, normalizedName(name), new Date().toISOString(), id, workspaceId] });
+    const result = iconProvided
+      ? await db.$client.execute({ sql: "UPDATE collections SET name = ?, normalized_name = ?, icon = ?, updated_at = ? WHERE id = ? AND workspace_id = ?", args: [name, normalizedName(name), icon ?? null, new Date().toISOString(), id, workspaceId] })
+      : await db.$client.execute({ sql: "UPDATE collections SET name = ?, normalized_name = ?, updated_at = ? WHERE id = ? AND workspace_id = ?", args: [name, normalizedName(name), new Date().toISOString(), id, workspaceId] });
     if (!result.rowsAffected) throw new Error("Коллекция не найдена.");
   } catch (error) {
     if (isUniqueViolation(error)) throw new Error("Такая коллекция уже есть.");

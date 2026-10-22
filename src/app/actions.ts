@@ -193,19 +193,18 @@ export async function renameCollectionAction(_previous: ActionFeedback, formData
   const id = z.string().uuid().safeParse(formData.get("id"));
   if (!id.success) return { status: "error", message: t("missingCollectionId") };
   try {
-    await renameCollection(id.data, { name: formData.get("name") });
+    await renameCollection(id.data, { name: formData.get("name"), icon: formData.get("icon") });
     revalidatePath("/collections"); revalidatePath(`/collections/${id.data}`);
     return { status: "success", message: t("collectionRenameSaved") };
   } catch (error) { return { status: "error", message: errorMessage(error, "collectionRenameGeneric", locale) }; }
 }
 
-export async function deleteCollectionAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
+export async function deleteCollectionAction(formData: FormData): Promise<void> {
   const locale = await getLocale();
-  const id = z.string().uuid().safeParse(formData.get("id"));
-  const confirmed = z.literal("on").safeParse(formData.get("confirm"));
-  if (!id.success || !confirmed.success) return { status: "error", message: translate(locale, "collectionDeleteConfirmError") };
-  await deleteCollection(id.data);
-  revalidatePath("/collections"); revalidatePath(`/collections/${id.data}`); revalidatePath("/");
+  const id = z.string().uuid().parse(formData.get("id"));
+  z.literal("on", { error: translate(locale, "collectionDeleteConfirmError") }).parse(formData.get("confirm"));
+  await deleteCollection(id);
+  revalidatePath("/collections"); revalidatePath(`/collections/${id}`); revalidatePath("/");
   redirect("/collections");
 }
 

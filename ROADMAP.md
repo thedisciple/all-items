@@ -60,9 +60,21 @@ Visual camera/cropper acceptance on a physical device was unavailable in the dev
 
 M2D-R1 hardens Cropper.js readiness, zoom bounds, crop output validation, and original-image recovery. Real-browser verification is reported for the hotfix; physical touch-device acceptance remains separate.
 
+## M2D-R2 — Interaction reliability and minimal design
+
+- [x] Verify Cropper props, full-image Original mode across portrait/landscape/rotation, preset bounds, and browser console cleanliness
+- [x] Reconcile saved photo state immediately after deletion and support replacement without a reload
+- [x] Apply search, categories, status, and sorting automatically while preserving URL and history state
+- [x] Make collection name/icon edits contextual; preview covers before save and show saved covers on detail and overview
+- [x] Use one keyboard-accessible confirmation pattern for destructive actions and local SVG language flags
+- [x] Record minimal design rules and multi-photo migration/archive shape
+- [x] Run isolated unit, lint, typecheck, build, and Edge Playwright verification before delivery
+
+M2D-R2 passed the automated suite in Microsoft Edge on Windows: 25 unit tests and 7 Playwright scenarios, with no browser console warnings/errors or failed page responses in the cropper acceptance scenario. Physical touch-device acceptance remains untested.
+
 ## M3 — Portability and personal organization — NOT STARTED
 
-- [ ] Versioned ZIP inventory archive with JSON manifest/payload, relative media paths, and per-entry checksums; include item fields and identifiers, stock/locations, collections/memberships, categories/attributes, private sale intent, editable normalized photo sources, display images/thumbnails, crop metadata, covers/icons, and portable settings
+- [ ] Versioned ZIP inventory archive with JSON manifest/payload, relative media paths, and per-entry checksums; include item fields and identifiers, stock/locations, collections/memberships, categories/attributes, private sale intent, lists of media assets per item (stable IDs, primary flag, order, editable normalized sources, display images/thumbnails and per-image crop metadata), covers/icons, and portable settings
 - [ ] Separate CSV export for spreadsheet interoperability; CSV does not replace the complete archive
 - [ ] Safe import with schema, archive-size, path, ZIP-slip, and ZIP-bomb validation; duplicate-ID policy; dry-run preview; empty-workspace restore; backup-before-replacement; staged writes, failure recovery, and integrity verification
 - [ ] Optional encrypted archive export as a future security enhancement
@@ -106,7 +118,9 @@ M2D-R1 hardens Cropper.js readiness, zoom bounds, crop output validation, and or
 
 ## Future advanced media and recovery
 
-- [ ] Multiple photographs, reordering, batch acquisition, and multiple-object extraction
+- [ ] **M3 media foundation:** additive `display_order` migration preserving existing media IDs and primaries; multiple media assets per item; exactly one primary when any exist; transactional next-primary promotion on primary deletion; retain per-image private editable source, crop, derivatives, and collection-cover reference integrity
+- [ ] **M3 media UI:** primary photograph plus secondary thumbnail gallery, add/reorder/choose-primary/edit/delete individual images, and full-screen viewer with file/camera acquisition
+- [ ] Batch acquisition, multiple-object extraction, and portable archive media-list import/export
 - [ ] Upload queue with cancel/retry, client-side compression, large-image handling, and resumable uploads where justified
 - [ ] Efficient local thumbnails/caching and portable image bundles
 - [ ] Non-destructive photo annotations: pencil/brush, arrows, rectangles, circles, text, blur/redaction, hardware highlights, undo/redo, and normalized coordinate operations

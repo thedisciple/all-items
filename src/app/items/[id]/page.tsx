@@ -5,6 +5,7 @@ import { AppSidebar } from "@/app/components/app-sidebar";
 import { CollectionMembership } from "@/app/components/collection-membership";
 import { ItemEditForm } from "@/app/components/item-edit-form";
 import { PhotoReplacement } from "@/app/components/photo-replacement";
+import { DestructiveConfirmation } from "@/app/components/destructive-confirmation";
 import { StockEditor } from "@/app/components/stock-editor";
 import { removeItem, removePhoto } from "@/app/actions";
 import { listCollections, listItemCollections } from "@/items/collections";
@@ -14,10 +15,9 @@ import { getLocale } from "@/i18n/server";
 import { translate } from "@/i18n/messages";
 import { categoryEmoji, categoryKeyForStoredValue, categoryMessageKey } from "@/items/categories";
 import { LanguageSwitcher } from "@/app/components/language-switcher";
-import { Trash2 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
-type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ from?: string; updated?: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ from?: string }> };
 
 export default async function ItemPage({ params, searchParams }: Props) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
@@ -44,7 +44,6 @@ export default async function ItemPage({ params, searchParams }: Props) {
     <AppSidebar active="items" itemCount={allItems.length} collectionCount={collections.length} locale={locale}/>
     <section className="main-content"><header className="topbar"><div className="breadcrumb"><Link href={returnTo}>{returnTo === "/" ? t("allItems") : t("collections")}</Link><span>/</span>{item.inventory_number}</div><LanguageSwitcher/></header>
       <div className="content-wrap detail-wrap">
-        {query.updated ? <p className="inline-status success-status" role="status">{t("changesSaved")}</p> : null}
         <div className="item-hero"><div><h1>{item.name}</h1><p className="subtitle">{[item.brand, item.model].filter(Boolean).join(" · ") || t("noName")}</p></div><span className="item-number-badge">{item.inventory_number}</span></div>
         <section className="item-summary" aria-label={t("itemSummary")}>
           <div><span>{t("total")}</span><strong>{new Intl.NumberFormat(locale).format(item.quantity)}</strong></div>
@@ -53,12 +52,12 @@ export default async function ItemPage({ params, searchParams }: Props) {
         </section>
         <section className="photo-detail-panel" aria-label={t("photo")}>
           <PhotoReplacement itemId={id} photoUrl={photo ? `/media/${id}/${photo.id}?v=${photo.id}` : null} itemName={item.name}/>
-          {photo ? <details className="remove-photo-panel"><summary>{t("photoDelete")}</summary><form action={removePhoto}><input type="hidden" name="id" value={id}/><label><input required type="checkbox" name="confirm"/> {t("photoDeleteConfirm")}</label><button className="delete-button" type="submit"><Trash2 size={16} aria-hidden="true"/><span>{t("photoDelete")}</span></button></form></details> : null}
+          {photo ? <DestructiveConfirmation action={removePhoto} label={t("photoDelete")} description={t("photoDeleteWarning")} fields={{ id }}/> : null}
         </section>
         <ItemEditForm itemId={id} initial={draft} returnTo={returnTo}/>
         <StockEditor itemId={id} initialRows={item.stock} trackingMode={item.tracking_mode}/>
         <CollectionMembership itemId={id} collections={collections.map(({ id: collectionId, name }) => ({ id: collectionId, name }))} memberships={memberships}/>
-        <details className="delete-panel"><summary>{t("itemDelete")}</summary><form action={removeItem}><input type="hidden" name="id" value={id}/><p>{t("itemDeleteWarning")}</p><label><input required type="checkbox" name="confirm"/> {t("itemDeleteConfirm")}</label><button className="delete-button" type="submit"><Trash2 size={16} aria-hidden="true"/><span>{t("itemDeleteFinal")}</span></button></form></details>
+        <DestructiveConfirmation action={removeItem} label={t("itemDelete")} description={t("itemDeleteWarning")} fields={{ id }}/>
       </div>
     </section>
   </main>;

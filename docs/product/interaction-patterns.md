@@ -2,6 +2,14 @@
 
 This document distinguishes shipped behavior from current behavior and future proposals. Update it when a workflow changes.
 
+## Reliability patterns for M2D-R2
+
+- **Filters:** category, status, and sort changes navigate immediately; text search uses a short debounce. Preserve unrelated query parameters, restore state from browser history, and offer a clear action only while a filter is active.
+- **Editing:** collection name and icon fields appear only in edit mode. Save/Cancel are contextual; validation errors retain the draft. Cover selection previews locally before submission, then refreshes the current detail and overview data after persistence.
+- **Destruction:** a normal destructive button opens a single alert dialog naming the consequence. Cancel or Escape returns focus; the confirm action disables while pending.
+- **Feedback:** immediate content updates are the visible confirmation. Use live regions for assistive technology; keep persistent visible feedback for errors, not successful saves.
+- **Language:** show locally bundled RU and UK flag SVGs with localized text. The menu supports keyboard focus and does not depend on OS emoji fonts.
+
 ## Item and photo acquisition
 
 | State | User-visible behavior | Current transition |

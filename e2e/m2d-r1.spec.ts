@@ -9,10 +9,10 @@ async function syntheticPhoto(width = 640, height = 480) {
 
 async function readCropState(page: Page) {
   return page.locator(".photo-cropper-widget").evaluate((root) => {
-    const image = root.querySelector<HTMLImageElement>(":scope > img") as (HTMLImageElement & { cropper?: { getImageData: () => { width: number; height: number }; getData: () => { rotate?: number }; getCropBoxData: () => { left: number; top: number; width: number; height: number } } }) | null;
+    const image = root.querySelector<HTMLImageElement>(":scope > img") as (HTMLImageElement & { cropper?: { getImageData: () => { width: number; height: number }; getData: () => { rotate?: number }; getCropBoxData: () => { left: number; top: number; width: number; height: number }; getCanvasData: () => { left: number; top: number; width: number; height: number } } }) | null;
     const instance = image?.cropper;
     if (!instance) throw new Error("Cropper instance is not attached to the image");
-    return { image: instance.getImageData(), rotation: instance.getData().rotate ?? 0, cropBox: instance.getCropBoxData() };
+    return { image: instance.getImageData(), rotation: instance.getData().rotate ?? 0, cropBox: instance.getCropBoxData(), canvas: instance.getCanvasData() };
   });
 }
 
@@ -38,9 +38,27 @@ async function createWithCrop(page: Page, name: string) {
   await expect(page.locator(".photo-viewer-image img")).toBeVisible();
 }
 
+async function createNoPhotoItem(page: Page, name: string, category: string) {
+  await page.goto("/");
+  await page.locator(".add-dialog-trigger").click();
+  const dialog = page.getByRole("dialog", { name: "Добавить вещь" });
+  await dialog.getByLabel("Название").fill(name);
+  if (category === "custom") {
+    await dialog.getByLabel("Категория").selectOption("__custom");
+    await dialog.getByLabel("Своя категория").fill("Electronics");
+  } else await dialog.getByLabel("Категория").selectOption(category);
+  await dialog.getByRole("button", { name: "Добавить вещь" }).click();
+  await expect(page).toHaveURL(/added=/);
+}
+
 test("waits for image readiness, applies zoom and aspect controls, crops, and opens a compact photo viewer", async ({ page }) => {
   const pageErrors: string[] = [];
+  const consoleErrors: string[] = [];
+  const consoleWarnings: string[] = [];
+  const failedResponses: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
+  page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(`${message.text()} (${message.location().url}:${message.location().lineNumber})`); if (message.type() === "warning") consoleWarnings.push(message.text()); });
+  page.on("response", (response) => { if (response.status() >= 400) failedResponses.push(`${response.status()} ${response.url()}`); });
   await page.goto("/");
   await page.locator(".add-dialog-trigger").click();
   const addDialog = page.getByRole("dialog", { name: "Добавить вещь" });
@@ -54,7 +72,7 @@ test("waits for image readiness, applies zoom and aspect controls, crops, and op
     input.dispatchEvent(new Event("input", { bubbles: true }));
     input.dispatchEvent(new Event("change", { bubbles: true }));
   });
-  await expect(editor.locator(".crop-zoom output")).toHaveText("1.65×");
+  await expect(editor.locator(".crop-zoom output")).toHaveText("× 1,65");
   await expect.poll(async () => (await readCropState(page)).image.width).toBeGreaterThan(stateBeforeZoom.image.width * 1.25);
   const beforeWheelZoom = (await readCropState(page)).image.width;
   const imageBounds = await editor.locator(".cropper-canvas").boundingBox();
@@ -65,10 +83,16 @@ test("waits for image readiness, applies zoom and aspect controls, crops, and op
 
   const aspect = editor.getByLabel("Формат кадра");
   await aspect.selectOption("original");
-  expect(Math.abs((await readCropState(page)).cropBox.width / (await readCropState(page)).cropBox.height - 4 / 3)).toBeLessThan(0.03);
+  const originalFrame = await readCropState(page);
+  expect(Math.abs(originalFrame.cropBox.width / originalFrame.cropBox.height - 4 / 3)).toBeLessThan(0.03);
+  expect(Math.abs(originalFrame.cropBox.width - originalFrame.canvas.width)).toBeLessThan(2);
+  expect(Math.abs(originalFrame.cropBox.height - originalFrame.canvas.height)).toBeLessThan(2);
   await editor.getByRole("button", { name: "Повернуть на 90°" }).click();
   await expect.poll(async () => (await readCropState(page)).rotation).toBe(90);
-  expect(Math.abs((await readCropState(page)).cropBox.width / (await readCropState(page)).cropBox.height - 3 / 4)).toBeLessThan(0.05);
+  const rotatedOriginalFrame = await readCropState(page);
+  expect(Math.abs(rotatedOriginalFrame.cropBox.width / rotatedOriginalFrame.cropBox.height - 3 / 4)).toBeLessThan(0.05);
+  expect(Math.abs(rotatedOriginalFrame.cropBox.width - rotatedOriginalFrame.canvas.width)).toBeLessThan(2);
+  expect(Math.abs(rotatedOriginalFrame.cropBox.height - rotatedOriginalFrame.canvas.height)).toBeLessThan(2);
   await aspect.selectOption("16:9");
   expect(Math.abs((await readCropState(page)).cropBox.width / (await readCropState(page)).cropBox.height - 16 / 9)).toBeLessThan(0.05);
   const boxBeforeDrag = (await readCropState(page)).cropBox;
@@ -111,11 +135,182 @@ test("waits for image readiness, applies zoom and aspect controls, crops, and op
   await page.keyboard.press("Escape");
   await expect(viewer).toHaveCount(0);
 
-  await page.getByLabel("Язык").selectOption("en");
+  await page.getByRole("button", { name: "Язык" }).click();
+  const languageMenu = page.getByRole("menu", { name: "Язык" });
+  await expect(languageMenu.getByRole("menuitemradio", { name: "Русский" }).locator("img")).toHaveAttribute("src", "/flags/ru.svg");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
   await expect(page.getByRole("button", { name: "Edit" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Replace photo" })).toBeVisible();
-  await expect(page.getByLabel("Language")).toHaveValue("en");
+  await expect(page.getByRole("button", { name: "Language" })).toContainText("English");
+  await page.getByRole("button", { name: "Language" }).click();
+  await expect(page.getByRole("menuitemradio", { name: "English" }).locator("img")).toHaveAttribute("src", "/flags/gb.svg");
   expect(pageErrors).toEqual([]);
+  expect(failedResponses).toEqual([]);
+  expect(consoleErrors).toEqual([]);
+  expect(consoleWarnings).toEqual([]);
+});
+
+test("deletes a saved photo immediately and allows a replacement without a reload", async ({ page }) => {
+  const pageErrors: string[] = [];
+  const consoleErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
+  await createWithCrop(page, "M2D-R2 delete and re-upload");
+  const photo = page.locator(".photo-viewer-image img.detail-photo");
+  await expect(photo).toBeVisible();
+  await expect.poll(() => photo.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  consoleErrors.length = 0;
+  await page.getByRole("button", { name: "Удалить фотографию" }).click();
+  const confirmation = page.getByRole("alertdialog", { name: "Удалить фотографию" });
+  await expect(confirmation.getByText(/Фотография будет удалена/)).toBeVisible();
+  await confirmation.getByRole("button", { name: "Удалить фотографию" }).click();
+  await expect(page.locator(".compact-photo-placeholder")).toBeVisible();
+  await expect(page.locator(".photo-viewer-image img.detail-photo")).toHaveCount(0);
+  await page.goto("/");
+  const photoLessRow = page.getByRole("link", { name: /M2D-R2 delete and re-upload/ });
+  await expect(photoLessRow.locator(".item-photo")).toHaveCount(0);
+  await expect(photoLessRow.locator(".item-thumb")).toBeVisible();
+  await photoLessRow.click();
+  await page.getByRole("button", { name: "Добавить фото" }).click();
+  await page.locator('input[name="photo"]').setInputFiles({ name: "replacement.png", mimeType: "image/png", buffer: await syntheticPhoto() });
+  const editor = page.getByRole("dialog", { name: "Обрезать фотографию" });
+  await editor.getByRole("button", { name: "Подтвердить кадр" }).click();
+  await expect(page.locator(".photo-viewer-image img.detail-photo")).toBeVisible();
+  await expect(page.locator(".photo-viewer-image img.detail-photo")).not.toHaveAttribute("src", /^blob:/);
+  expect(pageErrors).toEqual([]);
+  expect(consoleErrors).toEqual([]);
+  await page.getByRole("button", { name: "Удалить вещь" }).click();
+  const itemConfirmation = page.getByRole("alertdialog", { name: "Удалить вещь" });
+  await itemConfirmation.getByRole("button", { name: "Удалить вещь" }).click();
+  await expect(page).toHaveURL("/");
+  await expect(page.getByRole("link", { name: /M2D-R2 delete and re-upload/ })).toHaveCount(0);
+});
+
+test("category and text filters update automatically and preserve browser history", async ({ page }) => {
+  await createNoPhotoItem(page, "Zulu Stable", "electronics");
+  await createNoPhotoItem(page, "Alpha Legacy", "custom");
+  await createNoPhotoItem(page, "Middle Custom", "other");
+  await page.getByRole("link", { name: /Zulu Stable/ }).click();
+  await page.locator(".advanced-fields").locator("summary").click();
+  await page.locator('select[name="trackingMode"]').selectOption("bulk");
+  await page.locator('select[name="identificationStatus"]').selectOption("user_confirmed");
+  await page.getByRole("button", { name: "Сохранить изменения" }).click();
+  await expect(page).toHaveURL("/");
+  await page.getByRole("link", { name: /Zulu Stable/ }).click();
+  await page.locator('.stock-editor input[name="quantity"]').fill("7");
+  await page.getByRole("button", { name: "Сохранить запас" }).click();
+  await expect(page.locator('.stock-editor input[name="quantity"]')).toHaveValue("7");
+  await page.goto("/");
+  const filters = page.locator(".filter-bar");
+  await expect.poll(async () => (await page.locator(".item-row h3").allTextContents()).filter((name) => /Alpha Legacy|Middle Custom|Zulu Stable/.test(name))).toEqual(["Middle Custom", "Alpha Legacy", "Zulu Stable"]);
+  await filters.getByLabel("Категория").selectOption("electronics");
+  await expect(page.locator(".item-row")).toHaveCount(2);
+  await expect(page.locator(".item-list")).toContainText("Zulu Stable");
+  await expect(page.locator(".item-list")).toContainText("Alpha Legacy");
+  await filters.getByLabel("Любой статус").selectOption("user_confirmed");
+  await expect(page.locator(".item-row")).toHaveCount(1);
+  await expect(page.locator(".item-row")).toContainText("Zulu Stable");
+  await filters.getByLabel("Любой статус").selectOption("");
+  await expect(page.locator(".item-row")).toHaveCount(2);
+  await filters.getByRole("searchbox").fill("Alpha");
+  await expect(page.locator(".item-row")).toHaveCount(1);
+  await expect(page.locator(".item-row")).toContainText("Alpha Legacy");
+  await expect(page).toHaveURL(/category=electronics.*q=Alpha|q=Alpha.*category=electronics/);
+  await page.goBack();
+  await expect(page.locator(".item-row")).toHaveCount(2);
+  await expect(filters.getByRole("searchbox")).toHaveValue("");
+  await page.goForward();
+  await expect(page.locator(".item-row")).toHaveCount(1);
+  await filters.getByRole("button", { name: "Сбросить фильтры" }).click();
+  await expect(page.locator(".item-row").filter({ hasText: /Alpha Legacy|Middle Custom|Zulu Stable/ })).toHaveCount(3);
+  await filters.getByLabel("Сортировка").selectOption("name");
+  await expect.poll(async () => (await page.locator(".item-row h3").allTextContents()).filter((name) => /Alpha Legacy|Middle Custom|Zulu Stable/.test(name))).toEqual(["Alpha Legacy", "Middle Custom", "Zulu Stable"]);
+
+  await filters.getByLabel("Сортировка").selectOption("quantity");
+  await expect.poll(async () => (await page.locator(".item-row h3").allTextContents()).filter((name) => /Alpha Legacy|Middle Custom|Zulu Stable/.test(name))[0]).toBe("Zulu Stable");
+
+  await page.goto("/collections");
+  await page.getByRole("button", { name: "Создать коллекцию" }).click();
+  const dialog = page.getByRole("dialog", { name: "Создать коллекцию" });
+  await dialog.getByLabel("Название коллекции").fill("Filter collection");
+  await dialog.getByRole("button", { name: "Создать коллекцию" }).click();
+  await expect(page).toHaveURL(/\/collections\/[0-9a-f-]+$/i);
+  await page.getByRole("button", { name: "Добавить вещи" }).click();
+  const picker = page.getByRole("dialog", { name: "Добавить вещи" });
+  await picker.locator(".collection-item-option").filter({ hasText: "Zulu Stable" }).locator("input").check();
+  await picker.locator(".collection-item-option").filter({ hasText: "Alpha Legacy" }).locator("input").check();
+  await picker.getByRole("button", { name: /Добавить вещи/ }).click();
+  await expect(page.locator(".collection-item-row")).toHaveCount(2);
+  await page.locator(".filter-bar").getByLabel("Категория").selectOption("electronics");
+  await expect(page.locator(".collection-item-row")).toHaveCount(2);
+  await page.locator(".filter-bar").getByRole("searchbox").fill("Alpha");
+  await expect(page.locator(".collection-item-row")).toHaveCount(1);
+  await expect(page.locator(".collection-item-row")).toContainText("Alpha Legacy");
+});
+
+test("collection name, icon, cover and deletion are contextual and immediately visible", async ({ page }) => {
+  await page.goto("/collections");
+  await page.getByRole("button", { name: "Язык" }).click();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("button", { name: "Language" })).toContainText("English");
+  await page.getByRole("button", { name: "Create collection" }).click();
+  const createDialog = page.getByRole("dialog", { name: "Create collection" });
+  await createDialog.getByLabel("Collection name").fill("Legacy collection");
+  await createDialog.getByRole("button", { name: "Create collection" }).click();
+  await expect(page).toHaveURL(/\/collections\/[0-9a-f-]+$/i);
+  await expect(page.getByRole("heading", { name: "Legacy collection" })).toBeVisible();
+  await page.getByRole("button", { name: "Edit collection" }).click();
+  const renameForm = page.locator(".collection-rename-form");
+  await expect(renameForm.getByLabel("Rename collection")).toBeFocused();
+  await renameForm.getByLabel("Rename collection").fill("Renamed collection");
+  await renameForm.getByLabel("Collection icon").selectOption("📷");
+  await renameForm.getByRole("button", { name: "Save name" }).click();
+  await expect(page.locator(".collection-detail-heading h1")).toHaveText(/📷 Renamed collection/);
+  await page.getByRole("button", { name: "Change cover" }).click();
+  const coverDialog = page.getByRole("dialog", { name: "Collection cover" });
+  await coverDialog.getByLabel("Collection cover").selectOption("upload");
+  await coverDialog.locator('input[type="file"]').setInputFiles({ name: "collection-cover.png", mimeType: "image/png", buffer: await syntheticPhoto(640, 320) });
+  await expect(coverDialog.getByRole("img", { name: "Cover preview" })).toBeVisible();
+  await coverDialog.getByRole("button", { name: "Save cover" }).click();
+  await expect(page.locator(".collection-detail-cover")).toBeVisible();
+  await expect(page.locator(".collection-detail-cover")).toHaveAttribute("src", /media\/collections/);
+  await expect.poll(() => page.locator(".collection-detail-cover").evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  await page.getByRole("link", { name: "Collections", exact: true }).click();
+  const renamedCard = page.locator(".collection-card").filter({ hasText: "Renamed collection" });
+  await expect(renamedCard).toHaveCount(1);
+  await expect(renamedCard.locator(".collection-card-image")).toBeVisible();
+  await renamedCard.click();
+  await page.getByRole("button", { name: "Delete collection" }).click();
+  const confirmation = page.getByRole("alertdialog", { name: "Delete collection" });
+  await expect(confirmation).toContainText("Items and photos will remain");
+  await confirmation.getByRole("button", { name: "Delete collection" }).click();
+  await expect(page).toHaveURL("/collections");
+  await expect(page.locator(".collection-card").filter({ hasText: "Renamed collection" })).toHaveCount(0);
+});
+
+test("Original crop covers portrait source and rotated orientation", async ({ page }) => {
+  await page.goto("/");
+  await page.locator(".add-dialog-trigger").click();
+  const addDialog = page.getByRole("dialog", { name: "Добавить вещь" });
+  const editor = await selectPhoto(page, "portrait.png", await syntheticPhoto(480, 640));
+  const aspect = editor.getByLabel("Формат кадра");
+  await aspect.selectOption("original");
+  let state = await readCropState(page);
+  expect(Math.abs(state.cropBox.width / state.cropBox.height - 0.75)).toBeLessThan(0.04);
+  expect(Math.abs(state.cropBox.width - state.canvas.width)).toBeLessThan(2);
+  expect(Math.abs(state.cropBox.height - state.canvas.height)).toBeLessThan(2);
+  await editor.getByRole("button", { name: "Повернуть на 90°" }).click();
+  await expect.poll(async () => (await readCropState(page)).rotation).toBe(90);
+  state = await readCropState(page);
+  expect(Math.abs(state.cropBox.width / state.cropBox.height - 4 / 3)).toBeLessThan(0.05);
+  expect(Math.abs(state.cropBox.width - state.canvas.width)).toBeLessThan(2);
+  expect(Math.abs(state.cropBox.height - state.canvas.height)).toBeLessThan(2);
+  await editor.getByRole("button", { name: "Отмена" }).last().click();
+  await expect(addDialog).toBeVisible();
 });
 
 test("rejects invalid crop coordinates and allows item creation with the original image", async ({ page }) => {
@@ -153,7 +348,7 @@ test("recovers from canvas encoding failure and keeps an existing saved photo on
   await editor.getByRole("button", { name: "Подтвердить кадр" }).click();
   await expect(editor.getByRole("alert")).toBeVisible();
   await editor.getByRole("button", { name: "Продолжить без кадрирования" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Фото сохранено" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Фото сохранено" })).toBeAttached();
   const recoveredSavedUrl = await page.locator(".photo-viewer-image img.detail-photo").getAttribute("src");
   expect(recoveredSavedUrl).toBeTruthy();
 

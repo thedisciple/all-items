@@ -15,6 +15,7 @@
 - Validate edit return destinations as internal inventory or collection routes. Collection cover uploads, source photos, thumbnails, and backups remain outside the repository and use controlled routes.
 - Collection batch membership must use the shared collection domain operation and transaction; changing membership or covers never deletes an item. A cover must be explicitly selected and must not default to the first member.
 - Consult `docs/product/ux-principles.md` and `docs/product/interaction-patterns.md` before adding interactions. Prefer simple, reliable workflows; keep technical storage formats out of the UI and preserve entered data on recoverable errors.
+- Review every user-facing change against `docs/product/design-manifesto.md`; minimalism, truthful controls, immediate feedback, and consistent destructive confirmations are product requirements.
 - Record useful product research in `docs/product/design-references.md` and `docs/product/opportunity-register.md`. Distinguish verified facts, design inference, and planned features; do not describe future ideas as implemented.
 - Evaluate user-visible changes for keyboard access, visible focus, Russian labels and feedback, 360px layouts, reduced motion, and accessible pending/error states.
 - Before a coherent commit, run `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build`; report any unavailable check accurately.

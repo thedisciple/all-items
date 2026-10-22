@@ -8,6 +8,8 @@ M2D builds on M2C with session-stable item drafts, one-step add/edit return flow
 
 Planned work is tracked in [ROADMAP.md](ROADMAP.md). Import/export, recovery, flexible attributes, and AI remain future work. AI assists development; product decisions, code review, and validation remain human-directed.
 
+M2D-R2 focuses on reliable crop behavior, immediate filter and photo state updates, contextual collection editing, accessible destructive confirmations, and consistent RU/EN flags. The product's minimalist design rules are documented in [the design manifesto](docs/product/design-manifesto.md). A multi-photo gallery is planned for M3 and is not part of this release.
+
 ## Run on Windows 11
 
 Install Node.js 20.9 or later, then in PowerShell:
