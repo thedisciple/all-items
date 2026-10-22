@@ -1,5 +1,7 @@
 # Roadmap
 
+See [the opportunity register](docs/product/opportunity-register.md) for detailed concepts, dependencies, risk, complexity, and priority. Checkmarks describe implemented and verified work only.
+
 ## M0 — Foundation and first working vertical slice
 
 - [x] Next.js, TypeScript, Tailwind, SQLite, and Drizzle foundation
@@ -20,21 +22,74 @@
 - [x] Private image and thumbnail storage, controlled media routes, replace/remove lifecycle
 - [x] Photo-first creation for unidentified objects and responsive photo rows/details
 
-## M2B — Collections
+## M2B.1 — UX foundations, photo acquisition, and item workflows
 
-- [ ] Collections and collection membership
-- [ ] Collection views and collection-specific filters
+- [x] Research documentation, UX principles, and reusable interaction patterns
+- [x] Camera/file acquisition, preview, save feedback, retry, and replacement-safe media flow
+- [x] Structured stock editor with computed totals and visible save/error states
+- [x] Item summary, progressive detail, keyboard/focus, and 360px responsive improvements
 
-## M3 — Portability and recovery
+## M2B.2 — Collections and navigation
 
-- [ ] Structured import/export with image data
-- [ ] Backup and restore guidance
-- [ ] Flexible item attributes and integrity checks
+- [x] Workspace-owned collections and many-to-many memberships
+- [x] Collection create, rename, confirmed delete, counts, navigation, and scoped search/filter/sort
+- [x] Add/remove membership without duplicating or deleting items and photographs
 
-## M4 — Quality and release
+## M3 — Portability and personal organization — NOT STARTED
 
-- [ ] Mobile UX refinement and security review
-- [ ] Optional authenticated LAN access, only if secure implementation is complete
-- [ ] CI, synthetic-data screenshots, and release preparation
+- [ ] Structured import/export with image data, archive validation, and integrity checks
+- [ ] Backup and restore workflow and guidance; draft recovery and unsaved-change behavior
+- [ ] Flexible item attributes and portable image paths
+- [ ] Favorites, pinned collections, recently used items, preferred view, and quick actions
+- [ ] Smart filters, tags, saved searches, and inventory completeness indicators
+- [ ] Optional organization goals based on actual progress
+- [ ] Image optimization refinements and advanced multi-photo/batch workflows
 
-AI identification, marketplace, sharing, and synchronization remain future directions and are not part of M2A.
+## M4 — Quality and release — NOT STARTED
+
+- [ ] Mobile UX refinement, accessibility, and security review
+- [ ] Real task-based usability tests and interaction-count/form-completion measures
+- [ ] Error-recovery, performance, responsive consistency, and microcopy reviews
+- [ ] CI, synthetic-data screenshots, and v0.1 release preparation
+- [ ] Optional authenticated LAN access only after server-side authentication and origin protections are complete
+
+## Future AI — NOT STARTED
+
+- [ ] Photo and multi-object identification with human-reviewed metadata proposals
+- [ ] Preserve original markings; use cited, verified datasheet references
+- [ ] Local Ollama, optional cloud providers, BYOK, and eligible ChatGPT integrations
+- [ ] Inventory curator, DIY project discovery, compatibility analysis, missing-component identification, and MCP integrations
+
+## Achievements & Guided Discovery — future concept only
+
+- [ ] Optional local achievements, tiered progress, and an original achievement gallery
+- [ ] User-defined goals, feature-discovery achievements, and useful data-quality measures
+- [ ] Opt-out, privacy-first local calculation, and anti-manipulation rules
+- [ ] Community comparisons only after multi-user support, with opt-in, transparent normalized metrics, adequate cohort sizes, and no raw-inventory disclosure
+
+## Future advanced media and recovery
+
+- [ ] Multiple photographs, reordering, batch acquisition, and multiple-object extraction
+- [ ] Upload queue with cancel/retry, client-side compression, large-image handling, and resumable uploads where justified
+- [ ] Efficient local thumbnails/caching and portable image bundles
+
+## Future sharing and resource network
+
+- [ ] Accounts, shared workspaces, family/team inventory, and explicit per-item visibility
+- [ ] Shared-by-link items, resource requests, privacy-preserving matching, borrowing, lending, renting, and exchange
+- [ ] Internal messaging and end-to-end-encrypted private synchronization, subject to security review
+
+## Future marketplace — monobazar-inspired, not implemented
+
+- [ ] Convert an inventory item into a separate listing draft; AI may suggest text but cannot invent facts or publish
+- [ ] Strict public/private data boundary and quantity reservation separate from owned/available/reserved/listed/sold/loaned/rented stock
+- [ ] Fixed-price listings, structured offers with accept/decline/counter, optional messaging, and transaction status
+- [ ] Seller storefronts, shareable links, following, and optional notifications
+- [ ] Auctions, competitive bids, settlement, cancellation, fraud and dispute handling
+- [ ] Professional maker accounts, business storefronts, team-managed inventory, and seller verification
+- [ ] Buyer protection, partner-based payments, delivery, tracking, returns, and optional installment partners
+- [ ] Verified charity listings and transparent proceeds
+- [ ] Optional managed hosting/marketplace monetization; keep the self-hosted personal core useful and free and preserve GPLv3
+- [ ] Legal, regulatory, trust, privacy, identity, moderation, support, and payment-partner review before implementation
+
+AI identification, marketplace, sharing, synchronization, achievements, rankings, analytics, payments, and transactions are future directions. M2B implements none of these.
