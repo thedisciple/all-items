@@ -24,7 +24,15 @@ export async function listCollections() {
           WHERE c.workspace_id = ? GROUP BY c.id ORDER BY lower(c.name), c.id`,
     args: [workspaceId],
   });
-  return result.rows as unknown as Array<{ id: string; name: string; createdAt: string; updatedAt: string; itemCount: number; previewMediaId: string | null; previewItemId: string | null }>;
+  return result.rows.map((row) => ({
+    id: String(row.id),
+    name: String(row.name),
+    createdAt: String(row.createdAt),
+    updatedAt: String(row.updatedAt),
+    itemCount: Number(row.itemCount),
+    previewMediaId: row.previewMediaId == null ? null : String(row.previewMediaId),
+    previewItemId: row.previewItemId == null ? null : String(row.previewItemId),
+  }));
 }
 
 export async function getCollection(idValue: unknown) {
@@ -36,7 +44,9 @@ export async function getCollection(idValue: unknown) {
           WHERE c.workspace_id = ? AND c.id = ? GROUP BY c.id LIMIT 1`,
     args: [workspaceId, id],
   });
-  return result.rows.length ? result.rows[0] as unknown as { id: string; name: string; createdAt: string; updatedAt: string; itemCount: number } : null;
+  if (!result.rows.length) return null;
+  const row = result.rows[0];
+  return { id: String(row.id), name: String(row.name), createdAt: String(row.createdAt), updatedAt: String(row.updatedAt), itemCount: Number(row.itemCount) };
 }
 
 export async function createCollection(input: unknown) {
@@ -83,7 +93,7 @@ export async function listItemCollections(itemIdValue: unknown) {
           WHERE c.workspace_id = ? AND i.workspace_id = ? AND i.id = ? ORDER BY lower(c.name), c.id`,
     args: [workspaceId, workspaceId, itemId],
   });
-  return result.rows as unknown as Array<{ id: string; name: string }>;
+  return result.rows.map((row) => ({ id: String(row.id), name: String(row.name) }));
 }
 
 export async function addItemToCollection(collectionIdValue: unknown, itemIdValue: unknown) {

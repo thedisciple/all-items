@@ -81,6 +81,29 @@ describe("M1 inventory", () => {
 });
 
 describe("collections", () => {
+  it("returns explicit plain-object detail and collection DTOs for item pages", async () => {
+    const image = await sharp({ create: { width: 48, height: 36, channels: 3, background: "#426584" } }).png().toBuffer();
+    const item = await createItemWithPhoto({ name: "Serializable detail fixture", trackingMode: "bulk" }, new File([new Uint8Array(image)], "detail.png", { type: "image/png" }));
+    await saveStock(item.id, [{ location: "", quantity: 2 }, { location: "Shelf A", quantity: 3 }, { location: "Box 2", quantity: 4 }]);
+    const first = await createCollection({ name: "Serializable collection A" });
+    const second = await createCollection({ name: "Serializable collection B" });
+    await addItemToCollection(first.id, item.id);
+    await addItemToCollection(second.id, item.id);
+
+    const detail = await getItem(item.id);
+    const memberships = await listItemCollections(item.id);
+    expect(detail).not.toBeNull();
+    expect(Object.getPrototypeOf(detail)).toBe(Object.prototype);
+    expect(detail).toMatchObject({ id: item.id, quantity: 9, primary_media_id: expect.any(String) });
+    expect(detail?.stock).toHaveLength(3);
+    expect(detail?.stock.map((row) => row.quantity).sort()).toEqual([2, 3, 4]);
+    expect(detail?.stock.find((row) => row.location === null)).toMatchObject({ quantity: 2, location: null });
+    expect(detail?.stock.every((row) => Object.getPrototypeOf(row) === Object.prototype)).toBe(true);
+    expect(detail?.stock.every((row) => typeof row.quantity === "number" && (row.location === null || typeof row.location === "string"))).toBe(true);
+    expect(memberships).toHaveLength(2);
+    expect(memberships.every((row) => Object.getPrototypeOf(row) === Object.prototype && typeof row.id === "string" && typeof row.name === "string")).toBe(true);
+  });
+
   it("creates, renames, filters, supports multiple memberships, and deletes without deleting items or photos", async () => {
     const source = await sharp({ create: { width: 48, height: 36, channels: 3, background: "#47652e" } }).jpeg().toBuffer();
     const item = await createItemWithPhoto({ name: "Collection fixture" }, new File([new Uint8Array(source)], "collection.jpg", { type: "image/jpeg" }));

@@ -33,6 +33,28 @@ export const stockInput = z.array(z.object({
   quantity: z.coerce.number().int().min(0).max(1000000),
 })).max(50);
 const itemIdInput = z.string().uuid();
+export type StockEntryDTO = { quantity: number; location: string | null };
+export type ItemDetailDTO = {
+  id: string;
+  name: string;
+  model: string | null;
+  inventory_number: string;
+  brand: string | null;
+  category: string | null;
+  original_marking: string | null;
+  notes: string | null;
+  description: string | null;
+  identification_status: string;
+  tracking_mode: string;
+  sale_intent: string;
+  asking_price_minor: number | null;
+  asking_currency: string | null;
+  created_at: string;
+  updated_at: string;
+  quantity: number;
+  primary_media_id: string | null;
+  stock: StockEntryDTO[];
+};
 const itemListFilters = z.object({
   search: z.string().trim().max(160).optional(),
   category: z.string().trim().max(80).optional(),
@@ -122,18 +144,46 @@ export async function listItems(filters: { search?: string; category?: string; s
   return result.rows.map((row) => rowObject(row as Record<string, unknown>));
 }
 
-export async function getItem(id: string): Promise<(Record<string, unknown> & { stock: Array<{ quantity: number; location: string | null }> }) | null> {
+export async function getItem(id: string): Promise<ItemDetailDTO | null> {
   id = itemIdInput.parse(id);
   const { db, workspaceId } = await initializeWorkspace();
   const result = await db.$client.execute({
-    sql: `SELECT i.*, COALESCE(SUM(s.quantity), 0) AS quantity,
+    sql: `SELECT i.id, i.name, i.model, i.inventory_number, i.brand, i.category, i.original_marking,
+                 i.notes, i.description, i.identification_status, i.tracking_mode, i.sale_intent,
+                 i.asking_price_minor, i.asking_currency, i.created_at, i.updated_at,
+                 COALESCE(SUM(s.quantity), 0) AS quantity,
                  (SELECT m.id FROM media_assets m WHERE m.item_id = i.id AND m.is_primary = 1 LIMIT 1) AS primary_media_id
           FROM items i LEFT JOIN stock_entries s ON s.item_id = i.id WHERE i.workspace_id = ? AND i.id = ? GROUP BY i.id`,
     args: [workspaceId, id],
   });
   if (!result.rows.length) return null;
   const stock = await db.$client.execute({ sql: `SELECT s.quantity, l.name AS location FROM stock_entries s LEFT JOIN locations l ON l.id = s.location_id WHERE s.item_id = ? ORDER BY l.name`, args: [id] });
-  return { ...rowObject(result.rows[0] as Record<string, unknown>), stock: stock.rows as unknown as Array<{ quantity: number; location: string | null }> };
+  const row = result.rows[0];
+  const stockRows: StockEntryDTO[] = stock.rows.map((stockRow) => ({
+    quantity: Number(stockRow.quantity),
+    location: stockRow.location == null ? null : String(stockRow.location),
+  }));
+  return {
+    id: String(row.id),
+    name: String(row.name),
+    model: row.model == null ? null : String(row.model),
+    inventory_number: String(row.inventory_number),
+    brand: row.brand == null ? null : String(row.brand),
+    category: row.category == null ? null : String(row.category),
+    original_marking: row.original_marking == null ? null : String(row.original_marking),
+    notes: row.notes == null ? null : String(row.notes),
+    description: row.description == null ? null : String(row.description),
+    identification_status: String(row.identification_status),
+    tracking_mode: String(row.tracking_mode),
+    sale_intent: String(row.sale_intent),
+    asking_price_minor: row.asking_price_minor == null ? null : Number(row.asking_price_minor),
+    asking_currency: row.asking_currency == null ? null : String(row.asking_currency),
+    created_at: String(row.created_at),
+    updated_at: String(row.updated_at),
+    quantity: Number(row.quantity),
+    primary_media_id: row.primary_media_id == null ? null : String(row.primary_media_id),
+    stock: stockRows,
+  };
 }
 
 export async function updateItem(id: string, input: ItemFields) {
