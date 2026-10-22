@@ -10,9 +10,9 @@
 
 ## M1 — Inventory management
 
-- [ ] Full item CRUD and sequential inventory numbers
-- [ ] Stock entries, quantities, and multiple locations
-- [ ] Tracking modes, search, filters, sorting, and private sale intent
+- [x] Full item CRUD and sequential inventory numbers
+- [x] Stock entries, quantities, and multiple locations
+- [x] Tracking modes, search, filters, sorting, and private sale intent
 
 ## M2 — Media and collections
 

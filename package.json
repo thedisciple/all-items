@@ -5,7 +5,7 @@
   "license": "GPL-3.0-only",
   "scripts": {
     "dev": "npm run db:migrate && next dev --hostname 127.0.0.1",
-    "build": "npm run db:migrate && next build",
+    "build": "next build",
     "start": "npm run db:migrate && next start --hostname 127.0.0.1",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",

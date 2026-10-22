@@ -1,6 +1,7 @@
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import { mkdir } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import * as schema from "@/db/schema";
@@ -9,7 +10,13 @@ const workspaceId = "00000000-0000-4000-8000-000000000001";
 let databasePromise: Promise<ReturnType<typeof drizzle<typeof schema>>> | undefined;
 
 export function dataDirectory() {
-  return process.env.ALL_ITEMS_DATA_DIR || path.join(process.env.LOCALAPPDATA || process.cwd(), "AllItems");
+  const directory = path.resolve(process.env.ALL_ITEMS_DATA_DIR || path.join(process.env.LOCALAPPDATA || os.homedir(), "AllItems"));
+  const repository = path.resolve(process.cwd());
+  const relative = path.relative(repository, directory);
+  if (relative === "" || (!relative.startsWith(`..${path.sep}`) && relative !== ".." && !path.isAbsolute(relative))) {
+    throw new Error("ALL_ITEMS_DATA_DIR must point outside the repository.");
+  }
+  return directory;
 }
 
 export async function getDatabase() {
