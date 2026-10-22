@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { initializeWorkspace } from "@/db/client";
+import { categoryFilterValues } from "./categories";
 
 const optionalText = (max: number) => z.string().trim().max(max).optional().transform((value) => value || null);
 export const itemFields = z.object({
@@ -124,10 +125,17 @@ export async function listItems(filters: { search?: string; category?: string; s
   const clauses = ["i.workspace_id = ?"];
   const args: (string | number)[] = [workspaceId];
   if (search) {
-    clauses.push("(i.name LIKE ? OR i.model LIKE ? OR i.original_marking LIKE ? OR i.brand LIKE ? OR i.notes LIKE ?)");
-    const match = `%${search}%`; args.push(match, match, match, match, match);
+    clauses.push(`(i.name LIKE ? OR i.model LIKE ? OR i.original_marking LIKE ? OR i.brand LIKE ? OR i.notes LIKE ?
+      OR i.inventory_number LIKE ? OR i.description LIKE ? OR i.category LIKE ?
+      OR EXISTS (SELECT 1 FROM stock_entries ss INNER JOIN locations sl ON sl.id = ss.location_id WHERE ss.item_id = i.id AND sl.name LIKE ?)
+      OR EXISTS (SELECT 1 FROM item_collection_memberships sicm INNER JOIN collections sc ON sc.id = sicm.collection_id WHERE sicm.item_id = i.id AND sc.name LIKE ?))`);
+    const match = `%${search}%`; args.push(match, match, match, match, match, match, match, match, match, match);
   }
-  if (parsedFilters.category) { clauses.push("i.category = ?"); args.push(parsedFilters.category); }
+  if (parsedFilters.category) {
+    const values = categoryFilterValues(parsedFilters.category);
+    clauses.push(`i.category IN (${values.map(() => "?").join(",")})`);
+    args.push(...values);
+  }
   if (parsedFilters.status) { clauses.push("i.identification_status = ?"); args.push(parsedFilters.status); }
   if (parsedFilters.collectionId) {
     clauses.push("EXISTS (SELECT 1 FROM item_collection_memberships icm INNER JOIN collections c ON c.id = icm.collection_id WHERE icm.item_id = i.id AND c.id = ? AND c.workspace_id = i.workspace_id)");
@@ -142,6 +150,12 @@ export async function listItems(filters: { search?: string; category?: string; s
           WHERE ${clauses.join(" AND ")} GROUP BY i.id ORDER BY ${order} ${direction}, i.id ASC`, args,
   });
   return result.rows.map((row) => rowObject(row as Record<string, unknown>));
+}
+
+export async function countItems() {
+  const { db, workspaceId } = await initializeWorkspace();
+  const result = await db.$client.execute({ sql: "SELECT COUNT(*) AS count FROM items WHERE workspace_id = ?", args: [workspaceId] });
+  return Number(result.rows[0]?.count ?? 0);
 }
 
 export async function getItem(id: string): Promise<ItemDetailDTO | null> {

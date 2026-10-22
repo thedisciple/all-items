@@ -1,6 +1,6 @@
 # All Items contributor instructions
 
-- Keep UI text in Russian and code, comments, and public documentation in English.
+- Keep UI copy in the Russian and English translation dictionaries; keep code, comments, and public documentation in English.
 - Bind the app to loopback by default. Do not add public or LAN inventory access without server-side authentication and origin protections.
 - Keep SQLite data, backups, generated storage, and private user data outside the repository. Never commit real inventory records, personal media, secrets, or local backups.
 - Store uploaded images only under the configured All Items data directory; never put them in `public/` or serve files by accepting user-supplied paths.
@@ -8,6 +8,8 @@
 - Extend the database only through ordered, additive SQL migrations. Keep migrations repeatable and run each with its migration log entry in one transaction.
 - Builds and tests must use isolated databases and must never migrate the user's configured database. Only the explicit `npm run db:migrate` and application startup scripts may migrate configured app data.
 - Validate all server inputs with Zod. Keep domain logic in `src/items`, separate from React components. Keep private sale intent local and unpublished.
+- Store system categories as stable keys, keep localized labels in `src/i18n`, and preserve unknown legacy category strings as custom values.
+- Keep all photos metadata-free after processing. Cropping must preserve the old saved image until a replacement has been persisted successfully.
 - Consult `docs/product/ux-principles.md` and `docs/product/interaction-patterns.md` before adding interactions. Prefer simple, reliable workflows; keep technical storage formats out of the UI and preserve entered data on recoverable errors.
 - Record useful product research in `docs/product/design-references.md` and `docs/product/opportunity-register.md`. Distinguish verified facts, design inference, and planned features; do not describe future ideas as implemented.
 - Evaluate user-visible changes for keyboard access, visible focus, Russian labels and feedback, 360px layouts, reduced motion, and accessible pending/error states.

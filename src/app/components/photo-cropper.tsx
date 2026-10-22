@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { cropFromDrag, moveCropRect, zoomCropRect, type CropRect } from "@/media/crop";
+import { useI18n } from "@/i18n/provider";
 
 type Bounds = { width: number; height: number; scale: number; left: number; top: number };
 
 function clamp(value: number, min: number, max: number) { return Math.min(max, Math.max(min, value)); }
 
 export function PhotoCropper({ file, onConfirm, onCancel }: { file: File; onConfirm: (file: File) => void; onCancel: () => void }) {
+  const { locale, t } = useI18n();
   const imageRef = useRef<HTMLImageElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
@@ -127,7 +129,7 @@ export function PhotoCropper({ file, onConfirm, onCancel }: { file: File; onConf
       const extension = mimeType === "image/png" ? "png" : "jpg";
       onConfirm(new File([blob], `edited-${file.name.replace(/\.[^.]+$/, "")}.${extension}`, { type: mimeType, lastModified: Date.now() }));
     } catch {
-      setError(selection.width < 64 || selection.height < 64 ? "Кадр слишком маленький. Выберите область не менее 64 × 64 пикселей." : "Не удалось подготовить кадр. Попробуйте ещё раз или выберите исходный файл.");
+      setError(selection.width < 64 || selection.height < 64 ? t("cropTooSmall") : t("cropFailed"));
       setBusy(false);
     }
   }
@@ -148,15 +150,15 @@ export function PhotoCropper({ file, onConfirm, onCancel }: { file: File; onConf
       if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
     }}>
-      <div className="dialog-heading"><h3 id="crop-title">Обрезать фотографию</h3><button type="button" className="icon-button" aria-label="Отменить кадрирование" disabled={busy} onClick={onCancel}>×</button></div>
-      <p id="crop-help" className="crop-help">Потяните, чтобы задать кадр. Переместите его, чтобы выбрать область.</p>
+      <div className="dialog-heading"><h3 id="crop-title">{t("cropTitle")}</h3><button type="button" className="icon-button" aria-label={t("cancelCropAria")} disabled={busy} onClick={onCancel}>×</button></div>
+      <p id="crop-help" className="crop-help">{t("cropHelp")}</p>
       <div ref={viewportRef} className="crop-viewport" onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp}>
-        <img ref={imageRef} className="crop-source-image" src={sourceUrl} alt="Фотография для кадрирования" onLoad={measure}/>
-        {rectStyle ? <div className="crop-selection" style={rectStyle} tabIndex={0} role="group" aria-label="Область кадрирования. Используйте стрелки для перемещения, плюс и минус для масштаба." onKeyDown={onCropKeyDown}/> : null}
+        <img ref={imageRef} className="crop-source-image" src={sourceUrl} alt={t("cropSourceAlt")} onLoad={measure}/>
+        {rectStyle ? <div className="crop-selection" style={rectStyle} tabIndex={0} role="group" aria-label={t("cropKeyboardHelp")} onKeyDown={onCropKeyDown}/> : null}
       </div>
-      <label className="crop-zoom"><span>Масштаб</span><input type="range" min={1} max={4} step={0.1} value={zoom} onChange={(event) => setZoomValue(Number(event.target.value))}/><output>{zoom.toFixed(1)}×</output></label>
+      <label className="crop-zoom"><span>{t("cropZoom")}</span><input type="range" min={1} max={4} step={0.1} value={zoom} aria-valuetext={`${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(zoom)}×`} onChange={(event) => setZoomValue(Number(event.target.value))}/><output>{new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(zoom)}×</output></label>
       {error ? <p className="form-error" role="alert">{error}</p> : null}
-      <div className="dialog-actions crop-actions"><button type="button" className="text-button" disabled={busy} onClick={reset}>Сбросить кадр</button><button type="button" className="text-button" disabled={busy} onClick={onCancel}>Отмена</button><button type="button" className="quiet-button" disabled={busy || !selection} onClick={() => void confirm()}>{busy ? "Подготавливаем…" : "Подтвердить кадр"}</button></div>
+      <div className="dialog-actions crop-actions"><button type="button" className="text-button" disabled={busy} onClick={reset}>{t("cropReset")}</button><button type="button" className="text-button" disabled={busy} onClick={onCancel}>{t("cancel")}</button><button type="button" className="quiet-button" disabled={busy || !selection} onClick={() => void confirm()}>{busy ? t("cropPreparing") : t("cropConfirm")}</button></div>
     </section>
   </div>;
 }

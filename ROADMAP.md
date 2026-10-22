@@ -35,6 +35,18 @@ See [the opportunity register](docs/product/opportunity-register.md) for detaile
 - [x] Collection create, rename, confirmed delete, counts, navigation, and scoped search/filter/sort
 - [x] Add/remove membership without duplicating or deleting items and photographs
 
+## M2C — Runtime stabilization, photo editing, and UX consolidation
+
+- [x] Serialize item, stock, and collection data through explicit client-boundary DTOs; verify an existing item-detail route with photo, multiple stock rows, and memberships using an isolated data copy
+- [x] Consolidate the detail view to one saved-photo viewer and add freeform crop, zoom, reposition, reset, cancel, and replacement-safe save behavior
+- [x] Move item creation into a focused photo-first dialog and simplify inventory cards, counts, search, navigation, and metadata treatment
+- [x] Add stable localized category keys while retaining legacy and custom category text
+- [x] Add Russian and English dictionaries, explicit cookie preference, browser-language fallback, localized status/actions, and `html lang`
+- [x] Expand search to inventory number, description, category, locations, and collection names; add regression coverage
+- [x] Document category research and future crop-source, storage-status, and reduced-motion transition considerations
+
+Visual camera/cropper acceptance on a physical device was unavailable in the development environment; server route, crop geometry, and automated regression coverage were verified.
+
 ## M3 — Portability and personal organization — NOT STARTED
 
 - [ ] Structured import/export with image data, archive validation, and integrity checks

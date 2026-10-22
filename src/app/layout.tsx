@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
+import { getLocale } from "@/i18n/server";
+import { I18nProvider } from "@/i18n/provider";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: "Все вещи — личная опись",
-  description: "Локальная приватная опись ваших вещей.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  return { title: "All Items", description: locale === "ru" ? "Личный инвентарь на вашем устройстве." : "Private inventory on your device." };
+}
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="ru"><body>{children}</body></html>;
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const locale = await getLocale();
+  return <html lang={locale}><body><I18nProvider locale={locale}>{children}</I18nProvider></body></html>;
 }

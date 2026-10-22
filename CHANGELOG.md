@@ -1,6 +1,14 @@
 # Changelog
 
-## Unreleased — M2B
+## Unreleased — M2C
+
+- Fixed item-detail Server Component serialization with explicit plain-object DTOs and verified a real item route against an isolated copy of the private database.
+- Added freeform photo cropping, zoom/reposition controls, keyboard support, and in-place replacement preview/save feedback without duplicate saved photos.
+- Moved photo-first item creation into an accessible dialog and simplified inventory navigation, counts, card metadata, and search behavior.
+- Added stable localized category keys with legacy/custom preservation, and complete Russian/English interface dictionaries with persistent language choice.
+- Expanded search to inventory numbers, storage locations, descriptions, categories, and collection names; documented category research and future interaction/storage-status ideas.
+
+## M2B
 
 - Added reusable camera/file photo acquisition with previews, retry, pending feedback, and replacement-safe media state.
 - Replaced the pipe-delimited stock editor with labeled location and numeric quantity rows and a live total.

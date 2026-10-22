@@ -12,6 +12,8 @@ These principles apply to product decisions and code review. They summarize the 
 8. **Respect time and attention.** No artificial urgency, mandatory streaks, guilt messages, or engagement loops. Positive feedback confirms useful work without demanding more time.
 9. **Accessible interaction.** Visible focus, keyboard operation, clear labels, meaningful status announcements, comfortable touch targets, responsive layouts from 360px, and reduced-motion support are acceptance criteria.
 10. **Ship a complete slice.** A workflow includes loading, success, validation, failure, retry or recovery, and a clear route back. Do not call planned functionality implemented.
+11. **Keep concepts distinct.** Categories describe what an item is; collections group items for a purpose; locations describe where an item is stored. Local storage, offline availability, synchronization, and backup are separate capabilities and must not be implied by one indicator.
+12. **Localize interface, not user data.** System labels, status, dates, and numbers follow the selected language. Item names, custom categories, collection names, and storage locations remain exactly as entered.
 
 ## Practical acceptance questions
 

@@ -49,6 +49,7 @@ describe("M1 inventory", () => {
     expect(second.inventoryNumber).toBe("INV-000003");
     expect((await listItems({ search: "верхняя" })).map((item) => item.id)).toContain(first.id);
     expect((await listItems({ category: "Электроника" })).map((item) => item.id)).toContain(first.id);
+    expect((await listItems({ search: "INV-000002" })).map((item) => item.id)).toContain(first.id);
 
     await updateItem(first.id, { name: "Резисторы", model: "R-1", brand: "Мастер", category: "Электроника", originalMarking: "A1", notes: "верхняя полка", description: "", identificationStatus: "user_confirmed", trackingMode: "bulk", saleIntent: "willing_to_sell", askingPrice: "12.50", askingCurrency: "EUR" });
     await saveStock(first.id, [{ location: "Шкаф A", quantity: 4 }, { location: "Ящик 2", quantity: 6 }]);
@@ -57,6 +58,7 @@ describe("M1 inventory", () => {
     expect(updated?.stock).toHaveLength(2);
     expect((await listItems({ search: "A1" })).map((item) => item.id)).toContain(first.id);
     expect((await listItems({ search: "Мастер" })).map((item) => item.id)).toContain(first.id);
+    expect((await listItems({ search: "Шкаф A" })).map((item) => item.id)).toContain(first.id);
     expect((await listItems({ status: "user_confirmed" })).map((item) => item.id)).toContain(first.id);
     expect((await listItems({ search: "Резисторы" }))[0]).not.toHaveProperty("sale_intent");
     await expect(saveStock(second.id, [{ location: "Полка", quantity: -1 }])).rejects.toThrow();
@@ -89,6 +91,8 @@ describe("collections", () => {
     const second = await createCollection({ name: "Serializable collection B" });
     await addItemToCollection(first.id, item.id);
     await addItemToCollection(second.id, item.id);
+    expect((await listItems({ search: "Shelf A" })).map((row) => row.id)).toContain(item.id);
+    expect((await listItems({ search: "Serializable collection A" })).map((row) => row.id)).toContain(item.id);
 
     const detail = await getItem(item.id);
     const memberships = await listItemCollections(item.id);
@@ -113,6 +117,8 @@ describe("collections", () => {
     await addItemToCollection(first.id, item.id);
     await addItemToCollection(first.id, item.id);
     await addItemToCollection(second.id, item.id);
+    await saveStock(item.id, [{ location: "Studio shelf", quantity: 1 }]);
+    expect((await listItems({ search: "Studio shelf" })).map((row) => row.id)).toContain(item.id);
     expect(await listItemCollections(item.id)).toHaveLength(2);
     expect((await listItems({ collectionId: first.id })).map((row) => row.id)).toContain(item.id);
     expect(Number((await listCollections()).find((collection) => collection.id === first.id)?.itemCount)).toBe(1);
