@@ -12,7 +12,7 @@ const mediaIdSchema = z.string().uuid();
 const mediaVariantSchema = z.enum(["image", "thumbnail"]);
 const uploadedFileSchema = z.custom<File>((value) => typeof File !== "undefined" && value instanceof File, "Выберите файл фотографии.")
   .refine((file) => file.size > 0, "Выберите непустой файл фотографии.")
-  .refine((file) => file.size <= MAX_IMAGE_BYTES, "Размер фотографии должен быть не более 10 МБ.");
+  .refine((file) => file.size <= MAX_IMAGE_BYTES, "Размер фотографии должен быть не более 10 МиБ.");
 const dimensionsSchema = z.object({ width: z.number().int().positive(), height: z.number().int().positive() })
   .refine(({ width, height }) => width <= MAX_IMAGE_SIDE && height <= MAX_IMAGE_SIDE && width * height <= MAX_IMAGE_PIXELS);
 const supportedFormats = new Set(["jpeg", "png", "webp"]);
@@ -63,7 +63,7 @@ async function processImage(file: File) {
   if (!validFile.success) throw new MediaValidationError(validFile.error.issues[0]?.message ?? "Файл фотографии недопустим.");
   const input = Buffer.from(await file.arrayBuffer());
   if (input.byteLength < 1 || input.byteLength > MAX_IMAGE_BYTES) {
-    throw new MediaValidationError("Размер фотографии должен быть не более 10 МБ.");
+    throw new MediaValidationError("Размер фотографии должен быть не более 10 МиБ.");
   }
 
   let metadata: Metadata;

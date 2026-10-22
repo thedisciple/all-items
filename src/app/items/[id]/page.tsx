@@ -1,46 +1,61 @@
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getItem } from "@/items/service";
+import { z } from "zod";
+import { AppSidebar } from "@/app/components/app-sidebar";
+import { CollectionMembership } from "@/app/components/collection-membership";
+import { ItemEditForm } from "@/app/components/item-edit-form";
+import { PhotoReplacement } from "@/app/components/photo-replacement";
+import { StockEditor } from "@/app/components/stock-editor";
+import { removeItem, removePhoto } from "@/app/actions";
+import { listCollections, listItemCollections } from "@/items/collections";
+import { getItem, listItems } from "@/items/service";
 import { getPrimaryPhoto } from "@/media/service";
-import { editItem, removeItem, removePhoto, replacePhoto, updateStock } from "@/app/actions";
 
 export const dynamic = "force-dynamic";
-type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string }> };
+type Props = { params: Promise<{ id: string }> };
 const val = (item: Record<string, unknown>, key: string) => item[key] == null ? "" : String(item[key]);
-const statuses = [["unknown","Не определён"],["user_confirmed","Подтверждён мной"],["source_verified","Проверен по источнику"]];
 
-export default async function ItemPage({ params, searchParams }: Props) {
+export default async function ItemPage({ params }: Props) {
   const { id } = await params;
-  const query = await searchParams;
-  const item = await getItem(id);
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) notFound();
+  const item = await getItem(parsedId.data);
   if (!item) notFound();
-  const photo = await getPrimaryPhoto(id);
+  const [photo, collections, memberships, allItems] = await Promise.all([
+    getPrimaryPhoto(id), listCollections(), listItemCollections(id), listItems(),
+  ]);
   const data = item as Record<string, unknown>;
-  const stockText = (item.stock as Array<{ quantity: number; location: string | null }>).map((entry) => `${entry.location ?? ""} | ${entry.quantity}`).join("\n");
-  return <main className="app-shell"><aside className="sidebar"><Link className="brand" href="/"><span className="brand-mark">в</span><span>все вещи<span className="brand-period">.</span></span></Link><div className="side-label">МОЯ КОЛЛЕКЦИЯ</div><Link className="nav-link active" href="/">← К списку вещей</Link><div className="sidebar-bottom"><span className="status-dot"/>Локальное хранилище<div className="privacy-note">Данные остаются на этом устройстве</div></div></aside>
-    <section className="main-content"><header className="topbar"><div className="breadcrumb"><Link href="/">Коллекция</Link><span>/</span>{val(data,"inventory_number")}</div></header><div className="content-wrap detail-wrap"><div className="eyebrow">КАРТОЧКА ВЕЩИ · {val(data,"inventory_number")}</div><h1>{val(data,"name")}</h1><p className="subtitle">UUID: {id}</p>
-      <section className="photo-detail-panel" aria-label="Фотография вещи">{photo ? <Image className="detail-photo" src={`/media/${id}/${photo.id}`} alt={`Фотография: ${val(data,"name")}`} width={photo.width} height={photo.height} unoptimized/> : <div className="detail-photo-placeholder">Фотография ещё не добавлена</div>}
-        {query.error === "photo" ? <p className="form-error" role="alert">Фотографию не удалось обработать или сохранить. Выберите JPEG, PNG или WebP размером до 10 МБ.</p> : null}
-        <form action={replacePhoto} className="photo-replace-form"><input type="hidden" name="id" value={id}/><label className="photo-upload-field"><span>{photo ? "Заменить фотографию" : "Добавить фотографию"}</span><input required type="file" name="photo" accept="image/jpeg,image/png,image/webp" capture="environment"/><small>JPEG, PNG или WebP · до 10 МБ</small></label><button className="quiet-button" type="submit">{photo ? "Заменить фото" : "Добавить фото"}</button></form>
-        {photo ? <details className="remove-photo-panel"><summary>Удалить фотографию</summary><form action={removePhoto}><input type="hidden" name="id" value={id}/><label><input required type="checkbox" name="confirm"/> Подтверждаю удаление фотографии</label><button className="delete-button" type="submit">Удалить фото</button></form></details> : null}
-      </section>
-      <form action={editItem} className="detail-panel"><input type="hidden" name="id" value={id}/><h2>Сведения</h2><div className="detail-grid">
-        <label className="field"><span>Название *</span><input required maxLength={160} name="name" defaultValue={val(data,"name")}/></label>
-        <label className="field"><span>Модель</span><input maxLength={160} name="model" defaultValue={val(data,"model")}/></label>
-        <label className="field"><span>Бренд</span><input maxLength={120} name="brand" defaultValue={val(data,"brand")}/></label>
-        <label className="field"><span>Категория</span><input maxLength={80} name="category" defaultValue={val(data,"category")}/></label>
-        <label className="field"><span>Оригинальная маркировка</span><input maxLength={160} name="originalMarking" defaultValue={val(data,"original_marking")}/></label>
-        <label className="field"><span>Статус определения</span><select name="identificationStatus" defaultValue={val(data,"identification_status")}>{statuses.map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
-        <label className="field"><span>Режим учёта</span><select name="trackingMode" defaultValue={val(data,"tracking_mode")}><option value="unique">Уникальная вещь</option><option value="bulk">Штучный запас</option><option value="consumable">Расходный материал</option></select></label>
-        <label className="field"><span>План продажи · только для вас</span><select name="saleIntent" defaultValue={val(data,"sale_intent")}><option value="not_for_sale">Не планирую продавать</option><option value="considering">Рассматриваю продажу</option><option value="willing_to_sell">Готов продать лично</option></select></label>
-        <label className="field"><span>Цена · сумма в выбранной валюте</span><input type="number" min="0" step="0.01" name="askingPrice" defaultValue={data.asking_price_minor == null ? "" : (Number(data.asking_price_minor)/100).toFixed(2)}/></label>
-        <label className="field"><span>Валюта</span><select name="askingCurrency" defaultValue={val(data,"asking_currency") || "RUB"}><option value="RUB">RUB</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="HUF">HUF</option></select></label>
-        <label className="field full-field"><span>Описание</span><textarea name="description" maxLength={4000} defaultValue={val(data,"description")}/></label>
-        <label className="field full-field"><span>Заметки</span><textarea name="notes" maxLength={2000} defaultValue={val(data,"notes")}/></label>
-      </div><button className="add-button" type="submit">Сохранить изменения</button></form>
-      <form action={updateStock} className="detail-panel"><input type="hidden" name="id" value={id}/><h2>Количество и места хранения</h2><p className="list-caption">Одна запись на строку: место хранения | количество. Оставьте место пустым для общего запаса.</p><label className="field"><span>Сейчас всего: {val(data,"quantity")}</span><textarea className="stock-textarea" name="stock" defaultValue={stockText} placeholder={'Шкаф A | 3\nЯщик 2 | 5'} /></label><button className="quiet-button" type="submit">Сохранить запас</button></form>
-      <details className="delete-panel"><summary>Удалить вещь</summary><form action={removeItem}><input type="hidden" name="id" value={id}/><label><input required type="checkbox" name="confirm"/> Подтверждаю удаление этой вещи и её записей о запасе</label><button className="delete-button" type="submit">Удалить без возможности отмены</button></form></details>
-      <p className="list-caption">Добавлена: {val(data,"created_at")} · Изменена: {val(data,"updated_at")}</p>
-    </div></section></main>;
+  const locations = item.stock.map((entry) => entry.location).filter((name): name is string => Boolean(name));
+  const draft = {
+    name: val(data, "name"), model: val(data, "model"), brand: val(data, "brand"), category: val(data, "category"),
+    originalMarking: val(data, "original_marking"), identificationStatus: val(data, "identification_status") || "unknown",
+    trackingMode: val(data, "tracking_mode") || "unique", saleIntent: val(data, "sale_intent") || "not_for_sale",
+    askingPrice: data.asking_price_minor == null ? "" : (Number(data.asking_price_minor) / 100).toFixed(2),
+    askingCurrency: val(data, "asking_currency") || "RUB", description: val(data, "description"), notes: val(data, "notes"),
+  };
+  return <main className="app-shell">
+    <AppSidebar active="items" itemCount={allItems.length} collectionCount={collections.length}/>
+    <section className="main-content"><header className="topbar"><div className="breadcrumb"><Link href="/">Все вещи</Link><span>/</span>{val(data, "inventory_number")}</div></header>
+      <div className="content-wrap detail-wrap">
+        <div className="eyebrow">ИНВЕНТАРНЫЙ НОМЕР · {val(data, "inventory_number")}</div>
+        <div className="item-hero"><div><h1>{val(data, "name")}</h1><p className="subtitle">{[val(data, "brand"), val(data, "model")].filter(Boolean).join(" · ") || "Личная опись"}</p></div><span className="item-number-badge">{val(data, "inventory_number")}</span></div>
+        <section className="item-summary" aria-label="Краткая информация">
+          <div><span>Всего</span><strong>{val(data, "quantity")}</strong></div>
+          <div><span>Места хранения</span><strong>{locations.length ? locations.join(", ") : "Не указаны"}</strong></div>
+          <div><span>Категория</span><strong>{val(data, "category") || "Не указана"}</strong></div>
+        </section>
+        <section className="photo-detail-panel" aria-label="Фотография вещи">
+          {photo ? <Image className="detail-photo" src={`/media/${id}/${photo.id}`} alt={`Фотография: ${val(data, "name")}`} width={photo.width} height={photo.height} unoptimized/> : <div className="compact-photo-placeholder"><span aria-hidden="true">Фото</span><p>Фотографии ещё нет</p></div>}
+          <PhotoReplacement itemId={id} photoUrl={photo ? `/media/${id}/${photo.id}` : null}/>
+          {photo ? <details className="remove-photo-panel"><summary>Удалить фотографию</summary><form action={removePhoto}><input type="hidden" name="id" value={id}/><label><input required type="checkbox" name="confirm"/> Подтверждаю удаление фотографии</label><button className="delete-button" type="submit">Удалить фото</button></form></details> : null}
+        </section>
+        <ItemEditForm itemId={id} initial={draft}/>
+        <StockEditor itemId={id} initialRows={item.stock} trackingMode={val(data, "tracking_mode")}/>
+        <CollectionMembership itemId={id} collections={collections.map(({ id: collectionId, name }) => ({ id: collectionId, name }))} memberships={memberships}/>
+        <details className="advanced-fields technical-details"><summary>Технические сведения</summary><dl><div><dt>Идентификатор</dt><dd>{id}</dd></div><div><dt>Добавлена</dt><dd>{val(data, "created_at")}</dd></div><div><dt>Изменена</dt><dd>{val(data, "updated_at")}</dd></div></dl></details>
+        <details className="delete-panel"><summary>Удалить вещь</summary><form action={removeItem}><input type="hidden" name="id" value={id}/><p>Будут удалены карточка, записи о запасе и фотографии.</p><label><input required type="checkbox" name="confirm"/> Подтверждаю удаление этой вещи</label><button className="delete-button" type="submit">Удалить вещь без возможности отмены</button></form></details>
+      </div>
+    </section>
+  </main>;
 }

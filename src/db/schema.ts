@@ -59,6 +59,26 @@ export const mediaAssets = sqliteTable("media_assets", {
   uniqueIndex("media_assets_one_primary_per_item_idx").on(table.itemId).where(sql`${table.isPrimary} = 1`),
 ]);
 
+export const collections = sqliteTable("collections", {
+  id: text("id").primaryKey(),
+  workspaceId: text("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  normalizedName: text("normalized_name").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  uniqueIndex("collections_workspace_name_idx").on(table.workspaceId, table.normalizedName),
+]);
+
+export const itemCollectionMemberships = sqliteTable("item_collection_memberships", {
+  id: text("id").primaryKey(),
+  collectionId: text("collection_id").notNull().references(() => collections.id, { onDelete: "cascade" }),
+  itemId: text("item_id").notNull().references(() => items.id, { onDelete: "cascade" }),
+  createdAt: text("created_at").notNull(),
+}, (table) => [
+  uniqueIndex("item_collection_memberships_pair_idx").on(table.itemId, table.collectionId),
+]);
+
 export const migrationLog = sqliteTable("_all_items_migrations", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull().unique(),

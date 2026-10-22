@@ -39,6 +39,7 @@ const itemListFilters = z.object({
   status: z.enum(["unknown", "user_confirmed", "source_verified"]).optional(),
   sort: z.enum(["date", "name", "quantity"]).optional(),
   direction: z.enum(["asc", "desc"]).optional(),
+  collectionId: z.string().uuid().optional(),
 });
 
 function rowObject(row: Record<string, unknown>) { return row; }
@@ -94,7 +95,7 @@ export async function createItem(input: ItemFields) {
   });
 }
 
-export async function listItems(filters: { search?: string; category?: string; status?: string; sort?: string; direction?: string } = {}) {
+export async function listItems(filters: { search?: string; category?: string; status?: string; sort?: string; direction?: string; collectionId?: string } = {}) {
   const parsedFilters = itemListFilters.parse(filters);
   const { db, workspaceId } = await initializeWorkspace();
   const search = parsedFilters.search || "";
@@ -106,6 +107,10 @@ export async function listItems(filters: { search?: string; category?: string; s
   }
   if (parsedFilters.category) { clauses.push("i.category = ?"); args.push(parsedFilters.category); }
   if (parsedFilters.status) { clauses.push("i.identification_status = ?"); args.push(parsedFilters.status); }
+  if (parsedFilters.collectionId) {
+    clauses.push("EXISTS (SELECT 1 FROM item_collection_memberships icm INNER JOIN collections c ON c.id = icm.collection_id WHERE icm.item_id = i.id AND c.id = ? AND c.workspace_id = i.workspace_id)");
+    args.push(parsedFilters.collectionId);
+  }
   const order = parsedFilters.sort === "name" ? "i.name" : parsedFilters.sort === "quantity" ? "quantity" : "i.created_at";
   const direction = parsedFilters.direction === "asc" ? "ASC" : "DESC";
   const result = await db.$client.execute({

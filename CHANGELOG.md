@@ -1,6 +1,14 @@
 # Changelog
 
-## Unreleased — M2A
+## Unreleased — M2B
+
+- Added reusable camera/file photo acquisition with previews, retry, pending feedback, and replacement-safe media state.
+- Replaced the pipe-delimited stock editor with labeled location and numeric quantity rows and a live total.
+- Improved item summary and progressive disclosure for advanced/private details.
+- Added workspace-owned collections, many-to-many item membership, navigation, and collection search/filter/sort.
+- Added product design references, UX principles, interaction patterns, gamification concept, marketplace concept, and an opportunity register.
+
+## M2A — Private photos and photo-first inventory
 
 - Added a private media table and ordered migration without rewriting existing inventory rows.
 - Added photo-only creation, identifier-checked media delivery, thumbnails, replacement, removal, and item-delete cleanup.

@@ -6,6 +6,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import sharp from "sharp";
 import { applyMigrations } from "@/db/migrate";
+import { addItemToCollection, createCollection, deleteCollection, getCollection, listCollections, listItemCollections, removeItemFromCollection, renameCollection } from "@/items/collections";
 import { createItem, deleteItem, getItem, listItems, saveStock, updateItem, itemFields, photoFirstItemValues } from "./service";
 import { createItemWithPhoto, deleteItemWithMedia, getNormalizedPhotoForAnalysis, getPrimaryPhoto, MAX_IMAGE_BYTES, readPrimaryPhoto, removePrimaryPhoto, replacePrimaryPhoto } from "@/media/service";
 
@@ -75,7 +76,51 @@ describe("M1 inventory", () => {
   it("applies migrations repeatedly without duplicating schema", async () => {
     await applyMigrations(client, migrations);
     const names = await client.execute("SELECT name FROM _all_items_migrations ORDER BY name");
-    expect(names.rows.map((row) => row.name)).toEqual(["0001_foundation", "0002_inventory_management", "0003_private_media"]);
+    expect(names.rows.map((row) => row.name)).toEqual(["0001_foundation", "0002_inventory_management", "0003_private_media", "0004_collections"]);
+  });
+});
+
+describe("collections", () => {
+  it("creates, renames, filters, supports multiple memberships, and deletes without deleting items or photos", async () => {
+    const source = await sharp({ create: { width: 48, height: 36, channels: 3, background: "#47652e" } }).jpeg().toBuffer();
+    const item = await createItemWithPhoto({ name: "Collection fixture" }, new File([new Uint8Array(source)], "collection.jpg", { type: "image/jpeg" }));
+    const first = await createCollection({ name: "  Робототехника  " });
+    const second = await createCollection({ name: "Домашняя мастерская" });
+    await expect(createCollection({ name: "робототехника" })).rejects.toThrow("уже есть");
+    await addItemToCollection(first.id, item.id);
+    await addItemToCollection(first.id, item.id);
+    await addItemToCollection(second.id, item.id);
+    expect(await listItemCollections(item.id)).toHaveLength(2);
+    expect((await listItems({ collectionId: first.id })).map((row) => row.id)).toContain(item.id);
+    expect(Number((await listCollections()).find((collection) => collection.id === first.id)?.itemCount)).toBe(1);
+
+    await renameCollection(first.id, { name: "Мои роботы" });
+    expect((await getCollection(first.id))?.name).toBe("Мои роботы");
+    await removeItemFromCollection(first.id, item.id);
+    expect((await listItemCollections(item.id)).map((collection) => collection.id)).toEqual([second.id]);
+
+    const photo = await getPrimaryPhoto(item.id);
+    expect(await deleteCollection(second.id)).toBe(true);
+    expect(await getCollection(second.id)).toBeNull();
+    expect(await getItem(item.id)).not.toBeNull();
+    expect((await listItems()).map((row) => row.id)).toContain(item.id);
+    expect((await listItemCollections(item.id))).toHaveLength(0);
+    expect((await readPrimaryPhoto(item.id, photo!.id, "image"))?.byteLength).toBeGreaterThan(0);
+  });
+
+  it("isolates collection and item membership to the local workspace", async () => {
+    const foreignWorkspace = "00000000-0000-4000-8000-000000000099";
+    const foreignItem = "00000000-0000-4000-8000-000000000098";
+    const foreignCollection = "00000000-0000-4000-8000-000000000097";
+    await client.execute({ sql: "INSERT INTO workspaces (id, name, created_at) VALUES (?, ?, ?)", args: [foreignWorkspace, "Other test workspace", "2025-01-01T00:00:00.000Z"] });
+    await client.execute({ sql: `INSERT INTO items (id, workspace_id, name, model, inventory_number, identification_status, tracking_mode, sale_intent, created_at, updated_at) VALUES (?, ?, ?, NULL, ?, 'unknown', 'bulk', 'not_for_sale', ?, ?)`, args: [foreignItem, foreignWorkspace, "Other workspace item", "INV-000001", "2025-01-02T00:00:00.000Z", "2025-01-02T00:00:00.000Z"] });
+    await client.execute({ sql: "INSERT INTO collections (id, workspace_id, name, normalized_name, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", args: [foreignCollection, foreignWorkspace, "Other collection", "other collection", "2025-01-01T00:00:00.000Z", "2025-01-01T00:00:00.000Z"] });
+    const localItem = await createItem({ name: "Local workspace item", trackingMode: "bulk" });
+    const localCollection = await createCollection({ name: "Local collection" });
+    await expect(addItemToCollection(localCollection.id, foreignItem)).rejects.toThrow("Вещь не найдена");
+    await expect(addItemToCollection(foreignCollection, localItem.id)).rejects.toThrow("Коллекция не найдена");
+    await expect(client.execute({ sql: "INSERT INTO item_collection_memberships (id, collection_id, item_id, created_at) VALUES (?, ?, ?, ?)", args: ["00000000-0000-4000-8000-000000000096", localCollection.id, foreignItem, "2025-01-03T00:00:00.000Z"] })).rejects.toThrow("same workspace");
+    expect(await getCollection(foreignCollection)).toBeNull();
   });
 });
 
@@ -113,7 +158,7 @@ describe("private image storage", () => {
     await expect(replacePrimaryPhoto(created.id, invalid)).rejects.toThrow("Не удалось прочитать");
     expect((await getPrimaryPhoto(created.id))?.id).toBe(current?.id);
     const oversized = new File([new Uint8Array(MAX_IMAGE_BYTES + 1)], "large.jpg", { type: "image/jpeg" });
-    await expect(replacePrimaryPhoto(created.id, oversized)).rejects.toThrow("не более 10 МБ");
+    await expect(replacePrimaryPhoto(created.id, oversized)).rejects.toThrow("не более 10 МиБ");
     const wide = await sharp({ create: { width: 12001, height: 1, channels: 3, background: "#000000" } }).png().toBuffer();
     await expect(replacePrimaryPhoto(created.id, new File([new Uint8Array(wide)], "wide.png", { type: "image/png" }))).rejects.toThrow("12 000");
     await expect(readPrimaryPhoto("../../outside", current!.id, "image")).rejects.toThrow();

@@ -1,27 +1,28 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Boxes, Plus, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { listItems } from "@/items/service";
-import { addItem } from "./actions";
+import { listCollections } from "@/items/collections";
+import { AppSidebar } from "@/app/components/app-sidebar";
+import { AddItemForm } from "@/app/components/add-item-form";
+import { formatRussianCount } from "@/app/format-count";
 
 export const dynamic = "force-dynamic";
-type Props = { searchParams: Promise<{ q?: string; category?: string; status?: string; sort?: string; error?: string }> };
+type Props = { searchParams: Promise<{ q?: string; category?: string; status?: string; sort?: string }> };
 const statusLabels: Record<string, string> = { unknown: "Не определён", user_confirmed: "Подтверждён", source_verified: "Проверен по источнику" };
 
 export default async function Home({ searchParams }: Props) {
   const params = await searchParams;
-  const items = await listItems({ search: params.q, category: params.category || undefined, status: params.status || undefined, sort: params.sort });
+  const [items, collections] = await Promise.all([
+    listItems({ search: params.q, category: params.category || undefined, status: params.status || undefined, sort: params.sort }),
+    listCollections(),
+  ]);
   return <main className="app-shell">
-    <aside className="sidebar"><Link className="brand" href="/" aria-label="Все вещи — главная"><span className="brand-mark">в</span><span>все вещи<span className="brand-period">.</span></span></Link><div className="side-label">МОЯ КОЛЛЕКЦИЯ</div><Link className="nav-link active" href="/"><Boxes size={15} aria-hidden="true" />Все вещи<span className="nav-count">{items.length}</span></Link><div className="sidebar-bottom"><span className="status-dot" />Локальное хранилище<div className="privacy-note">Данные остаются на этом устройстве</div></div></aside>
+    <AppSidebar active="items" itemCount={items.length} collectionCount={collections.length}/>
     <section className="main-content"><header className="topbar"><div className="breadcrumb">Коллекция <span>/</span> Все вещи</div></header>
-      <div className="content-wrap"><div className="heading-row"><div><div className="eyebrow">ВАША КОЛЛЕКЦИЯ</div><h1>Все вещи</h1><p className="subtitle">Личная опись того, что у вас есть.</p></div><div className="total-badge"><span>{items.length}</span> {items.length === 1 ? "вещь" : "вещей"}</div></div>
+      <div className="content-wrap"><div className="heading-row"><div><div className="eyebrow">ВАША КОЛЛЕКЦИЯ</div><h1>Все вещи</h1><p className="subtitle">Личная опись того, что у вас есть.</p></div><div className="total-badge">{formatRussianCount(items.length, "вещь", "вещи", "вещей")}</div></div>
         <section className="add-panel photo-first-panel"><div className="panel-intro"><div><h2>Добавить вещь</h2><p>Сфотографируйте предмет или заполните название. Можно начать только с фотографии.</p></div></div>
-          {params.error ? <p className="form-error" role="alert">{params.error === "photo-or-name" ? "Добавьте фотографию или укажите название вещи." : params.error === "photo" ? "Фотографию не удалось сохранить. Проверьте формат и размер файла (до 10 МБ)." : "Проверьте заполненные данные и попробуйте ещё раз."}</p> : null}
-          <form action={addItem} className="photo-add-form">
-            <label className="photo-upload-field"><span>Фотография предмета</span><input type="file" name="photo" accept="image/jpeg,image/png,image/webp" capture="environment"/><small>JPEG, PNG или WebP · до 10 МБ · фото хранится только на этом устройстве</small></label>
-            <div className="photo-add-fields"><label className="field"><span>Модель или маркировка</span><input name="model" placeholder="Например, R3" maxLength={160}/></label><label className="field"><span>Название <em>можно оставить пустым при добавлении фото</em></span><input name="name" placeholder="Например, плата Arduino Uno" maxLength={160}/></label><label className="field"><span>Бренд</span><input name="brand" placeholder="Производитель" maxLength={120}/></label><label className="field"><span>Категория</span><input name="category" placeholder="Например, электроника" maxLength={80}/></label><label className="field"><span>Оригинальная маркировка</span><input name="originalMarking" placeholder="Маркировка на корпусе" maxLength={160}/></label></div>
-            <input type="hidden" name="trackingMode" value="unique"/><button className="add-button" type="submit"><Plus size={14} aria-hidden="true"/> Добавить</button>
-          </form>
+          <AddItemForm/>
         </section>
         <form className="filter-bar" method="get"><label className="search-field"><Search size={15}/><input name="q" defaultValue={params.q} placeholder="Название, модель, бренд, маркировка или заметки" maxLength={160}/></label><input name="category" defaultValue={params.category} placeholder="Категория"/><select name="status" defaultValue={params.status ?? ""}><option value="">Любой статус</option>{Object.entries(statusLabels).map(([key,value])=><option value={key} key={key}>{value}</option>)}</select><select name="sort" defaultValue={params.sort ?? "date"}><option value="date">Сначала новые</option><option value="name">По названию</option><option value="quantity">По количеству</option></select><button className="quiet-button">Найти</button></form>
         <div className="list-heading"><div><h2>Инвентарь</h2><span className="list-caption">Поиск охватывает названия, модели, маркировку, бренд и заметки</span></div><span className="list-total">{String(items.length).padStart(2,"0")}</span></div>
