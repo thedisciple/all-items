@@ -19,6 +19,15 @@ export const itemFields = z.object({
 });
 export type ItemFields = z.input<typeof itemFields>;
 
+export function photoFirstItemValues(input: ItemFields, hasPhoto: boolean): ItemFields {
+  const suppliedName = input.name.trim();
+  return {
+    ...input,
+    name: suppliedName || (hasPhoto ? "Неизвестный предмет" : ""),
+    identificationStatus: suppliedName ? input.identificationStatus : "unknown",
+  };
+}
+
 export const stockInput = z.array(z.object({
   location: z.string().trim().max(120).optional().transform((value) => value || ""),
   quantity: z.coerce.number().int().min(0).max(1000000),
@@ -100,18 +109,21 @@ export async function listItems(filters: { search?: string; category?: string; s
   const order = parsedFilters.sort === "name" ? "i.name" : parsedFilters.sort === "quantity" ? "quantity" : "i.created_at";
   const direction = parsedFilters.direction === "asc" ? "ASC" : "DESC";
   const result = await db.$client.execute({
-    sql: `SELECT i.id, i.name, i.model, i.brand, i.category, i.original_marking, i.inventory_number, i.identification_status, i.tracking_mode, i.created_at AS createdAt, COALESCE(SUM(s.quantity), 0) AS quantity, GROUP_CONCAT(DISTINCT l.name) AS locations
+    sql: `SELECT i.id, i.name, i.model, i.brand, i.category, i.original_marking, i.inventory_number, i.identification_status, i.tracking_mode, i.created_at AS createdAt, COALESCE(SUM(s.quantity), 0) AS quantity, GROUP_CONCAT(DISTINCT l.name) AS locations,
+                 (SELECT m.id FROM media_assets m WHERE m.item_id = i.id AND m.is_primary = 1 LIMIT 1) AS primary_media_id
           FROM items i LEFT JOIN stock_entries s ON s.item_id = i.id LEFT JOIN locations l ON l.id = s.location_id
           WHERE ${clauses.join(" AND ")} GROUP BY i.id ORDER BY ${order} ${direction}, i.id ASC`, args,
   });
   return result.rows.map((row) => rowObject(row as Record<string, unknown>));
 }
 
-export async function getItem(id: string) {
+export async function getItem(id: string): Promise<(Record<string, unknown> & { stock: Array<{ quantity: number; location: string | null }> }) | null> {
   id = itemIdInput.parse(id);
   const { db, workspaceId } = await initializeWorkspace();
   const result = await db.$client.execute({
-    sql: `SELECT i.*, COALESCE(SUM(s.quantity), 0) AS quantity FROM items i LEFT JOIN stock_entries s ON s.item_id = i.id WHERE i.workspace_id = ? AND i.id = ? GROUP BY i.id`,
+    sql: `SELECT i.*, COALESCE(SUM(s.quantity), 0) AS quantity,
+                 (SELECT m.id FROM media_assets m WHERE m.item_id = i.id AND m.is_primary = 1 LIMIT 1) AS primary_media_id
+          FROM items i LEFT JOIN stock_entries s ON s.item_id = i.id WHERE i.workspace_id = ? AND i.id = ? GROUP BY i.id`,
     args: [workspaceId, id],
   });
   if (!result.rows.length) return null;

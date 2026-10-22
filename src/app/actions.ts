@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { createItem, deleteItem, saveStock, updateItem, type ItemFields } from "@/items/service";
+import { createItem, photoFirstItemValues, saveStock, updateItem, type ItemFields } from "@/items/service";
+import { createItemWithPhoto, deleteItemWithMedia, removePrimaryPhoto, replacePrimaryPhoto } from "@/media/service";
 
 function formValues(formData: FormData) {
   return {
@@ -17,9 +18,42 @@ function formValues(formData: FormData) {
 }
 
 export async function addItem(formData: FormData) {
-  const item = await createItem(formValues(formData) as ItemFields);
+  const uploaded = formData.get("photo");
+  const file = uploaded instanceof File && uploaded.size > 0 ? uploaded : null;
+  const values = photoFirstItemValues(formValues(formData) as ItemFields, file !== null);
+  const name = values.name.trim();
+  if (!name && !file) redirect("/?error=photo-or-name");
+  let item: { id: string };
+  try {
+    item = file
+      ? await createItemWithPhoto(values as ItemFields, file)
+      : await createItem(values as ItemFields);
+  } catch {
+    redirect(file ? "/?error=photo" : "/?error=validation");
+  }
   revalidatePath("/");
   redirect(`/items/${item.id}`);
+}
+
+export async function replacePhoto(formData: FormData) {
+  const id = z.string().uuid().parse(String(formData.get("id") ?? ""));
+  const file = formData.get("photo");
+  let failed = false;
+  if (!(file instanceof File) || file.size === 0) failed = true;
+  else {
+    try { await replacePrimaryPhoto(id, file); }
+    catch { failed = true; }
+  }
+  revalidatePath("/"); revalidatePath(`/items/${id}`);
+  redirect(`/items/${id}${failed ? "?error=photo" : ""}`);
+}
+
+export async function removePhoto(formData: FormData) {
+  const id = z.string().uuid().parse(String(formData.get("id") ?? ""));
+  z.literal("on", { error: "Подтвердите удаление фотографии" }).parse(formData.get("confirm"));
+  await removePrimaryPhoto(id);
+  revalidatePath("/"); revalidatePath(`/items/${id}`);
+  redirect(`/items/${id}`);
 }
 
 export async function editItem(formData: FormData) {
@@ -45,7 +79,7 @@ export async function updateStock(formData: FormData) {
 export async function removeItem(formData: FormData) {
   const id = z.string().uuid().parse(String(formData.get("id") ?? ""));
   z.literal("on", { error: "Подтвердите удаление вещи" }).parse(formData.get("confirm"));
-  await deleteItem(id);
+  await deleteItemWithMedia(id);
   revalidatePath("/");
   redirect("/");
 }

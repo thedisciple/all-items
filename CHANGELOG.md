@@ -1,9 +1,10 @@
 # Changelog
 
-## Unreleased — M1
+## Unreleased — M2A
 
-- Added item details, editing, and confirmed deletion while preserving item UUIDs.
-- Added sequential workspace inventory numbers, stock quantities, locations, tracking modes, search, filters, and sorting.
-- Added private sale intent and asking price fields. No public listing is created.
-- Added transactional, ordered migrations and made builds independent of the configured user database.
-- Hardened default data paths and ignore rules for generated and private files.
+- Added a private media table and ordered migration without rewriting existing inventory rows.
+- Added photo-only creation, identifier-checked media delivery, thumbnails, replacement, removal, and item-delete cleanup.
+- Added server-side JPEG, PNG, and WebP validation and metadata-stripped WebP output.
+- Added photo-first inventory creation, thumbnails in inventory rows, and full-size item photos.
+- Kept photos, thumbnails, and the database under the configured data directory, outside Git and the public directory.
+- Removed the decorative plus beside the add form heading; the add button is the only plus action.

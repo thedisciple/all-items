@@ -1,21 +1,30 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getItem } from "@/items/service";
-import { editItem, removeItem, updateStock } from "@/app/actions";
+import { getPrimaryPhoto } from "@/media/service";
+import { editItem, removeItem, removePhoto, replacePhoto, updateStock } from "@/app/actions";
 
 export const dynamic = "force-dynamic";
-type Props = { params: Promise<{ id: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string }> };
 const val = (item: Record<string, unknown>, key: string) => item[key] == null ? "" : String(item[key]);
 const statuses = [["unknown","Не определён"],["user_confirmed","Подтверждён мной"],["source_verified","Проверен по источнику"]];
 
-export default async function ItemPage({ params }: Props) {
+export default async function ItemPage({ params, searchParams }: Props) {
   const { id } = await params;
+  const query = await searchParams;
   const item = await getItem(id);
   if (!item) notFound();
+  const photo = await getPrimaryPhoto(id);
   const data = item as Record<string, unknown>;
   const stockText = (item.stock as Array<{ quantity: number; location: string | null }>).map((entry) => `${entry.location ?? ""} | ${entry.quantity}`).join("\n");
   return <main className="app-shell"><aside className="sidebar"><Link className="brand" href="/"><span className="brand-mark">в</span><span>все вещи<span className="brand-period">.</span></span></Link><div className="side-label">МОЯ КОЛЛЕКЦИЯ</div><Link className="nav-link active" href="/">← К списку вещей</Link><div className="sidebar-bottom"><span className="status-dot"/>Локальное хранилище<div className="privacy-note">Данные остаются на этом устройстве</div></div></aside>
     <section className="main-content"><header className="topbar"><div className="breadcrumb"><Link href="/">Коллекция</Link><span>/</span>{val(data,"inventory_number")}</div></header><div className="content-wrap detail-wrap"><div className="eyebrow">КАРТОЧКА ВЕЩИ · {val(data,"inventory_number")}</div><h1>{val(data,"name")}</h1><p className="subtitle">UUID: {id}</p>
+      <section className="photo-detail-panel" aria-label="Фотография вещи">{photo ? <Image className="detail-photo" src={`/media/${id}/${photo.id}`} alt={`Фотография: ${val(data,"name")}`} width={photo.width} height={photo.height} unoptimized/> : <div className="detail-photo-placeholder">Фотография ещё не добавлена</div>}
+        {query.error === "photo" ? <p className="form-error" role="alert">Фотографию не удалось обработать или сохранить. Выберите JPEG, PNG или WebP размером до 10 МБ.</p> : null}
+        <form action={replacePhoto} className="photo-replace-form"><input type="hidden" name="id" value={id}/><label className="photo-upload-field"><span>{photo ? "Заменить фотографию" : "Добавить фотографию"}</span><input required type="file" name="photo" accept="image/jpeg,image/png,image/webp" capture="environment"/><small>JPEG, PNG или WebP · до 10 МБ</small></label><button className="quiet-button" type="submit">{photo ? "Заменить фото" : "Добавить фото"}</button></form>
+        {photo ? <details className="remove-photo-panel"><summary>Удалить фотографию</summary><form action={removePhoto}><input type="hidden" name="id" value={id}/><label><input required type="checkbox" name="confirm"/> Подтверждаю удаление фотографии</label><button className="delete-button" type="submit">Удалить фото</button></form></details> : null}
+      </section>
       <form action={editItem} className="detail-panel"><input type="hidden" name="id" value={id}/><h2>Сведения</h2><div className="detail-grid">
         <label className="field"><span>Название *</span><input required maxLength={160} name="name" defaultValue={val(data,"name")}/></label>
         <label className="field"><span>Модель</span><input maxLength={160} name="model" defaultValue={val(data,"model")}/></label>

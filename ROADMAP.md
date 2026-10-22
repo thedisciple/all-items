@@ -14,11 +14,16 @@
 - [x] Stock entries, quantities, and multiple locations
 - [x] Tracking modes, search, filters, sorting, and private sale intent
 
-## M2 — Media and collections
+## M2A — Private photos and photo-first inventory
 
-- [ ] Validated private local images and thumbnails
-- [ ] Collections and responsive item cards/list
-- [ ] Unidentified object workflow
+- [x] Validated local JPEG, PNG, and WebP input with server-side WebP normalization
+- [x] Private image and thumbnail storage, controlled media routes, replace/remove lifecycle
+- [x] Photo-first creation for unidentified objects and responsive photo rows/details
+
+## M2B — Collections
+
+- [ ] Collections and collection membership
+- [ ] Collection views and collection-specific filters
 
 ## M3 — Portability and recovery
 
@@ -32,4 +37,4 @@
 - [ ] Optional authenticated LAN access, only if secure implementation is complete
 - [ ] CI, synthetic-data screenshots, and release preparation
 
-AI, marketplace, sharing, and synchronization remain future directions and are not part of M0.
+AI identification, marketplace, sharing, and synchronization remain future directions and are not part of M2A.

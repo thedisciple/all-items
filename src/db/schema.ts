@@ -1,4 +1,5 @@
 import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
 
 export const workspaces = sqliteTable("workspaces", {
   id: text("id").primaryKey(),
@@ -42,6 +43,21 @@ export const stockEntries = sqliteTable("stock_entries", {
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
+
+export const mediaAssets = sqliteTable("media_assets", {
+  id: text("id").primaryKey(),
+  itemId: text("item_id").notNull().references(() => items.id, { onDelete: "cascade" }),
+  storagePath: text("storage_path").notNull().unique(),
+  thumbnailPath: text("thumbnail_path").notNull().unique(),
+  originalFilename: text("original_filename").notNull(),
+  mimeType: text("mime_type").notNull(),
+  width: integer("width").notNull(),
+  height: integer("height").notNull(),
+  createdAt: text("created_at").notNull(),
+  isPrimary: integer("is_primary", { mode: "boolean" }).notNull().default(true),
+}, (table) => [
+  uniqueIndex("media_assets_one_primary_per_item_idx").on(table.itemId).where(sql`${table.isPrimary} = 1`),
+]);
 
 export const migrationLog = sqliteTable("_all_items_migrations", {
   id: integer("id").primaryKey({ autoIncrement: true }),

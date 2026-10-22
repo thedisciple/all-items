@@ -1,11 +1,13 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { createClient } from "@libsql/client";
-import { copyFile, mkdtemp, mkdir } from "node:fs/promises";
+import { access, copyFile, mkdtemp, mkdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import sharp from "sharp";
 import { applyMigrations } from "@/db/migrate";
-import { createItem, deleteItem, getItem, listItems, saveStock, updateItem, itemFields } from "./service";
+import { createItem, deleteItem, getItem, listItems, saveStock, updateItem, itemFields, photoFirstItemValues } from "./service";
+import { createItemWithPhoto, deleteItemWithMedia, getNormalizedPhotoForAnalysis, getPrimaryPhoto, MAX_IMAGE_BYTES, readPrimaryPhoto, removePrimaryPhoto, replacePrimaryPhoto } from "@/media/service";
 
 const migrations = path.join(process.cwd(), "src/db/migrations");
 let directory = "";
@@ -28,6 +30,7 @@ beforeAll(async () => {
 describe("M1 inventory", () => {
   it("validates item fields and trims user input", () => {
     expect(itemFields.parse({ name: "  Вольтметр  " }).name).toBe("Вольтметр");
+    expect(photoFirstItemValues({ name: "", model: " HC-12 " }, true)).toMatchObject({ name: "Неизвестный предмет", model: " HC-12 ", identificationStatus: "unknown" });
     expect(() => itemFields.parse({ name: "  " })).toThrow();
     expect(itemFields.parse({ name: "Тестер", saleIntent: "willing_to_sell" }).saleIntent).toBe("willing_to_sell");
   });
@@ -72,6 +75,74 @@ describe("M1 inventory", () => {
   it("applies migrations repeatedly without duplicating schema", async () => {
     await applyMigrations(client, migrations);
     const names = await client.execute("SELECT name FROM _all_items_migrations ORDER BY name");
-    expect(names.rows.map((row) => row.name)).toEqual(["0001_foundation", "0002_inventory_management"]);
+    expect(names.rows.map((row) => row.name)).toEqual(["0001_foundation", "0002_inventory_management", "0003_private_media"]);
+  });
+});
+
+describe("private image storage", () => {
+  it("accepts a photo-only item, normalizes orientation and strips EXIF, and makes a thumbnail", async () => {
+    const source = await sharp({ create: { width: 800, height: 600, channels: 3, background: { r: 160, g: 80, b: 30 } } })
+      .jpeg().withExif({ IFD0: { ImageDescription: "private fixture" }, IFD3: { GPSLatitudeRef: "N", GPSLatitude: "47/1 30/1 0/1" } }).toBuffer();
+    const file = new File([new Uint8Array(source)], "C:\\private\\camera.jpg", { type: "image/jpeg" });
+    const created = await createItemWithPhoto({ name: "Неизвестный предмет", model: "HC-12", trackingMode: "unique" }, file);
+    const item = await getItem(created.id);
+    const photo = await getPrimaryPhoto(created.id);
+    expect(item).toMatchObject({ name: "Неизвестный предмет", model: "HC-12", identification_status: "unknown" });
+    expect(photo).toMatchObject({ width: 800, height: 600 });
+    expect(item?.primary_media_id).toBe(photo?.id);
+
+    const full = await readPrimaryPhoto(created.id, photo!.id, "image");
+    const thumbnail = await readPrimaryPhoto(created.id, photo!.id, "thumbnail");
+    const fullMetadata = await sharp(full!).metadata();
+    const thumbnailMetadata = await sharp(thumbnail!).metadata();
+    expect(fullMetadata.format).toBe("webp");
+    expect(fullMetadata.exif).toBeUndefined();
+    expect(fullMetadata.width).toBeLessThanOrEqual(2400);
+    expect(thumbnailMetadata.width).toBeLessThanOrEqual(480);
+    expect((await getNormalizedPhotoForAnalysis(created.id))?.mimeType).toBe("image/webp");
+  });
+
+  it("rejects invalid, oversized, oversized-dimension, and path-traversal input without losing the current photo", async () => {
+    const source = await sharp({ create: { width: 80, height: 60, channels: 3, background: "#667788" } }).png().toBuffer();
+    const created = await createItemWithPhoto({ name: "Fixture with photo" }, new File([new Uint8Array(source)], "photo.png", { type: "image/png" }));
+    const current = await getPrimaryPhoto(created.id);
+    const invalid = new File(["not an image"], "bad.png", { type: "image/png" });
+    const priorItems = await listItems();
+    await expect(createItemWithPhoto({ name: "Неизвестный предмет" }, invalid)).rejects.toThrow();
+    expect(await listItems()).toHaveLength(priorItems.length);
+    await expect(replacePrimaryPhoto(created.id, invalid)).rejects.toThrow("Не удалось прочитать");
+    expect((await getPrimaryPhoto(created.id))?.id).toBe(current?.id);
+    const oversized = new File([new Uint8Array(MAX_IMAGE_BYTES + 1)], "large.jpg", { type: "image/jpeg" });
+    await expect(replacePrimaryPhoto(created.id, oversized)).rejects.toThrow("не более 10 МБ");
+    const wide = await sharp({ create: { width: 12001, height: 1, channels: 3, background: "#000000" } }).png().toBuffer();
+    await expect(replacePrimaryPhoto(created.id, new File([new Uint8Array(wide)], "wide.png", { type: "image/png" }))).rejects.toThrow("12 000");
+    await expect(readPrimaryPhoto("../../outside", current!.id, "image")).rejects.toThrow();
+    await expect(readPrimaryPhoto(created.id, "../../outside", "image")).rejects.toThrow();
+    await expect(readPrimaryPhoto(created.id, current!.id, "../../outside")).rejects.toThrow();
+  });
+
+  it("replaces and removes a photo, then deletes item media without leaving files", async () => {
+    const first = await sharp({ create: { width: 40, height: 30, channels: 3, background: "#335577" } }).jpeg().toBuffer();
+    const second = await sharp({ create: { width: 64, height: 48, channels: 4, background: { r: 10, g: 200, b: 90, alpha: 0.5 } } }).png().toBuffer();
+    const item = await createItemWithPhoto({ name: "Replace fixture" }, new File([new Uint8Array(first)], "first.jpg", { type: "image/jpeg" }));
+    const previous = await getPrimaryPhoto(item.id);
+    const directoryPath = path.join(directory, "media", "items", item.id);
+    const previousFile = path.join(directoryPath, `${previous!.id}.webp`);
+    await replacePrimaryPhoto(item.id, new File([new Uint8Array(second)], "replacement.png", { type: "image/png" }));
+    const current = await getPrimaryPhoto(item.id);
+    expect(current?.id).not.toBe(previous?.id);
+    expect(await readPrimaryPhoto(item.id, previous!.id, "image")).toBeNull();
+    await expect(access(previousFile)).rejects.toThrow();
+    expect((await sharp((await readPrimaryPhoto(item.id, current!.id, "image"))!).metadata()).hasAlpha).toBe(true);
+    expect(await removePrimaryPhoto(item.id)).toBe(true);
+    expect(await getPrimaryPhoto(item.id)).toBeNull();
+    expect(await removePrimaryPhoto(item.id)).toBe(false);
+
+    const withPhoto = await createItemWithPhoto({ name: "Delete fixture" }, new File([new Uint8Array(first)], "first.jpg", { type: "image/jpeg" }));
+    const attached = await getPrimaryPhoto(withPhoto.id);
+    const attachedFile = path.join(directory, "media", "items", withPhoto.id, `${attached!.id}.webp`);
+    await deleteItemWithMedia(withPhoto.id);
+    expect(await getItem(withPhoto.id)).toBeNull();
+    await expect(access(attachedFile)).rejects.toThrow();
   });
 });
