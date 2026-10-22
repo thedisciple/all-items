@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { PhotoCropper } from "./photo-cropper";
 
 const maxBytes = 10 * 1024 * 1024;
 const acceptedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -13,6 +14,8 @@ type Props = {
   savedToken?: string;
   resultToken?: string;
   retryReady?: boolean;
+  externalPreview?: boolean;
+  onPreviewChange?: (url: string | null) => void;
 };
 
 function cameraError(error: unknown) {
@@ -24,7 +27,7 @@ function cameraError(error: unknown) {
   return "Не удалось открыть камеру. Выберите фотографию из файлов.";
 }
 
-export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoSubmit = false, savedToken, resultToken, retryReady = false }: Props) {
+export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoSubmit = false, savedToken, resultToken, retryReady = false, externalPreview = false, onPreviewChange }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
@@ -34,6 +37,7 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
   const submittingRef = useRef(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [cropFile, setCropFile] = useState<File | null>(null);
   const [sourceOpen, setSourceOpen] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [cameraMessage, setCameraMessage] = useState("");
@@ -51,8 +55,9 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
     if (!savedToken) return;
     setSelectedFile(null);
     setPreviewUrl(null);
+    onPreviewChange?.(null);
     if (inputRef.current) inputRef.current.value = "";
-  }, [savedToken, resultToken]);
+  }, [savedToken, resultToken, onPreviewChange]);
 
   useEffect(() => {
     if (!stream || !videoRef.current) return;
@@ -107,13 +112,41 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
       return;
     }
     setSelectionError("");
+    closeSources();
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    onPreviewChange?.(null);
+    setCropFile(file);
+  }
+
+  function confirmCrop(file: File) {
+    setCropFile(null);
+    triggerRef.current?.focus();
     setInputFile(file);
     setSelectedFile(file);
-    setPreviewUrl(URL.createObjectURL(file));
-    closeSources();
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    onPreviewChange?.(url);
     if (autoSubmit && !submittingRef.current) {
       submittingRef.current = true;
       queueMicrotask(() => inputRef.current?.form?.requestSubmit());
+    }
+  }
+
+  async function editCurrentPhoto() {
+    if (!currentPhotoUrl) return;
+    setSelectionError("");
+    try {
+      const response = await fetch(currentPhotoUrl, { cache: "no-store" });
+      if (!response.ok) throw new Error("Photo unavailable");
+      const blob = await response.blob();
+      const file = new File([blob], "saved-photo.webp", { type: blob.type || "image/webp", lastModified: Date.now() });
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      onPreviewChange?.(null);
+      setCropFile(file);
+    } catch {
+      setSelectionError("Не удалось открыть сохранённую фотографию. Выберите файл для замены.");
     }
   }
 
@@ -163,11 +196,18 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
     setSelectedFile(null);
     setPreviewUrl(null);
     setSelectionError("");
+    onPreviewChange?.(null);
     submittingRef.current = false;
     if (inputRef.current) inputRef.current.value = "";
   }
 
-  const displayedUrl = previewUrl ?? currentPhotoUrl;
+  function cancelCrop() {
+    setCropFile(null);
+    clearSelection();
+    triggerRef.current?.focus();
+  }
+
+  const displayedUrl = externalPreview ? null : previewUrl ?? currentPhotoUrl;
 
   return <div className="photo-acquisition">
     <input ref={inputRef} className="visually-hidden" type="file" name={name} accept="image/jpeg,image/png,image/webp" capture="environment" aria-hidden="true" tabIndex={-1} disabled={pending} onChange={(event) => {
@@ -184,6 +224,7 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
       {selectedFile && !pending && !autoSubmit ? <button type="button" className="text-button" onClick={clearSelection}>Убрать выбранное фото</button> : null}
       {selectedFile && !pending && autoSubmit ? <button type="button" className="text-button" onClick={clearSelection}>Отменить выбор</button> : null}
       {selectedFile && retryReady && !pending ? <button type="button" className="quiet-button" onClick={() => { submittingRef.current = true; inputRef.current?.form?.requestSubmit(); }}>Повторить сохранение</button> : null}
+      {currentPhotoUrl && !pending && !selectedFile ? <button type="button" className="text-button" onClick={() => void editCurrentPhoto()}>Изменить кадр</button> : null}
     </div>
     {selectedFile ? <p className="photo-file-caption">Выбрано: {selectedFile.name} · {(selectedFile.size / (1024 * 1024)).toFixed(1)} МБ</p> : null}
     {selectionError ? <p className="form-error" role="alert">{selectionError}</p> : null}
@@ -208,5 +249,6 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
         </>}
       </section>
     </div> : null}
+    {cropFile ? <PhotoCropper file={cropFile} onConfirm={confirmCrop} onCancel={cancelCrop}/> : null}
   </div>;
 }

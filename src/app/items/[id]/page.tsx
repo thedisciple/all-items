@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
@@ -44,8 +43,7 @@ export default async function ItemPage({ params }: Props) {
           <div><span>Категория</span><strong>{item.category || "Не указана"}</strong></div>
         </section>
         <section className="photo-detail-panel" aria-label="Фотография вещи">
-          {photo ? <Image className="detail-photo" src={`/media/${id}/${photo.id}`} alt={`Фотография: ${item.name}`} width={photo.width} height={photo.height} unoptimized/> : <div className="compact-photo-placeholder"><span aria-hidden="true">Фото</span><p>Фотографии ещё нет</p></div>}
-          <PhotoReplacement itemId={id} photoUrl={photo ? `/media/${id}/${photo.id}` : null}/>
+          <PhotoReplacement itemId={id} photoUrl={photo ? `/media/${id}/${photo.id}?v=${photo.id}` : null} itemName={item.name}/>
           {photo ? <details className="remove-photo-panel"><summary>Удалить фотографию</summary><form action={removePhoto}><input type="hidden" name="id" value={id}/><label><input required type="checkbox" name="confirm"/> Подтверждаю удаление фотографии</label><button className="delete-button" type="submit">Удалить фото</button></form></details> : null}
         </section>
         <ItemEditForm itemId={id} initial={draft}/>
