@@ -52,17 +52,20 @@ Visual camera/cropper acceptance on a physical device was unavailable in the dev
 - [x] Preserve text, category, advanced values, and selected/cropped File state while the Add Item dialog is temporarily closed; confirm deliberate draft discard and keep retry data on save errors
 - [x] Save an item once, return to inventory with confirmation, and return from edits to a validated inventory or collection route
 - [x] Clarify Model and physical marking fields; move language selection to the top-right header and add restrained category emoji
-- [x] Replace handwritten crop selection with Cropper.js freeform handles, pan, smooth wheel/touch/slider zoom, aspect presets, 90-degree rotation, live output preview, and keyboard adjustment buttons
+- [x] Replace handwritten crop selection with Cropper.js freeform handles, pan, wheel/touch/slider zoom, aspect presets, 90-degree rotation, live output preview, and keyboard adjustment tools behind a disclosure
 - [x] Store a metadata-stripped editable source, crop parameters, display image, and thumbnail for newly processed photos; legacy photo rows remain intact and use their display image as fallback
 - [x] Create collections through a dialog; search and batch-add existing items; manage membership without copying or deleting inventory items
 - [x] Support explicit collection item-photo, private upload, emoji, and default covers; never auto-select a member photo
 - [x] Add Notion icon/cover organization research and update UX, interaction, privacy, and future annotation guidance
 
-The browser surface was unavailable in this environment, so visual cropper behavior and full end-to-end browser flows require manual follow-up. Automated and route/build verification is reported at delivery.
+M2D-R1 hardens Cropper.js readiness, zoom bounds, crop output validation, and original-image recovery. Real-browser verification is reported for the hotfix; physical touch-device acceptance remains separate.
 
 ## M3 — Portability and personal organization — NOT STARTED
 
-- [ ] Structured import/export with image data, archive validation, and integrity checks
+- [ ] Versioned ZIP inventory archive with JSON manifest/payload, relative media paths, and per-entry checksums; include item fields and identifiers, stock/locations, collections/memberships, categories/attributes, private sale intent, editable normalized photo sources, display images/thumbnails, crop metadata, covers/icons, and portable settings
+- [ ] Separate CSV export for spreadsheet interoperability; CSV does not replace the complete archive
+- [ ] Safe import with schema, archive-size, path, ZIP-slip, and ZIP-bomb validation; duplicate-ID policy; dry-run preview; empty-workspace restore; backup-before-replacement; staged writes, failure recovery, and integrity verification
+- [ ] Optional encrypted archive export as a future security enhancement
 - [ ] Backup and restore workflow; IndexedDB crash/reload recovery for drafts and photo Blobs (M2D only preserves drafts within the active app session)
 - [ ] Flexible item attributes and portable image paths
 - [ ] Favorites, pinned collections, recently used items, preferred view, and quick actions
@@ -77,6 +80,15 @@ The browser surface was unavailable in this environment, so visual cropper behav
 - [ ] Error-recovery, performance, responsive consistency, and microcopy reviews
 - [ ] CI, synthetic-data screenshots, and v0.1 release preparation
 - [ ] Optional authenticated LAN access only after server-side authentication and origin protections are complete
+
+## M3.5 — Private multi-user beta — NOT STARTED
+
+- [ ] Plan a 5–10 person invite-only pilot on a production-mode host with authenticated HTTPS access
+- [ ] Implement secure sessions, workspace-scoped authorization in every service and media route, and verify isolation between users
+- [ ] Add CSRF/origin protections, rate limits, upload limits, security headers, backup/recovery, and privacy-conscious feedback reporting
+- [ ] Migrate the owner's existing workspace safely and validate recovery before inviting testers
+- [ ] Keep development endpoints private; never expose the unauthenticated loopback app through a public tunnel
+- [ ] Consider Telegram OIDC as an optional identity provider with local authentication fallback; identity must not grant access to Telegram chats/files
 
 ## Future AI — NOT STARTED
 

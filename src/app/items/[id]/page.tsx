@@ -11,9 +11,10 @@ import { listCollections, listItemCollections } from "@/items/collections";
 import { getItem, listItems } from "@/items/service";
 import { getPrimaryPhoto } from "@/media/service";
 import { getLocale } from "@/i18n/server";
-import { formatDate, translate } from "@/i18n/messages";
+import { translate } from "@/i18n/messages";
 import { categoryEmoji, categoryKeyForStoredValue, categoryMessageKey } from "@/items/categories";
 import { LanguageSwitcher } from "@/app/components/language-switcher";
+import { Trash2 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ from?: string; updated?: string }> };
@@ -44,7 +45,6 @@ export default async function ItemPage({ params, searchParams }: Props) {
     <section className="main-content"><header className="topbar"><div className="breadcrumb"><Link href={returnTo}>{returnTo === "/" ? t("allItems") : t("collections")}</Link><span>/</span>{item.inventory_number}</div><LanguageSwitcher/></header>
       <div className="content-wrap detail-wrap">
         {query.updated ? <p className="inline-status success-status" role="status">{t("changesSaved")}</p> : null}
-        <div className="eyebrow">{t("itemNumber")} · {item.inventory_number}</div>
         <div className="item-hero"><div><h1>{item.name}</h1><p className="subtitle">{[item.brand, item.model].filter(Boolean).join(" · ") || t("noName")}</p></div><span className="item-number-badge">{item.inventory_number}</span></div>
         <section className="item-summary" aria-label={t("itemSummary")}>
           <div><span>{t("total")}</span><strong>{new Intl.NumberFormat(locale).format(item.quantity)}</strong></div>
@@ -53,13 +53,12 @@ export default async function ItemPage({ params, searchParams }: Props) {
         </section>
         <section className="photo-detail-panel" aria-label={t("photo")}>
           <PhotoReplacement itemId={id} photoUrl={photo ? `/media/${id}/${photo.id}?v=${photo.id}` : null} itemName={item.name}/>
-          {photo ? <details className="remove-photo-panel"><summary>{t("photoDelete")}</summary><form action={removePhoto}><input type="hidden" name="id" value={id}/><label><input required type="checkbox" name="confirm"/> {t("photoDeleteConfirm")}</label><button className="delete-button" type="submit">{t("photoDelete")}</button></form></details> : null}
+          {photo ? <details className="remove-photo-panel"><summary>{t("photoDelete")}</summary><form action={removePhoto}><input type="hidden" name="id" value={id}/><label><input required type="checkbox" name="confirm"/> {t("photoDeleteConfirm")}</label><button className="delete-button" type="submit"><Trash2 size={16} aria-hidden="true"/><span>{t("photoDelete")}</span></button></form></details> : null}
         </section>
         <ItemEditForm itemId={id} initial={draft} returnTo={returnTo}/>
         <StockEditor itemId={id} initialRows={item.stock} trackingMode={item.tracking_mode}/>
         <CollectionMembership itemId={id} collections={collections.map(({ id: collectionId, name }) => ({ id: collectionId, name }))} memberships={memberships}/>
-        <details className="advanced-fields technical-details"><summary>{t("technicalDetails")}</summary><dl><div><dt>{t("itemIdentifier")}</dt><dd>{id}</dd></div><div><dt>{t("dateAdded")}</dt><dd>{formatDate(locale, item.created_at)}</dd></div><div><dt>{t("dateUpdated")}</dt><dd>{formatDate(locale, item.updated_at)}</dd></div></dl></details>
-        <details className="delete-panel"><summary>{t("itemDelete")}</summary><form action={removeItem}><input type="hidden" name="id" value={id}/><p>{t("itemDeleteWarning")}</p><label><input required type="checkbox" name="confirm"/> {t("itemDeleteConfirm")}</label><button className="delete-button" type="submit">{t("itemDeleteFinal")}</button></form></details>
+        <details className="delete-panel"><summary>{t("itemDelete")}</summary><form action={removeItem}><input type="hidden" name="id" value={id}/><p>{t("itemDeleteWarning")}</p><label><input required type="checkbox" name="confirm"/> {t("itemDeleteConfirm")}</label><button className="delete-button" type="submit"><Trash2 size={16} aria-hidden="true"/><span>{t("itemDeleteFinal")}</span></button></form></details>
       </div>
     </section>
   </main>;

@@ -19,6 +19,8 @@ These principles apply to product decisions and code review. They summarize the 
 15. **Edit photos without losing the clean source.** Newly processed photos retain a normalized, metadata-stripped source plus the current display derivative and thumbnail. Keep operations such as crop/rotation as editable metadata where practical; never claim old cropped pixels can be restored.
 16. **Make collections useful from their own page.** Create through one focused dialog; search and batch-add existing items, and remove memberships without deleting items. Covers are explicit optional choices with a safe default.
 17. **Use symbols as visual anchors.** Map system-category emoji from stable category keys; keep text labels, accessible names, and consistent control geometry. Emoji help recognition but never carry meaning alone or appear beside a duplicate icon.
+18. **Keep media editing recoverable.** Do not call cropper operations until the decoded image is ready; validate dimensions, zoom, crop bounds, and encoded output. When processing fails, retain the selected file and offer the original image as an explicit path to finish item creation. Keep common crop actions compact, with keyboard adjustments disclosed rather than permanently displayed.
+19. **Keep the photo secondary to the item.** Show a compact, contained image beside useful item data; offer a larger viewer on demand. Deletion must be visually distinct from replace/edit controls and require clear confirmation.
 
 ## Practical acceptance questions
 

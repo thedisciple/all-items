@@ -34,7 +34,7 @@ Each row has a labeled location field, numeric quantity field, and remove-row bu
 
 ## Item details
 
-Lead with item name, inventory number, photo, total quantity, and location summary. Keep UUID, timestamps, sale intent, and long metadata below the primary summary or in advanced sections. Editing forms preserve their drafts on validation errors. Delete actions state what is deleted and require confirmation.
+Lead with item name, inventory number, compact contained photo, total quantity, and location summary. Open a larger photo in one lightbox image with a clear close control and Escape support; do not render a duplicate image. Keep UUID and technical metadata out of the ordinary detail flow; retain useful user-facing values and keep deletion actions explicit and confirmed. Editing forms preserve their drafts on validation errors.
 
 ## M2D item creation and photo editing
 
@@ -42,7 +42,7 @@ The Add Item dialog stays mounted while closed, so text fields, category/advance
 
 One Add submission creates the item and returns to inventory with confirmation and highlight. An edit returns to inventory or the validated collection it came from; cancel uses the same internal route. Model is the identified designation; Marking on device is the literal visible text and remains optional in Advanced Details.
 
-Cropper.js owns the resizable crop rectangle, edge/corner handles, freeform/aspect presets, image panning, wheel/touch zoom, and rotation. A continuous slider and keyboard-operable move/resize buttons provide alternatives. The output preview is visible before confirmation. Sharp normalizes the display derivative and thumbnail. New/replaced photos also keep a separate metadata-stripped editable source and crop operation data under private storage. Legacy photos have no source path and re-edit from their saved derivative, so pixels discarded before M2D remain unavailable. Failed replacement keeps the previous media record and files.
+Cropper.js manipulation waits for its `ready` event and validated image metrics. The resizable crop rectangle supports direct mouse/finger drag, edge/corner handles, freeform and Original/1:1/4:3/3:2/16:9 presets, image panning, wheel/touch/slider zoom, 90-degree rotation, and reset. Compact icon actions expose rotate/reset; keyboard move/resize controls are available in a disclosure rather than displayed permanently. The output preview is visible before confirmation. Invalid dimensions, crop coordinates, zoom values, canvas output, or destroyed instances produce a recoverable error; the selected File and draft remain available, and an explicit action continues with the original image. Sharp normalizes the display derivative and thumbnail. New/replaced photos also keep a separate metadata-stripped editable source and crop operation data under private storage. Legacy photos have no source path and re-edit from their saved derivative, so pixels discarded before M2D remain unavailable. Failed replacement keeps the previous media record and files.
 
 Future annotation operations should refer to normalized source coordinates and remain editable/reversible: pencil/brush, shapes, arrows, labels, redaction, highlights, and undo/redo. These are not implemented in M2D. A future AI flow may receive the clean source, current crop, highlighted area, and explicit instruction after a separate privacy review.
 

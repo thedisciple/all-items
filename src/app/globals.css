@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-:root { color-scheme: dark; --bg: #10110f; --panel: #171916; --line: #2a2d28; --text: #eeefe9; --muted: #858a80; --green: #c5f36b; }
+:root { color-scheme: dark; --bg: #10110f; --panel: #171916; --line: #2a2d28; --text: #eeefe9; --muted: #858a80; --green: #c5f36b; --danger-bg: #762f2a; --danger-hover: #913b34; --danger-text: #fff0ed; --danger-line: #d36a5d; }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 14px; }
 a { color: inherit; text-decoration: none; }
@@ -158,10 +158,6 @@ body { font-size: 15px; }
 .item-photo-viewer { display: grid; gap: 9px; min-width: 0; }
 .photo-unsaved-note { margin: 0; color: #f0cf8b; font-size: 12px; }
 .crop-dialog { width: min(100%, 760px); }
-.crop-help { margin: 0 0 12px; color: #aab19f; font-size: 13px; line-height: 1.45; }
-.crop-viewport { position: relative; width: 100%; height: min(58vh, 500px); min-height: 230px; overflow: hidden; border-radius: 8px; background: #090a08; touch-action: none; user-select: none; }
-.crop-source-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
-.crop-selection { position: absolute; border: 2px solid #f4f7eb; box-shadow: 0 0 0 9999px #05060580; cursor: move; touch-action: none; outline-offset: 3px; }
 .crop-zoom { display: grid; grid-template-columns: auto minmax(80px,1fr) 44px; align-items: center; gap: 12px; margin-top: 14px; color: #c5cbbd; font-size: 13px; }
 .crop-zoom input { width: 100%; accent-color: var(--green); }
 .crop-zoom output { text-align: right; font-variant-numeric: tabular-nums; }
@@ -173,9 +169,7 @@ body { font-size: 15px; }
 .crop-output-preview-wrap { display: grid; gap: 5px; color: #c5cbbd; font-size: 12px; }
 .crop-output-preview { width: 100%; height: 74px; overflow: hidden; border: 1px solid #454c3f; border-radius: 6px; background: #0c0d0b; }
 .crop-output-preview img { max-width: 100%; max-height: 72px; }
-.crop-accessibility-controls,.crop-nudge-group { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.crop-accessibility-controls { justify-content: space-between; margin-top: 12px; }
-.crop-nudge-group > span { width: 100%; color: #aeb5a2; font-size: 12px; }
+.crop-nudge-group { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .crop-nudge-button { min-height: 36px; border: 1px solid #454c3f; border-radius: 6px; background: #20241d; color: #e8eddf; padding: 5px 8px; font: inherit; font-size: 12px; cursor: pointer; }
 .item-row-highlight { border-color: #c5f36b; box-shadow: 0 0 0 2px #c5f36b2b; }
 .photo-replacement-form .detail-photo { width: auto; max-width: 100%; max-height: 560px; margin-inline: auto; }
@@ -317,4 +311,82 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
   .crop-viewport { height: min(48vh, 390px); min-height: 190px; }
   .crop-controls { grid-template-columns: 1fr; }
   .crop-output-preview { width: 140px; }
+}
+
+.side-navigation { margin-top: 34px; }
+.language-switcher { min-width: 166px; }
+.photo-acquisition-actions { gap: 8px; }
+.photo-acquisition-primary,.photo-acquisition-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; border: 1px solid transparent; border-radius: 7px; padding: 0 14px; font: inherit; font-size: 13px; font-weight: 620; cursor: pointer; transition: background-color .14s ease,border-color .14s ease,color .14s ease; }
+.photo-add-primary,.photo-edit-primary { color: #202516; background: var(--green); }
+.photo-add-primary:hover,.photo-edit-primary:hover { background: #d5ff83; }
+.photo-acquisition-secondary { color: #e4ecd9; background: #242820; border-color: #49513e; }
+.photo-acquisition-secondary:hover { background: #30372a; border-color: #697657; }
+.photo-acquisition-primary:focus-visible,.photo-acquisition-secondary:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
+.photo-acquisition-primary:disabled,.photo-acquisition-secondary:disabled { opacity: .55; cursor: not-allowed; }
+.photo-acquisition-actions .text-button { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; }
+.photo-replacement-form { gap: 12px; }
+.item-photo-viewer { width: min(100%, 560px); gap: 0; }
+.photo-viewer-image { display: grid; place-items: center; width: 100%; min-height: 120px; padding: 0; overflow: hidden; border: 1px solid #353a31; border-radius: 8px; background: #10120f; cursor: zoom-in; }
+.photo-viewer-image:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
+.photo-viewer-image .detail-photo { width: auto; max-width: 100%; height: auto; max-height: 300px; object-fit: contain; }
+.photo-viewer-open { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; max-width: none; width: 100%; min-height: 100vh; padding: 48px 24px; background: #050605ed; }
+.photo-viewer-open .photo-viewer-image { width: min(100%, 1100px); height: min(84vh, 900px); min-height: 0; border: 0; border-radius: 0; background: transparent; cursor: zoom-out; }
+.photo-viewer-open .photo-viewer-image .detail-photo { width: auto; max-width: 100%; height: auto; max-height: 84vh; object-fit: contain; }
+.photo-viewer-close { position: absolute; top: max(16px, env(safe-area-inset-top)); right: max(16px, env(safe-area-inset-right)); z-index: 1; width: 46px; height: 46px; display: grid; place-items: center; }
+.photo-viewer-open .photo-viewer-image:focus-visible { outline-offset: 6px; }
+.delete-panel { border-color: #6a3631; background: #1d1514; }
+.delete-panel summary { color: #ffb9ad; }
+.delete-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; border: 1px solid var(--danger-line); border-radius: 7px; color: var(--danger-text); background: var(--danger-bg); padding: 9px 13px; font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; transition: background-color .14s ease,border-color .14s ease; }
+.delete-button:hover { background: var(--danger-hover); border-color: #ee897d; }
+.delete-button:focus-visible { outline: 3px solid #ffaaa0; outline-offset: 3px; }
+.delete-button:disabled { opacity: .6; cursor: not-allowed; }
+.crop-dialog { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 12px 18px; }
+.crop-dialog > .dialog-heading,.crop-dialog > .photo-cropper-widget,.crop-dialog > .crop-load-status,.crop-dialog > .crop-controls,.crop-dialog > .crop-accessibility-controls,.crop-dialog > .crop-recovery,.crop-dialog > .crop-actions { grid-column: 1/-1; }
+.crop-load-status { margin: 0; color: #bac6aa; font-size: 13px; }
+.photo-cropper-widget { min-height: 250px; }
+.photo-cropper-widget .cropper-container { touch-action: none; cursor: grab; }
+.photo-cropper-widget .cropper-container:active { cursor: grabbing; }
+.photo-cropper-widget .cropper-move,.photo-cropper-widget .cropper-crop,.photo-cropper-widget .cropper-view-box { cursor: grab !important; }
+.photo-cropper-widget .cropper-move:active,.photo-cropper-widget .cropper-crop:active,.photo-cropper-widget .cropper-view-box:active { cursor: grabbing !important; }
+.photo-cropper-widget .cropper-face { opacity: .035; cursor: grab; }
+.photo-cropper-widget .cropper-face:active { cursor: grabbing; }
+.photo-cropper-widget .cropper-view-box { outline: 2px solid #f4f7eb; outline-color: #f4f7eb; }
+.photo-cropper-widget .cropper-line { z-index: 8; background: #c5f36b; opacity: 1; }
+.photo-cropper-widget .cropper-line.line-e,.photo-cropper-widget .cropper-line.line-w { width: 9px; cursor: ew-resize; }
+.photo-cropper-widget .cropper-line.line-n,.photo-cropper-widget .cropper-line.line-s { height: 9px; cursor: ns-resize; }
+.photo-cropper-widget .cropper-point { z-index: 9; width: 22px; height: 22px; border: 2px solid #10120f; border-radius: 50%; background: #d3ff78; opacity: 1; box-shadow: 0 0 0 1px #fff; }
+.photo-cropper-widget .cropper-point.point-e { right: -11px; margin-top: -11px; cursor: ew-resize; }
+.photo-cropper-widget .cropper-point.point-w { left: -11px; margin-top: -11px; cursor: ew-resize; }
+.photo-cropper-widget .cropper-point.point-n { top: -11px; margin-left: -11px; cursor: ns-resize; }
+.photo-cropper-widget .cropper-point.point-s { bottom: -11px; margin-left: -11px; cursor: ns-resize; }
+.photo-cropper-widget .cropper-point.point-ne,.photo-cropper-widget .cropper-point.point-sw { cursor: nesw-resize; }
+.photo-cropper-widget .cropper-point.point-nw,.photo-cropper-widget .cropper-point.point-se { cursor: nwse-resize; }
+.photo-cropper-widget .cropper-point.point-ne { top: -11px; right: -11px; }
+.photo-cropper-widget .cropper-point.point-nw { top: -11px; left: -11px; }
+.photo-cropper-widget .cropper-point.point-sw { bottom: -11px; left: -11px; }
+.photo-cropper-widget .cropper-point.point-se { bottom: -11px; right: -11px; }
+.crop-controls { margin-top: 0; }
+.crop-accessibility-controls { display: block; margin: 0; border-top: 1px solid #343a30; padding-top: 10px; }
+.crop-accessibility-controls summary { width: fit-content; color: #c6eb85; cursor: pointer; font-size: 13px; }
+.crop-accessibility-groups { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 10px; }
+.crop-nudge-group > span { display: block; width: 100%; color: #aeb5a2; font-size: 12px; }
+.crop-toolbar { display: flex; align-items: center; gap: 8px; }
+.crop-tool-button { display: grid; place-items: center; width: 42px; height: 42px; font-size: initial; }
+.crop-tool-button:disabled { opacity: .5; cursor: not-allowed; }
+.crop-recovery { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid #705a34; border-radius: 7px; background: #292216; }
+.crop-recovery p { margin: 0; color: #f1d39a; line-height: 1.5; }
+.crop-actions { grid-column: 1/-1; display: flex; justify-content: flex-end; }
+.crop-actions .text-button,.crop-actions .add-button { min-height: 44px; font-size: 14px; }
+.photo-guidance { display: none; }
+@media (max-width: 560px) {
+  .side-navigation { margin-top: 0; }
+  .photo-acquisition-primary,.photo-acquisition-secondary { flex: 1 1 auto; }
+  .photo-viewer-open { padding: 44px 12px 20px; }
+  .photo-viewer-open .photo-viewer-image { height: 80vh; }
+  .photo-viewer-open .photo-viewer-image .detail-photo { max-height: 80vh; }
+  .crop-dialog { grid-template-columns: minmax(0,1fr) auto; gap: 10px; }
+  .photo-cropper-widget { min-height: 190px; }
+  .crop-recovery { align-items: flex-start; flex-direction: column; }
+  .crop-toolbar { gap: 6px; }
+  .crop-actions button { width: auto; flex: 1 1 auto; }
 }

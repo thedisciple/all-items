@@ -3,6 +3,7 @@
 import { useActionState, useCallback, useEffect, useState } from "react";
 import { replacePhotoAction, type PhotoActionFeedback } from "@/app/actions";
 import { PhotoAcquisition } from "./photo-acquisition";
+import { PhotoViewer } from "./photo-viewer";
 import { useI18n } from "@/i18n/provider";
 
 const idle: PhotoActionFeedback = { status: "idle", message: "" };
@@ -24,7 +25,7 @@ export function PhotoReplacement({ itemId, photoUrl, itemName }: { itemId: strin
   return <form action={action} className="photo-replacement-form">
     <input type="hidden" name="id" value={itemId}/>
     <div className="item-photo-viewer">
-      {previewUrl || savedUrl ? <img className="detail-photo" src={previewUrl ?? savedUrl ?? ""} alt={`${t("photo")}: ${itemName}`} /> : <div className="compact-photo-placeholder"><span aria-hidden="true">{t("photo")}</span><p>{t("photoMissing")}</p></div>}
+      {previewUrl || savedUrl ? <PhotoViewer src={previewUrl ?? savedUrl ?? ""} alt={`${t("photo")}: ${itemName}`}/> : <div className="compact-photo-placeholder"><span aria-hidden="true">{t("photo")}</span><p>{t("photoMissing")}</p></div>}
       {previewUrl ? <p className="photo-unsaved-note" role="status">{t("previewUnsaved")}</p> : null}
     </div>
     <PhotoAcquisition name="photo" currentPhotoUrl={savedUrl} autoSubmit savedToken={feedback.status === "success" ? feedback.mediaId : undefined} resultToken={feedback.message} retryReady={feedback.status === "error"} externalPreview onPreviewChange={updatePreview}/>

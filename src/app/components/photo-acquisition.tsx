@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import type CropperJS from "cropperjs";
+import { ImagePlus, Pencil, RefreshCw } from "lucide-react";
 import { PhotoCropper } from "./photo-cropper";
 import { useI18n } from "@/i18n/provider";
 
@@ -137,7 +138,7 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
     setCropFile(file);
   }
 
-  function confirmCrop(file: File, data: CropData) {
+  function acceptSelection(file: File, data: CropData | null) {
     setCropFile(null);
     triggerRef.current?.focus();
     setInputFile(inputRef, file);
@@ -152,6 +153,16 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
       submittingRef.current = true;
       queueMicrotask(() => inputRef.current?.form?.requestSubmit());
     }
+  }
+
+  function confirmCrop(file: File, data: CropData) {
+    acceptSelection(file, data);
+  }
+
+  function useOriginalPhoto() {
+    const original = sourceFile ?? cropFile;
+    if (!original) { cancelCrop(); return; }
+    acceptSelection(original, null);
   }
 
   async function editCurrentPhoto() {
@@ -244,15 +255,15 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
     <input ref={sourceInputRef} className="visually-hidden" type="file" name={`${name}Source`} aria-hidden="true" tabIndex={-1} disabled={pending}/>
     <input type="hidden" name="crop" value={cropData ? JSON.stringify(cropData) : ""}/>
     {displayedUrl ? <div className="photo-preview-frame"><img className="photo-preview" src={displayedUrl} alt={selectedFile ? t("photoPreviewSelected") : t("photo")}/></div> : null}
-    <p className="photo-guidance">{t("photoGuidance")}</p>
     <div className="photo-acquisition-actions">
-      <button ref={triggerRef} type="button" className={displayedUrl ? "quiet-button" : "photo-source-button"} disabled={pending} onClick={() => { setSourceOpen(true); setCameraMessage(""); }}>
-        {pending ? t("savingPhoto") : selectedFile ? t("chooseAnotherPhoto") : currentPhotoUrl ? t("replacePhoto") : t("addPhoto")}
+      <button ref={triggerRef} type="button" className={currentPhotoUrl ? "photo-acquisition-secondary" : "photo-acquisition-primary photo-add-primary"} disabled={pending} onClick={() => { setSourceOpen(true); setCameraMessage(""); }}>
+        {currentPhotoUrl ? <RefreshCw size={16} aria-hidden="true"/> : <ImagePlus size={16} aria-hidden="true"/>}
+        <span>{pending ? t("savingPhoto") : selectedFile ? t("chooseAnotherPhoto") : currentPhotoUrl ? t("replacePhoto") : t("addPhoto")}</span>
       </button>
+      {currentPhotoUrl && !pending && !selectedFile ? <button type="button" className="photo-acquisition-primary photo-edit-primary" onClick={() => void editCurrentPhoto()}><Pencil size={16} aria-hidden="true"/><span>{t("editCrop")}</span></button> : null}
       {selectedFile && !pending && !autoSubmit ? <button type="button" className="text-button" onClick={clearSelection}>{t("removeSelection")}</button> : null}
       {selectedFile && !pending && autoSubmit ? <button type="button" className="text-button" onClick={clearSelection}>{t("cancelSelection")}</button> : null}
       {selectedFile && retryReady && !pending ? <button type="button" className="quiet-button" onClick={() => { submittingRef.current = true; inputRef.current?.form?.requestSubmit(); }}>{t("retryUpload")}</button> : null}
-      {currentPhotoUrl && !pending && !selectedFile ? <button type="button" className="text-button" onClick={() => void editCurrentPhoto()}>{t("editCrop")}</button> : null}
     </div>
     {selectedFile ? <p className="photo-file-caption">{t("photoChosen", { name: selectedFile.name, size: new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(selectedFile.size / (1024 * 1024)) })}</p> : null}
     {selectionError ? <p className="form-error" role="alert">{selectionError}</p> : null}
@@ -277,6 +288,6 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
         </>}
       </section>
     </div> : null}
-    {cropFile ? <PhotoCropper file={cropFile} onConfirm={confirmCrop} onCancel={cancelCrop}/> : null}
+    {cropFile ? <PhotoCropper file={cropFile} onConfirm={confirmCrop} onCancel={cancelCrop} onUseOriginal={useOriginalPhoto}/> : null}
   </div>;
 }
