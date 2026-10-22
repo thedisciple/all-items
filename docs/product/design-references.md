@@ -57,6 +57,23 @@ The user's private inventory should reduce repeated data entry only after an exp
 
 Collections, categories, physical locations, and search are different views over the same item, never duplicate item records. Keep search available as the inventory grows. For current local image uploads, an immediate preview, indeterminate processing state, retryable failure, and local thumbnail are sufficient. Draft recovery, batch uploads, cancellable queues, and portable media belong to later milestones.
 
+## Notion — lightweight icon and cover organization
+
+### Verified source findings
+
+- Notion's official guide says users can assign emoji/icons to pages and choose or upload a cover; it describes icons as a way to make pages easier to recognize and find. [Page icons & covers](https://www.notion.com/help/guides/page-icons-and-covers)
+- Notion's database documentation describes views that let the same information appear through different layouts and filters. [Database views](https://www.notion.com/help/category/database-views)
+
+### All Items interpretation
+
+Use stable text/category identity with a restrained local emoji as a visual anchor. Let collections optionally carry an icon and an explicit cover; keep a clear default when no cover is selected. Keep labels and accessible names visible so emoji are not the only meaning. All Items uses a small local choice set and private cover storage. This is a design inference from Notion's documented page recognition and icon/cover options, not a claim about measured usability gains.
+
+## Crop library evaluation
+
+- `react-cropper` wraps Cropper.js and documents crop box options, methods, and MIT licensing. The wrapper accepts React 17+, compatible with this project's React 19 setup. [react-cropper](https://github.com/react-cropper/react-cropper), [Cropper.js](https://github.com/fengyuanchen/cropperjs)
+- Cropper.js v1 exposes crop-box resize/move, aspect ratio, zoom, rotation, and canvas output. The library does not provide All Items' full keyboard control surface, so the app adds keyboard-operable move/resize buttons and keeps aspect, zoom, rotate, reset, cancel, and confirm controls focusable.
+- One cropper owns selection, pan, zoom, and rotation. This avoids combining a rectangle library with a second image pan/zoom coordinate system.
+
 ## Research limits
 
 Observed screens and public announcements do not reveal private source code, internal systems, accessibility conformance, or causal product metrics. Treat all All Items recommendations above as design inferences and proposals, not claims about reference-product internals.

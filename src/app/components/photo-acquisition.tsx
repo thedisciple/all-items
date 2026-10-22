@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
+import type CropperJS from "cropperjs";
 import { PhotoCropper } from "./photo-cropper";
 import { useI18n } from "@/i18n/provider";
 
 const maxBytes = 10 * 1024 * 1024;
 const acceptedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+type CropData = CropperJS.Data;
 
 type Props = {
   name?: string;
@@ -17,6 +19,8 @@ type Props = {
   retryReady?: boolean;
   externalPreview?: boolean;
   onPreviewChange?: (url: string | null) => void;
+  onDraftChange?: (dirty: boolean) => void;
+  resetToken?: number;
 };
 
 function cameraErrorKey(error: unknown) {
@@ -28,9 +32,10 @@ function cameraErrorKey(error: unknown) {
   return "cameraUnavailable";
 }
 
-export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoSubmit = false, savedToken, resultToken, retryReady = false, externalPreview = false, onPreviewChange }: Props) {
+export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoSubmit = false, savedToken, resultToken, retryReady = false, externalPreview = false, onPreviewChange, onDraftChange, resetToken }: Props) {
   const { locale, t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
+  const sourceInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -38,6 +43,8 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
   const cameraRequestRef = useRef(0);
   const submittingRef = useRef(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [sourceFile, setSourceFile] = useState<File | null>(null);
+  const [cropData, setCropData] = useState<CropData | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [cropFile, setCropFile] = useState<File | null>(null);
   const [sourceOpen, setSourceOpen] = useState(false);
@@ -56,10 +63,16 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
     submittingRef.current = false;
     if (!savedToken) return;
     setSelectedFile(null);
+    setSourceFile(null);
+    setCropData(null);
     setPreviewUrl(null);
     onPreviewChange?.(null);
     if (inputRef.current) inputRef.current.value = "";
+    if (sourceInputRef.current) sourceInputRef.current.value = "";
+    onDraftChange?.(false);
   }, [savedToken, resultToken, onPreviewChange]);
+
+  useEffect(() => { if (resetToken) clearSelection(); }, [resetToken]);
 
   useEffect(() => {
     if (!stream || !videoRef.current) return;
@@ -94,38 +107,44 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
     triggerRef.current?.focus();
   }
 
-  function setInputFile(file: File) {
+  function setInputFile(ref: React.RefObject<HTMLInputElement | null>, file: File) {
     const transfer = new DataTransfer();
     transfer.items.add(file);
-    if (inputRef.current) inputRef.current.files = transfer.files;
+    if (ref.current) ref.current.files = transfer.files;
   }
 
   function selectFile(file: File) {
     if (file.size > maxBytes) {
       setSelectionError(t("photoFileTooLarge"));
-      if (selectedFile) setInputFile(selectedFile);
+      if (selectedFile) setInputFile(inputRef, selectedFile);
       else if (inputRef.current) inputRef.current.value = "";
       return;
     }
     if (file.type && !acceptedTypes.has(file.type)) {
       setSelectionError(t("photoTypeInvalid"));
-      if (selectedFile) setInputFile(selectedFile);
+      if (selectedFile) setInputFile(inputRef, selectedFile);
       else if (inputRef.current) inputRef.current.value = "";
       return;
     }
     setSelectionError("");
+    onDraftChange?.(true);
     closeSources();
     setSelectedFile(null);
+    setSourceFile(file);
+    setCropData(null);
     setPreviewUrl(null);
     onPreviewChange?.(null);
     setCropFile(file);
   }
 
-  function confirmCrop(file: File) {
+  function confirmCrop(file: File, data: CropData) {
     setCropFile(null);
     triggerRef.current?.focus();
-    setInputFile(file);
+    setInputFile(inputRef, file);
+    if (sourceFile) setInputFile(sourceInputRef, sourceFile);
     setSelectedFile(file);
+    setCropData(data);
+    onDraftChange?.(true);
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
     onPreviewChange?.(url);
@@ -139,10 +158,12 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
     if (!currentPhotoUrl) return;
     setSelectionError("");
     try {
-      const response = await fetch(currentPhotoUrl, { cache: "no-store" });
+      const response = await fetch(`${currentPhotoUrl}&variant=source`, { cache: "no-store" });
       if (!response.ok) throw new Error("Photo unavailable");
       const blob = await response.blob();
       const file = new File([blob], "saved-photo.webp", { type: blob.type || "image/webp", lastModified: Date.now() });
+      setSourceFile(file);
+      onDraftChange?.(true);
       setSelectedFile(null);
       setPreviewUrl(null);
       onPreviewChange?.(null);
@@ -196,11 +217,15 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
   function clearSelection() {
     if (pending) return;
     setSelectedFile(null);
+    setSourceFile(null);
+    setCropData(null);
     setPreviewUrl(null);
     setSelectionError("");
     onPreviewChange?.(null);
+    onDraftChange?.(false);
     submittingRef.current = false;
     if (inputRef.current) inputRef.current.value = "";
+    if (sourceInputRef.current) sourceInputRef.current.value = "";
   }
 
   function cancelCrop() {
@@ -216,6 +241,8 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
       const file = event.currentTarget.files?.[0];
       if (file) selectFile(file);
     }}/>
+    <input ref={sourceInputRef} className="visually-hidden" type="file" name={`${name}Source`} aria-hidden="true" tabIndex={-1} disabled={pending}/>
+    <input type="hidden" name="crop" value={cropData ? JSON.stringify(cropData) : ""}/>
     {displayedUrl ? <div className="photo-preview-frame"><img className="photo-preview" src={displayedUrl} alt={selectedFile ? t("photoPreviewSelected") : t("photo")}/></div> : null}
     <p className="photo-guidance">{t("photoGuidance")}</p>
     <div className="photo-acquisition-actions">

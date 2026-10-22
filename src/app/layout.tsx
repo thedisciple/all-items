@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getLocale } from "@/i18n/server";
 import { I18nProvider } from "@/i18n/provider";
+import "cropperjs/dist/cropper.css";
 import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {

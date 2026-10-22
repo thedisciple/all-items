@@ -10,6 +10,10 @@
 - Validate all server inputs with Zod. Keep domain logic in `src/items`, separate from React components. Keep private sale intent local and unpublished.
 - Store system categories as stable keys, keep localized labels in `src/i18n`, and preserve unknown legacy category strings as custom values.
 - Keep all photos metadata-free after processing. Cropping must preserve the old saved image until a replacement has been persisted successfully.
+- Keep the metadata-stripped source for newly processed item photos separately from display derivatives; serve it only through the private identifier-checked media route. Legacy photos without a source must remain readable and unchanged.
+- Preserve Add Item text and File state for the lifetime of the application session when its dialog closes. Recovery across full reloads/crashes is not implemented; do not claim it is.
+- Validate edit return destinations as internal inventory or collection routes. Collection cover uploads, source photos, thumbnails, and backups remain outside the repository and use controlled routes.
+- Collection batch membership must use the shared collection domain operation and transaction; changing membership or covers never deletes an item. A cover must be explicitly selected and must not default to the first member.
 - Consult `docs/product/ux-principles.md` and `docs/product/interaction-patterns.md` before adding interactions. Prefer simple, reliable workflows; keep technical storage formats out of the UI and preserve entered data on recoverable errors.
 - Record useful product research in `docs/product/design-references.md` and `docs/product/opportunity-register.md`. Distinguish verified facts, design inference, and planned features; do not describe future ideas as implemented.
 - Evaluate user-visible changes for keyboard access, visible focus, Russian labels and feedback, 360px layouts, reduced motion, and accessible pending/error states.

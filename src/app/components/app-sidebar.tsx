@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Boxes, LibraryBig } from "lucide-react";
 import { type Locale, translate } from "@/i18n/messages";
-import { LanguageSwitcher } from "./language-switcher";
 
 export function AppSidebar({ active, itemCount, collectionCount, locale }: { active: "items" | "collections"; itemCount?: number; collectionCount?: number; locale: Locale }) {
   return <aside className="sidebar">
@@ -10,6 +9,5 @@ export function AppSidebar({ active, itemCount, collectionCount, locale }: { act
       <Link className={`nav-link ${active === "items" ? "active" : ""}`} href="/"><Boxes size={15} aria-hidden="true"/>{translate(locale, "allItems")}{itemCount === undefined ? null : <span className="nav-count">{itemCount}</span>}</Link>
       <Link className={`nav-link ${active === "collections" ? "active" : ""}`} href="/collections"><LibraryBig size={15} aria-hidden="true"/>{translate(locale, "collections")}{collectionCount === undefined ? null : <span className="nav-count">{collectionCount}</span>}</Link>
     </nav>
-    <LanguageSwitcher/>
   </aside>;
 }

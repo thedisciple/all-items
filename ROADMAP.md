@@ -47,10 +47,23 @@ See [the opportunity register](docs/product/opportunity-register.md) for detaile
 
 Visual camera/cropper acceptance on a physical device was unavailable in the development environment; server route, crop geometry, and automated regression coverage were verified.
 
+## M2D — Seamless flows, photo editing, and collection UX
+
+- [x] Preserve text, category, advanced values, and selected/cropped File state while the Add Item dialog is temporarily closed; confirm deliberate draft discard and keep retry data on save errors
+- [x] Save an item once, return to inventory with confirmation, and return from edits to a validated inventory or collection route
+- [x] Clarify Model and physical marking fields; move language selection to the top-right header and add restrained category emoji
+- [x] Replace handwritten crop selection with Cropper.js freeform handles, pan, smooth wheel/touch/slider zoom, aspect presets, 90-degree rotation, live output preview, and keyboard adjustment buttons
+- [x] Store a metadata-stripped editable source, crop parameters, display image, and thumbnail for newly processed photos; legacy photo rows remain intact and use their display image as fallback
+- [x] Create collections through a dialog; search and batch-add existing items; manage membership without copying or deleting inventory items
+- [x] Support explicit collection item-photo, private upload, emoji, and default covers; never auto-select a member photo
+- [x] Add Notion icon/cover organization research and update UX, interaction, privacy, and future annotation guidance
+
+The browser surface was unavailable in this environment, so visual cropper behavior and full end-to-end browser flows require manual follow-up. Automated and route/build verification is reported at delivery.
+
 ## M3 — Portability and personal organization — NOT STARTED
 
 - [ ] Structured import/export with image data, archive validation, and integrity checks
-- [ ] Backup and restore workflow and guidance; draft recovery and unsaved-change behavior
+- [ ] Backup and restore workflow; IndexedDB crash/reload recovery for drafts and photo Blobs (M2D only preserves drafts within the active app session)
 - [ ] Flexible item attributes and portable image paths
 - [ ] Favorites, pinned collections, recently used items, preferred view, and quick actions
 - [ ] Smart filters, tags, saved searches, and inventory completeness indicators
@@ -84,6 +97,8 @@ Visual camera/cropper acceptance on a physical device was unavailable in the dev
 - [ ] Multiple photographs, reordering, batch acquisition, and multiple-object extraction
 - [ ] Upload queue with cancel/retry, client-side compression, large-image handling, and resumable uploads where justified
 - [ ] Efficient local thumbnails/caching and portable image bundles
+- [ ] Non-destructive photo annotations: pencil/brush, arrows, rectangles, circles, text, blur/redaction, hardware highlights, undo/redo, and normalized coordinate operations
+- [ ] Optional AI-guided annotation using a clean source, crop, highlighted region, text prompt, and human-reviewed result
 
 ## Future sharing and resource network
 

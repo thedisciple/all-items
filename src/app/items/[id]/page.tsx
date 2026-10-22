@@ -12,13 +12,14 @@ import { getItem, listItems } from "@/items/service";
 import { getPrimaryPhoto } from "@/media/service";
 import { getLocale } from "@/i18n/server";
 import { formatDate, translate } from "@/i18n/messages";
-import { categoryMessageKey } from "@/items/categories";
+import { categoryEmoji, categoryKeyForStoredValue, categoryMessageKey } from "@/items/categories";
+import { LanguageSwitcher } from "@/app/components/language-switcher";
 
 export const dynamic = "force-dynamic";
-type Props = { params: Promise<{ id: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ from?: string; updated?: string }> };
 
-export default async function ItemPage({ params }: Props) {
-  const { id } = await params;
+export default async function ItemPage({ params, searchParams }: Props) {
+  const [{ id }, query] = await Promise.all([params, searchParams]);
   const parsedId = z.uuid().safeParse(id);
   if (!parsedId.success) notFound();
   const item = await getItem(parsedId.data);
@@ -36,22 +37,25 @@ export default async function ItemPage({ params }: Props) {
     askingPrice: item.asking_price_minor == null ? "" : (item.asking_price_minor / 100).toFixed(2),
     askingCurrency: item.asking_currency ?? "RUB", description: item.description ?? "", notes: item.notes ?? "",
   };
+  const fromCollection = z.uuid().safeParse(query.from ?? "");
+  const returnTo = fromCollection.success ? `/collections/${fromCollection.data}` : "/";
   return <main className="app-shell">
     <AppSidebar active="items" itemCount={allItems.length} collectionCount={collections.length} locale={locale}/>
-    <section className="main-content"><header className="topbar"><div className="breadcrumb"><Link href="/">{t("allItems")}</Link><span>/</span>{item.inventory_number}</div></header>
+    <section className="main-content"><header className="topbar"><div className="breadcrumb"><Link href={returnTo}>{returnTo === "/" ? t("allItems") : t("collections")}</Link><span>/</span>{item.inventory_number}</div><LanguageSwitcher/></header>
       <div className="content-wrap detail-wrap">
+        {query.updated ? <p className="inline-status success-status" role="status">{t("changesSaved")}</p> : null}
         <div className="eyebrow">{t("itemNumber")} · {item.inventory_number}</div>
         <div className="item-hero"><div><h1>{item.name}</h1><p className="subtitle">{[item.brand, item.model].filter(Boolean).join(" · ") || t("noName")}</p></div><span className="item-number-badge">{item.inventory_number}</span></div>
         <section className="item-summary" aria-label={t("itemSummary")}>
           <div><span>{t("total")}</span><strong>{new Intl.NumberFormat(locale).format(item.quantity)}</strong></div>
           <div><span>{t("locations")}</span><strong>{locations.length ? locations.join(", ") : t("locationUnknown")}</strong></div>
-          <div><span>{t("category")}</span><strong>{item.category ? (categoryMessageKey(String(item.category)) ? t(categoryMessageKey(String(item.category))!) : item.category) : t("categoryUnknown")}</strong></div>
+          <div><span>{t("category")}</span><strong>{item.category ? `${categoryKeyForStoredValue(String(item.category)) ? `${categoryEmoji[categoryKeyForStoredValue(String(item.category))!]} ` : ""}${categoryMessageKey(String(item.category)) ? t(categoryMessageKey(String(item.category))!) : item.category}` : t("categoryUnknown")}</strong></div>
         </section>
         <section className="photo-detail-panel" aria-label={t("photo")}>
           <PhotoReplacement itemId={id} photoUrl={photo ? `/media/${id}/${photo.id}?v=${photo.id}` : null} itemName={item.name}/>
           {photo ? <details className="remove-photo-panel"><summary>{t("photoDelete")}</summary><form action={removePhoto}><input type="hidden" name="id" value={id}/><label><input required type="checkbox" name="confirm"/> {t("photoDeleteConfirm")}</label><button className="delete-button" type="submit">{t("photoDelete")}</button></form></details> : null}
         </section>
-        <ItemEditForm itemId={id} initial={draft}/>
+        <ItemEditForm itemId={id} initial={draft} returnTo={returnTo}/>
         <StockEditor itemId={id} initialRows={item.stock} trackingMode={item.tracking_mode}/>
         <CollectionMembership itemId={id} collections={collections.map(({ id: collectionId, name }) => ({ id: collectionId, name }))} memberships={memberships}/>
         <details className="advanced-fields technical-details"><summary>{t("technicalDetails")}</summary><dl><div><dt>{t("itemIdentifier")}</dt><dd>{id}</dd></div><div><dt>{t("dateAdded")}</dt><dd>{formatDate(locale, item.created_at)}</dd></div><div><dt>{t("dateUpdated")}</dt><dd>{formatDate(locale, item.updated_at)}</dd></div></dl></details>

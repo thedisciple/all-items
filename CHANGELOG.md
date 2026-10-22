@@ -1,6 +1,15 @@
 # Changelog
 
-## Unreleased — M2C
+## Unreleased — M2D
+
+- Kept item text and photo drafts mounted across dialog close/reopen; added explicit discard confirmation and retry-safe, single-submit add behavior.
+- Made add-item success return to inventory with the new item highlighted, and made edits return to the validated inventory or collection route.
+- Clarified Model versus physical marking, moved the latter into advanced details, placed RU/EN language controls in the top-right header, and added restrained category emoji.
+- Replaced custom crop geometry with a Cropper.js editor supporting resizable freeform rectangles, aspect presets, smooth zoom, pan, rotation, preview, and keyboard-operated adjustment controls.
+- Added normalized, metadata-free editable photo sources with crop data while preserving legacy photos and replacement rollback; uploaded collection covers stay private.
+- Added focused collection creation, batch add/remove of existing items, explicit photo/icon/default covers, simpler empty states, and Notion-inspired visual organization guidance.
+
+## M2C
 
 - Fixed item-detail Server Component serialization with explicit plain-object DTOs and verified a real item route against an isolated copy of the private database.
 - Added freeform photo cropping, zoom/reposition controls, keyboard support, and in-place replacement preview/save feedback without duplicate saved photos.

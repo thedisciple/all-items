@@ -14,6 +14,6 @@ export function LanguageSwitcher() {
     formData.set("locale", event.currentTarget.value);
     startTransition(async () => { await setLanguageAction(formData); router.refresh(); });
   }}>
-    <option value="ru">RU</option><option value="en">EN</option>
+    <option value="ru">🇷🇺 {t("languageRussian")}</option><option value="en">🇬🇧 {t("languageEnglish")}</option>
   </select>;
 }

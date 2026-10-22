@@ -49,6 +49,8 @@ export const mediaAssets = sqliteTable("media_assets", {
   itemId: text("item_id").notNull().references(() => items.id, { onDelete: "cascade" }),
   storagePath: text("storage_path").notNull().unique(),
   thumbnailPath: text("thumbnail_path").notNull().unique(),
+  sourceStoragePath: text("source_storage_path"),
+  cropData: text("crop_data"),
   originalFilename: text("original_filename").notNull(),
   mimeType: text("mime_type").notNull(),
   width: integer("width").notNull(),
@@ -66,9 +68,25 @@ export const collections = sqliteTable("collections", {
   normalizedName: text("normalized_name").notNull(),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
+  icon: text("icon"),
+  coverType: text("cover_type"),
+  coverIcon: text("cover_icon"),
+  coverItemId: text("cover_item_id"),
+  coverMediaId: text("cover_media_id"),
+  coverUploadId: text("cover_upload_id"),
 }, (table) => [
   uniqueIndex("collections_workspace_name_idx").on(table.workspaceId, table.normalizedName),
 ]);
+
+export const collectionCoverAssets = sqliteTable("collection_cover_assets", {
+  id: text("id").primaryKey(),
+  collectionId: text("collection_id").notNull().references(() => collections.id, { onDelete: "cascade" }),
+  storagePath: text("storage_path").notNull().unique(),
+  thumbnailPath: text("thumbnail_path").notNull().unique(),
+  width: integer("width").notNull(),
+  height: integer("height").notNull(),
+  createdAt: text("created_at").notNull(),
+});
 
 export const itemCollectionMemberships = sqliteTable("item_collection_memberships", {
   id: text("id").primaryKey(),

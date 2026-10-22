@@ -27,17 +27,24 @@ Each row has a labeled location field, numeric quantity field, and remove-row bu
 - Collection names and counts are visible in the collection list. Opening one shows its members and collection-scoped search/filter state.
 - Adding/removing an item changes only membership. An item may appear in several collections and always remains in All Items.
 - Rename changes the collection label only. Confirmed collection deletion removes membership rows and the collection; it never deletes items or photos.
-- Empty state explains how to create a collection or add an item. Duplicate names produce a field-level message and preserve input.
+- Create starts from one primary button and a focused name/icon dialog. A validation failure preserves entered values; success opens the new collection.
+- An empty collection shows one short empty state and Add Items. Search/filter controls appear only when there are members. Result counts appear only after an active search/filter.
+- Add Items searches existing inventory, excludes current members, supports multi-selection, and adds in one transaction. Removing membership leaves the item and photos intact.
+- Covers are optional explicit selections: an existing member photo, normalized private upload, emoji, or default placeholder. No first member is automatically chosen. A stale photo reference resolves to the default placeholder.
 
 ## Item details
 
 Lead with item name, inventory number, photo, total quantity, and location summary. Keep UUID, timestamps, sale intent, and long metadata below the primary summary or in advanced sections. Editing forms preserve their drafts on validation errors. Delete actions state what is deleted and require confirmation.
 
-## M2C photo editing
+## M2D item creation and photo editing
 
-The crop dialog starts with the full image selected. Users can draw a freeform crop, move it, adjust zoom, reset, confirm, or cancel. Keyboard arrows move a focused crop; plus/minus change zoom. The crop is optional and preserves the source aspect ratio unless the user changes the crop bounds. Browser image decoding applies EXIF orientation, Canvas output removes metadata, and Sharp normalizes the saved derivative. Existing normalized photos can be re-cropped; the previous uncropped source is not retained.
+The Add Item dialog stays mounted while closed, so text fields, category/advanced values, a selected File, and cropped preview survive same-session close/reopen. The backdrop does not dismiss it. Close preserves work; Discard Draft confirms only when work exists. A save error keeps its fields and File available for retry. Full reload/crash recovery is not implemented.
 
-Future: retain a privacy-safe, metadata-free normalized source separately from the crop derivative only if users need repeat editing beyond the current saved crop. Replace the two derivatives atomically and clean them together. Do not retain the raw upload.
+One Add submission creates the item and returns to inventory with confirmation and highlight. An edit returns to inventory or the validated collection it came from; cancel uses the same internal route. Model is the identified designation; Marking on device is the literal visible text and remains optional in Advanced Details.
+
+Cropper.js owns the resizable crop rectangle, edge/corner handles, freeform/aspect presets, image panning, wheel/touch zoom, and rotation. A continuous slider and keyboard-operable move/resize buttons provide alternatives. The output preview is visible before confirmation. Sharp normalizes the display derivative and thumbnail. New/replaced photos also keep a separate metadata-stripped editable source and crop operation data under private storage. Legacy photos have no source path and re-edit from their saved derivative, so pixels discarded before M2D remain unavailable. Failed replacement keeps the previous media record and files.
+
+Future annotation operations should refer to normalized source coordinates and remain editable/reversible: pencil/brush, shapes, arrows, labels, redaction, highlights, and undo/redo. These are not implemented in M2D. A future AI flow may receive the clean source, current crop, highlighted area, and explicit instruction after a separate privacy review.
 
 ## Future only
 

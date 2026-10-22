@@ -14,6 +14,11 @@ These principles apply to product decisions and code review. They summarize the 
 10. **Ship a complete slice.** A workflow includes loading, success, validation, failure, retry or recovery, and a clear route back. Do not call planned functionality implemented.
 11. **Keep concepts distinct.** Categories describe what an item is; collections group items for a purpose; locations describe where an item is stored. Local storage, offline availability, synchronization, and backup are separate capabilities and must not be implied by one indicator.
 12. **Localize interface, not user data.** System labels, status, dates, and numbers follow the selected language. Item names, custom categories, collection names, and storage locations remain exactly as entered.
+13. **Preserve ordinary-session drafts.** Closing a form dialog preserves every entered value and selected File. Discard is a visible, deliberate action with confirmation only when work exists. A recoverable submission error keeps the draft and offers retry. IndexedDB reload/crash recovery is a separate future capability.
+14. **One save completes one task.** Successful item creation returns to inventory with confirmation; successful edits return to their validated calling context. Do not follow a successful save with another required save.
+15. **Edit photos without losing the clean source.** Newly processed photos retain a normalized, metadata-stripped source plus the current display derivative and thumbnail. Keep operations such as crop/rotation as editable metadata where practical; never claim old cropped pixels can be restored.
+16. **Make collections useful from their own page.** Create through one focused dialog; search and batch-add existing items, and remove memberships without deleting items. Covers are explicit optional choices with a safe default.
+17. **Use symbols as visual anchors.** Map system-category emoji from stable category keys; keep text labels, accessible names, and consistent control geometry. Emoji help recognition but never carry meaning alone or appear beside a duplicate icon.
 
 ## Practical acceptance questions
 

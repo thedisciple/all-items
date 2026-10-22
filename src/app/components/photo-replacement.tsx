@@ -18,8 +18,6 @@ export function PhotoReplacement({ itemId, photoUrl, itemName }: { itemId: strin
     if (feedback.status === "success" && feedback.mediaId) {
       setSavedUrl(`/media/${itemId}/${feedback.mediaId}?v=${feedback.mediaId}`);
       setPreviewUrl(null);
-    } else if (feedback.status === "error") {
-      setPreviewUrl(null);
     }
   }, [feedback, itemId]);
 

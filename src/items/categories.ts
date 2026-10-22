@@ -4,6 +4,11 @@ export const categories = [
 
 export type CategoryKey = typeof categories[number];
 
+export const categoryEmoji: Record<CategoryKey, string> = {
+  electronics: "🔌", computers: "💻", tools: "🛠️", antiques: "🏺", clothing: "👕", plants: "🌿",
+  home: "🏠", books_hobbies: "📚", sports: "⚽", kids: "🧸", other: "📦",
+};
+
 const legacyCategoryMap: Record<CategoryKey, readonly string[]> = {
   electronics: ["Электроника", "Электроника и компоненты", "Electronics"],
   computers: ["Компьютеры", "Компьютеры и гаджеты", "Компьютерная техника", "Computers & Gadgets"],
