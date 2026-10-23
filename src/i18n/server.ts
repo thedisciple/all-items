@@ -1,13 +1,20 @@
 import { cookies, headers } from "next/headers";
-import { type Locale } from "./messages";
+import { locales, type Locale } from "./messages";
 
-const validLocales = new Set<Locale>(["ru", "en"]);
+const validLocales = new Set<string>(locales);
 
 export function resolveLocale(stored: string | undefined, acceptLanguage: string | null): Locale {
   if (stored && validLocales.has(stored as Locale)) return stored as Locale;
   const accepted = acceptLanguage?.split(",").map((part) => part.split(";")[0]?.trim().toLowerCase()) ?? [];
-  const preferred = accepted.find((language) => language?.startsWith("en") || language?.startsWith("ru"));
-  return preferred?.startsWith("en") ? "en" : "ru";
+  for (const language of accepted) {
+    if (!language) continue;
+    if (language.startsWith("zh")) return "zh-Hans";
+    if (language.startsWith("sr")) return "sr-Latn";
+    if (language.startsWith("uk")) return "uk";
+    if (language.startsWith("en")) return "en";
+    if (language.startsWith("ru")) return "ru";
+  }
+  return "ru";
 }
 
 export async function getLocale(): Promise<Locale> {

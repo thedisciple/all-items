@@ -9,13 +9,13 @@ import { createItemWithPhoto, deleteItemWithMedia, removePrimaryPhoto, replacePr
 import { addItemToCollection, addItemsToCollection, createCollection, deleteCollection, removeItemFromCollection, renameCollection, setCollectionCover } from "@/items/collections";
 import { replaceCollectionCoverUpload } from "@/media/collection-covers";
 import { getLocale } from "@/i18n/server";
-import { translate, type MessageKey, type Locale } from "@/i18n/messages";
+import { locales, translate, type MessageKey, type Locale } from "@/i18n/messages";
 
 export type ActionFeedback = { status: "idle" | "success" | "error"; message: string; itemId?: string; collectionId?: string; count?: number };
 export type PhotoActionFeedback = ActionFeedback & { mediaId?: string };
 
 export async function setLanguageAction(formData: FormData) {
-  const locale = z.enum(["ru", "en"]).parse(formData.get("locale"));
+  const locale = z.enum(locales).parse(formData.get("locale"));
   (await cookies()).set("all-items-language", locale, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 60 * 60 * 24 * 365 });
 }
 

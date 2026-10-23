@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { setLanguageAction } from "@/app/actions";
 import { useI18n } from "@/i18n/provider";
+import { type Locale, type MessageKey } from "@/i18n/messages";
+
+const languageLabels: Record<Locale, MessageKey> = { ru: "languageRussian", en: "languageEnglish", uk: "languageUkrainian", "sr-Latn": "languageSerbian", "zh-Hans": "languageChinese" };
+const flagFiles: Record<Locale, string> = { ru: "ru", en: "gb", uk: "uk", "sr-Latn": "rs", "zh-Hans": "cn" };
 
 export function LanguageSwitcher() {
   const { locale, t } = useI18n();
@@ -20,7 +24,7 @@ export function LanguageSwitcher() {
     document.addEventListener("pointerdown", closeOutside);
     return () => document.removeEventListener("pointerdown", closeOutside);
   }, [open]);
-  const choose = (value: "ru" | "en") => {
+  const choose = (value: Locale) => {
     setOpen(false);
     triggerRef.current?.focus();
     if (value === locale) return;
@@ -39,12 +43,15 @@ export function LanguageSwitcher() {
   };
   return <div ref={rootRef} className="language-switcher-wrap" onKeyDown={onKeyDown}>
     <button ref={triggerRef} className="language-switcher" type="button" aria-label={t("language")} aria-haspopup="menu" aria-expanded={open} disabled={pending} onClick={() => setOpen((value) => !value)}>
-      <img src={locale === "ru" ? "/flags/ru.svg" : "/flags/gb.svg"} alt="" width="20" height="15"/>
-      <span>{locale === "ru" ? t("languageRussian") : t("languageEnglish")}</span><ChevronDown size={15} aria-hidden="true"/>
+      <img src={`/flags/${flagFiles[locale]}.svg`} alt="" width="20" height="15"/>
+      <span>{t(languageLabels[locale])}</span><ChevronDown size={15} aria-hidden="true"/>
     </button>
     {open ? <div className="language-menu" role="menu" aria-label={t("language")} ref={menuRef}>
       <button type="button" role="menuitemradio" aria-checked={locale === "ru"} onClick={() => choose("ru")}><img src="/flags/ru.svg" alt="" width="20" height="15"/>{t("languageRussian")}</button>
       <button type="button" role="menuitemradio" aria-checked={locale === "en"} onClick={() => choose("en")}><img src="/flags/gb.svg" alt="" width="20" height="15"/>{t("languageEnglish")}</button>
+      <button type="button" role="menuitemradio" aria-checked={locale === "uk"} onClick={() => choose("uk")}><img src="/flags/uk.svg" alt="" width="20" height="15"/>{t("languageUkrainian")}</button>
+      <button type="button" role="menuitemradio" aria-checked={locale === "sr-Latn"} onClick={() => choose("sr-Latn")}><img src="/flags/rs.svg" alt="" width="20" height="15"/>{t("languageSerbian")}</button>
+      <button type="button" role="menuitemradio" aria-checked={locale === "zh-Hans"} onClick={() => choose("zh-Hans")}><img src="/flags/cn.svg" alt="" width="20" height="15"/>{t("languageChinese")}</button>
     </div> : null}
   </div>;
 }
