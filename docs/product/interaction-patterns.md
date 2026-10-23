@@ -27,7 +27,7 @@ Object URLs are revoked when replaced, cancelled, or unmounted. Camera tracks st
 
 ## Stock editing
 
-Each row has a labeled location field, numeric quantity field, and remove-row button. One unlabeled location with a quantity is valid. Add row adds one blank row; remove row affects only the draft until save. Show a calculated total before save. Save gives pending, success, or validation feedback. Duplicate nonempty locations and invalid counts are rejected without replacing saved stock.
+Unique tracking represents one object and retains its saved one-unit stock row without exposing bulk row controls. Bulk and consumable tracking expose labeled location and quantity rows; Add Location appends one blank draft row and Remove affects the draft until save. Quantity remains a text draft while typed, then is validated as a nonnegative whole number; invalid input never silently becomes another number. The item summary carries the total, so the editor avoids a repeated total. Save gives pending, success, or validation feedback. Duplicate nonempty locations and invalid counts are rejected without replacing saved stock.
 
 ## Collections
 
@@ -65,3 +65,7 @@ Storage status must distinguish local storage, synchronized storage, offline ava
 ## Local data export
 
 The Data view offers one primary ZIP download and one separate CSV option. Both start from explicit user activation, display pending state while the response is prepared, and report failure in an accessible status region. No automatic upload or permanent public URL is used. ZIP is the full-fidelity portable representation; CSV is a spreadsheet view without photos and collection membership details. A completed browser download is not described as verified external backup storage.
+
+## M3.2 archive restoration
+
+The Data view accepts a local revision 2 ZIP and shows a validated preview of item, collection, and media counts. Preview leaves the current workspace untouched. The user explicitly confirms restoration; the action is disabled or refused when the inventory is populated. A pending state, concise localized error, and retained selected file make recoverable failure clear. Successful restoration refreshes the visible inventory. Keep the source archive until items, memberships, and photos have been checked. Revision 1 and unknown revisions receive an unsupported-format message; there is no silent conversion. The ZIP remains a complete archive; CSV and a future styled XLSX are spreadsheet views rather than restore formats.

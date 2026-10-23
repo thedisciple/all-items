@@ -92,10 +92,15 @@ M2D-R2 passed the automated suite in Microsoft Edge on Windows: 25 unit tests an
 - [x] Separate CSV spreadsheet export with formula-injection protection
 - [x] Local download UI, isolated fixtures, archive documentation, and Edge download verification
 
-### M3.2 Safe archive import — NOT STARTED
+### M3.2 Safe archive import — COMPLETE
 
-- [ ] Validate archive structure, versions, paths, resource limits, checksums, and media references before preview
-- [ ] Stage imports and provide safe conflict handling, backup, recovery, and integrity verification
+- [x] Refine photo editor, stock, collection identity/cover, focus, and Data page interactions
+- [x] Export revision 2 ZIP with readable, collision-safe names and stable JSON identities; retain checksums and bounded verification
+- [x] Validate archive structure, revision, paths, resource limits, checksums, relationships, and actual media before preview
+- [x] Restore into an empty inventory through private staging, a write transaction, integrity checks, rollback cleanup, and next-attempt interruption cleanup
+- [x] Verify a synthetic full-fidelity round trip and isolated Edge export/import flow
+
+Revision 1 was experimental and is unsupported for import. Import does not merge or replace a populated workspace. Preserve the source archive until the restore is checked; automated backup and broader recovery remain future work. Styled XLSX is planned as a distinct spreadsheet export.
 
 ### M3.3 Recovery and preferences — PLANNED
 
@@ -105,7 +110,8 @@ M2D-R2 passed the automated suite in Microsoft Edge on Windows: 25 unit tests an
 ## M3 — Remaining personal organization
 
 - [ ] Optional encrypted archive export as a future security enhancement
-- [ ] Backup and restore workflow; IndexedDB crash/reload recovery for drafts and photo Blobs (M2D only preserves drafts within the active app session)
+- [ ] Automated backup and populated-workspace merge/replacement with verified recovery; IndexedDB crash/reload recovery for drafts and photo Blobs (M2D only preserves drafts within the active app session)
+- [ ] Styled XLSX spreadsheet export separate from the full-fidelity ZIP archive
 - [ ] Flexible item attributes and portable image paths
 - [ ] Favorites, pinned collections, recently used items, preferred view, and quick actions
 - [ ] Smart filters, tags, saved searches, and inventory completeness indicators

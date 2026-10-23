@@ -17,10 +17,13 @@ This manifesto governs every user-facing change in All Items. The interface shou
 - Present categories as quiet informational chips, and represent an unspecified optional value with a neutral dash when its context is clear.
 - Keep collection identity (name and optional emoji) separate from its selected cover (emoji, photo, or default), and render the same cover choice in overview and detail views.
 - In editing surfaces, keep essential actions reachable in the viewport. Let the working area flex before making controls require scrolling; allow controlled scrolling on short screens rather than clipping controls.
+- Keep photo editor actions and its expanded keyboard controls reachable at 360px and short viewport heights. Crop handles, zoom, and focus cues should share one visual grammar.
+- In stock editing, show mode-appropriate rows and one clear quantity input per row. Keep typed drafts stable, reject invalid quantities with an actionable message, and avoid repeating totals already present in the item summary.
+- Categories describe items, collections group them, and emoji support recognition. A collection's single visible emoji identity must not compete with its explicit cover choice.
 - Remove repeated totals and explanatory copy from editors when the value is already clear in the item summary or enforced by validation.
 - Motion must clarify a state change, respect reduced-motion preferences, and never delay a task.
 - Keep private inventory, photos, sale intent, and local-first storage private by default. Do not imply synchronization, backup, or availability that is not implemented.
-- Give export one obvious full-archive action and a separate optional CSV action. Show a real pending state and truthful failures; do not invent progress or imply that a download is an automated backup. Explain CSV's photo limitation briefly and in context.
+- Give export one obvious full-archive action and a separate optional CSV action. Show a real pending state and truthful failures; do not invent progress or imply that a download is an automated backup. Explain CSV's photo limitation briefly and in context. Import preview must state scope before confirmation and refuse a populated inventory without suggesting it was changed.
 - Keep language switching local and preserve the current route and entered user data. Native language names supplement, rather than rely on, locally bundled flags.
 
 ## Review questions

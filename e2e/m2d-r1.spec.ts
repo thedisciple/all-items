@@ -38,7 +38,14 @@ async function createWithCrop(page: Page, name: string) {
   await page.setViewportSize({ width: 360, height: 800 });
   await expect(editor.getByRole("button", { name: "Готово" })).toBeInViewport();
   await expect(editor.locator(".crop-actions").getByRole("button", { name: "Отмена" })).toBeInViewport();
+  await page.setViewportSize({ width: 360, height: 640 });
+  await editor.locator(".crop-accessibility-controls summary").click();
+  await editor.locator(".crop-nudge-button").first().click();
+  await expect(editor.getByRole("button", { name: "Готово" })).toBeInViewport();
+  await expect(editor.locator(".crop-actions").getByRole("button", { name: "Отмена" })).toBeInViewport();
   await page.setViewportSize({ width: 1024, height: 768 });
+  await expect(editor.getByRole("button", { name: "Готово" })).toBeInViewport();
+  await page.setViewportSize({ width: 1365, height: 500 });
   await expect(editor.getByRole("button", { name: "Готово" })).toBeInViewport();
   await page.setViewportSize({ width: 1365, height: 900 });
   await editor.getByRole("button", { name: "Готово" }).click();

@@ -81,3 +81,7 @@ Observed screens and public announcements do not reveal private source code, int
 ## M3.1 user-reported interaction findings
 
 The M3.1 brief reports inconsistent collection emoji/cover rendering, visually different collection actions, a misaligned language chevron, low-salience category metadata, hard-to-reach photo-editor actions, ambiguous rotate/reset icons, repeated stock totals, and verbose empty membership text. These are user-reported findings from the project brief, not independently observed usability-test measurements. The design inference is to share visual renderers, use one icon grammar, protect essential actions within short viewports, and remove repeated information while preserving validation and accessible labels.
+
+## M3.2 user-reported interaction findings
+
+The M3.2 brief reports cropped photo-editor controls on short screens, inconsistent crop and zoom focus cues, confusing stock quantity edits, a clipped collection-cover picker, double focus outlines, and redundant Data-page success feedback. These are user-reported observations rather than independent usability measurements. The design inference is to keep actions and keyboard adjustments reachable within a short viewport, preserve quantity text during editing, use one visible focus treatment, and let completed downloads speak for themselves while retaining actionable errors. The same brief asks for readable archive filenames; stable IDs remain in JSON because filenames are editable presentation text, not identity.

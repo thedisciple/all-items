@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — M3.2 readable archive and safe import
+
+- Kept photo editor controls reachable on short screens, aligned crop and zoom focus treatment, removed duplicate focus rings, and simplified cover selection and collection emoji editing.
+- Fixed stock quantity draft handling across unique, bulk, and consumable modes while keeping invalid edits recoverable.
+- Replaced the experimental ZIP layout with revision 2 readable item and collection paths, stable identifiers in JSON, a human README, strict path rules, and SHA-256 verification. Revision 1 remains unsupported for import.
+- Added localized archive preview and confirmed empty-workspace restore with bounded validation, private media staging, transactional records, failure cleanup, and interrupted-import recovery on the next attempt.
+- Verified a synthetic complete archive round trip, injected staging/promotion/database failures, and an isolated Edge UI export/import flow. CSV remains a separate lossy spreadsheet download.
+
 ## Unreleased — M3.1 UX, localization, and portability
 
 - Unified collection cover rendering across overview and detail pages while keeping identity emoji independent; aligned management controls and preserved uploaded covers while editing identity.
@@ -9,7 +17,7 @@
 - Added the local Data page, bounded version 1 ZIP export, portable JSON/media payload, manifest and SHA-256 checksums, read-only verifier, and a separate UTF-8 formula-safe CSV export.
 - Verified ZIP and CSV downloads in Edge against an isolated database, including a real photo's display image, thumbnail, and editable source; the verifier also checks paths, collection membership, cover references, limits, and checksums.
 
-Archive import has not started and remains M3.2.
+M3.1 revision 1 ZIP export was an experimental predecessor; M3.2 now exports revision 2.
 
 ## Unreleased — M2D-R2
 

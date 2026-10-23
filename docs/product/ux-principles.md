@@ -2,7 +2,7 @@
 
 Follow the [design manifesto](design-manifesto.md) for every interface change. Show Save and Cancel only while editing; show success through changed content or a screen-reader announcement, not a persistent banner. Keep visible errors actionable. Search should debounce and filters should apply immediately while preserving URL and Back/Forward state. Destructive operations use the same explicit confirmation pattern, with one final action. A control's icon and styling must match its behavior.
 
-Collection identity and cover are separate values. Reuse one renderer so overview and detail views show the same selected cover. Use category chips as non-interactive metadata. Keep photo rotate controls grouped separately from reset/undo controls. Editors should not repeat the summary total, and optional missing values may use an accessible neutral dash.
+Collection identity and cover are separate values. Reuse one renderer so overview and detail views show the same selected cover. A category describes the item; a collection groups items; an emoji is a recognition cue and not a stable identifier. Use category chips as non-interactive metadata. Keep photo rotate controls grouped separately from reset/undo controls and all crop actions reachable on short screens. Stock editors use mode-appropriate fields, stable typed quantity drafts, and actionable validation without repeating the summary total. Optional missing values may use an accessible neutral dash.
 
 These principles apply to product decisions and code review. They summarize the research in [design references](design-references.md) for All Items rather than copying another product.
 
@@ -27,6 +27,7 @@ These principles apply to product decisions and code review. They summarize the 
 19. **Keep the photo secondary to the item.** Show a compact, contained image beside useful item data; offer a larger viewer on demand. Deletion must be visually distinct from replace/edit controls and require clear confirmation.
 20. **Treat export as a local user action.** Make the complete archive the primary choice and CSV a separate spreadsheet option. A pending state lasts only while the server is preparing the file; errors preserve the page and entered UI state. CSV never claims to include photos or all relationships.
 21. **Localize every application surface.** Keep all five dictionaries key-complete, use Intl for locale-sensitive counts, dates, and numbers, and never translate user content. Language changes keep the route and stored records intact.
+22. **Restore deliberately.** Preview only a verified current archive; require explicit confirmation and an empty target. Keep the original archive for recovery, and explain unsupported experimental revisions without guessing how to convert them.
 
 ## Practical acceptance questions
 
