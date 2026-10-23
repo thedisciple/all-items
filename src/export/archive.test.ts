@@ -67,6 +67,17 @@ describe("portable inventory archive", () => {
     expect(paths.imagePath).not.toMatch(/[\\:*?"<>|]/);
     expect(collectionArchivePaths({ id: "22222222-2222-4222-8222-222222222222", name: "con" }).path).toContain("Collection - 22222222");
   });
+
+  it("rejects unsafe, equivalent and oversized ZIP entries before reading metadata", () => {
+    const bytes = new Uint8Array([1]);
+    for (const name of ["../outside", "/absolute", "C:/absolute", "Items/CON.webp", "Items/trailing. "]) {
+      expect(() => verifyInventoryArchive(zipSync({ [name]: bytes }))).toThrow(/unsafe or duplicate path/);
+    }
+    expect(() => verifyInventoryArchive(zipSync({ "Items/Photo.webp": bytes, "Items/photo.webp": bytes }))).toThrow(/unsafe or duplicate path/);
+    expect(() => verifyInventoryArchive(zipSync({ "Items/é.webp": bytes, "Items/e\u0301.webp": bytes }))).toThrow(/unsafe or duplicate path/);
+    expect(() => verifyInventoryArchive(zipSync({ "Items/bomb.webp": new Uint8Array(1_000_000) }, { level: 9 }))).toThrow(/unsupported or oversized entry/);
+    expect(() => verifyInventoryArchive(zipSync({ "Items/large.webp": new Uint8Array(32 * 1024 * 1024 + 1) }, { level: 0 }))).toThrow(/unsupported or oversized entry/);
+  });
 });
 
 describe("CSV export", () => {

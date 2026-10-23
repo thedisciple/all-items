@@ -8,6 +8,7 @@ const ru = {
   exportCsvFailed: "Не удалось подготовить CSV. Попробуйте ещё раз.",
   exportReady: "Файл подготовлен к скачиванию.",
   exportCsvNote: ".csv · без фото",
+  importArchive: "Импортировать архив", importChecking: "Проверяем архив…", importPreview: "Содержимое архива", importItems: "Вещей: {count}", importCollections: "Коллекций: {count}", importPhotos: "Фото: {count}", importExported: "Создан: {date}", importConfirm: "Импортировать", importRunning: "Восстанавливаем…", importInvalid: "Архив повреждён или содержит недопустимые данные.", importUnsupported: "Формат архива не поддерживается. Создайте новый архив в текущей версии All Items.", importOccupied: "Для импорта нужен пустой инвентарь.", importFailed: "Не удалось восстановить архив. Попробуйте ещё раз.",
   language: "Язык",
   primaryNavigation: "Основная навигация",
   languageRussian: "Русский",
@@ -250,6 +251,7 @@ const en: Record<MessageKey, string> = {
   exportCsvFailed: "Could not prepare the CSV. Please try again.",
   exportReady: "File is ready to download.",
   exportCsvNote: ".csv · without photos",
+  importArchive: "Import archive", importChecking: "Checking archive…", importPreview: "Archive contents", importItems: "Items: {count}", importCollections: "Collections: {count}", importPhotos: "Photos: {count}", importExported: "Exported: {date}", importConfirm: "Import", importRunning: "Restoring…", importInvalid: "The archive is damaged or contains invalid data.", importUnsupported: "Unsupported archive format. Regenerate it in the current All Items installation.", importOccupied: "Import requires an empty inventory.", importFailed: "Could not restore the archive. Please try again.",
   language: "Language", primaryNavigation: "Primary navigation", languageRussian: "Русский", languageEnglish: "English", languageUkrainian: "Українська", languageSerbian: "Srpski", languageChinese: "简体中文", allItems: "All Items", collections: "Collections",
   searchItems: "Search items", search: "Search", sortLabel: "Sort", inventoryFilters: "Inventory filters", clearFilters: "Clear filters", category: "Category", categoriesAll: "All categories", statusAny: "Any status",
   sortNewest: "Newest first", sortName: "By name", sortQuantity: "By quantity", inventory: "Inventory", noItems: "Your inventory is empty",
@@ -317,6 +319,7 @@ const en: Record<MessageKey, string> = {
 
 const uk: Record<MessageKey, string> = {
   data: "Дані", dataBackup: "Резервна копія", downloadArchive: "Завантажити архів", exportCsv: "Експорт CSV", exportPreparing: "Готуємо файл…", exportArchiveFailed: "Не вдалося підготувати архів. Перевірте вільне місце й спробуйте ще раз.", exportCsvFailed: "Не вдалося підготувати CSV. Спробуйте ще раз.", exportReady: "Файл готовий до завантаження.", exportCsvNote: ".csv · без фото",
+  importArchive: "Імпортувати архів", importChecking: "Перевіряємо архів…", importPreview: "Вміст архіву", importItems: "Речей: {count}", importCollections: "Колекцій: {count}", importPhotos: "Фото: {count}", importExported: "Створено: {date}", importConfirm: "Імпортувати", importRunning: "Відновлюємо…", importInvalid: "Архів пошкоджений або містить некоректні дані.", importUnsupported: "Формат архіву не підтримується. Створіть новий архів у поточній версії All Items.", importOccupied: "Для імпорту потрібен порожній інвентар.", importFailed: "Не вдалося відновити архів. Спробуйте ще раз.",
   language:"Мова", primaryNavigation:"Основна навігація", languageRussian:"Русский", languageEnglish:"English", languageUkrainian:"Українська", languageSerbian:"Srpski", languageChinese:"简体中文",
   allItems:"Усі речі", collections:"Колекції", searchItems:"Пошук речей", search:"Знайти", sortLabel:"Сортування", inventoryFilters:"Фільтри інвентарю", clearFilters:"Очистити фільтри", category:"Категорія", categoriesAll:"Усі категорії", statusAny:"Будь-який статус", sortNewest:"Спочатку нові", sortName:"За назвою", sortQuantity:"За кількістю", inventory:"Інвентар",
   noItems:"Інвентар поки порожній", noMatches:"Нічого не знайдено", adjustFilters:"Змініть пошук або фільтри.", addFirstItem:"Додайте першу річ.", addItem:"Додати річ", addingItem:"Додаємо…", itemCount:"{count} предметів", foundCount:"Знайдено: {count}", collectionCount:"{count} колекцій",
@@ -331,6 +334,7 @@ const uk: Record<MessageKey, string> = {
 
 const srLatn: Record<MessageKey, string> = {
   data: "Podaci", dataBackup: "Rezervna kopija", downloadArchive: "Preuzmi arhivu", exportCsv: "Izvezi CSV", exportPreparing: "Priprema datoteke…", exportArchiveFailed: "Arhiva nije pripremljena. Proverite slobodan prostor i pokušajte ponovo.", exportCsvFailed: "CSV nije pripremljen. Pokušajte ponovo.", exportReady: "Datoteka je spremna za preuzimanje.", exportCsvNote: ".csv · bez fotografija",
+  importArchive: "Uvezi arhivu", importChecking: "Proveravamo arhivu…", importPreview: "Sadržaj arhive", importItems: "Stavke: {count}", importCollections: "Kolekcije: {count}", importPhotos: "Fotografije: {count}", importExported: "Izvezeno: {date}", importConfirm: "Uvezi", importRunning: "Vraćamo podatke…", importInvalid: "Arhiva je oštećena ili sadrži neispravne podatke.", importUnsupported: "Format arhive nije podržan. Napravite novu arhivu u aktuelnoj verziji All Items.", importOccupied: "Za uvoz je potreban prazan inventar.", importFailed: "Arhiva nije vraćena. Pokušajte ponovo.",
   language:"Jezik", primaryNavigation:"Glavna navigacija", languageRussian:"Русский", languageEnglish:"English", languageUkrainian:"Українська", languageSerbian:"Srpski", languageChinese:"简体中文",
   allItems:"Sve stvari", collections:"Kolekcije", searchItems:"Pretraži stvari", search:"Pretraži", sortLabel:"Sortiranje", inventoryFilters:"Filteri inventara", clearFilters:"Obriši filtere", category:"Kategorija", categoriesAll:"Sve kategorije", statusAny:"Bilo koji status", sortNewest:"Najnovije prvo", sortName:"Po nazivu", sortQuantity:"Po količini", inventory:"Inventar",
   noItems:"Inventar je prazan", noMatches:"Nema rezultata", adjustFilters:"Promenite pretragu ili filtere.", addFirstItem:"Dodajte prvu stvar.", addItem:"Dodaj stvar", addingItem:"Dodavanje…", itemCount:"{count} predmeta", foundCount:"Pronađeno: {count}", collectionCount:"{count} kolekcija",
@@ -345,6 +349,7 @@ const srLatn: Record<MessageKey, string> = {
 
 const zhHans: Record<MessageKey, string> = {
   data: "数据", dataBackup: "备份", downloadArchive: "下载归档", exportCsv: "导出 CSV", exportPreparing: "正在准备文件…", exportArchiveFailed: "无法准备归档。请检查可用空间后重试。", exportCsvFailed: "无法准备 CSV，请重试。", exportReady: "文件已准备好下载。", exportCsvNote: ".csv · 不含照片",
+  importArchive: "导入归档", importChecking: "正在检查归档…", importPreview: "归档内容", importItems: "物品：{count}", importCollections: "收藏集：{count}", importPhotos: "照片：{count}", importExported: "导出时间：{date}", importConfirm: "导入", importRunning: "正在恢复…", importInvalid: "归档已损坏或包含无效数据。", importUnsupported: "不支持此归档格式。请在当前版本的 All Items 中重新导出。", importOccupied: "导入需要空的库存。", importFailed: "无法恢复归档，请重试。",
   language:"语言", primaryNavigation:"主导航", languageRussian:"Русский", languageEnglish:"English", languageUkrainian:"Українська", languageSerbian:"Srpski", languageChinese:"简体中文",
   allItems:"全部物品", collections:"收藏集", searchItems:"搜索物品", search:"搜索", sortLabel:"排序", inventoryFilters:"库存筛选", clearFilters:"清除筛选", category:"类别", categoriesAll:"所有类别", statusAny:"所有状态", sortNewest:"最新优先", sortName:"按名称", sortQuantity:"按数量", inventory:"库存",
   noItems:"库存为空", noMatches:"没有匹配项", adjustFilters:"请调整搜索或筛选条件。", addFirstItem:"添加第一件物品。", addItem:"添加物品", addingItem:"正在添加…", itemCount:"{count} 件物品", foundCount:"找到：{count}", collectionCount:"{count} 个收藏集",

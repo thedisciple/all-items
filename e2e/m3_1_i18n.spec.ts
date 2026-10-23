@@ -2,11 +2,11 @@ import { expect, test, type Page } from "@playwright/test";
 import sharp from "sharp";
 
 const cases = [
-  { locale: "ru", native: "Русский", title: "Все вещи", collection: "Коллекции", data: "Данные", download: "Скачать архив", csv: "Экспорт CSV", stock: "Запасы", addPhoto: "Добавить фото", editTitle: "Редактировать фото", done: "Готово", cancel: "Отмена", close: "Закрыть" },
-  { locale: "en", native: "English", title: "All Items", collection: "Collections", data: "Data", download: "Download archive", csv: "Export CSV", stock: "Stock", addPhoto: "Add photo", editTitle: "Edit photo", done: "Done", cancel: "Cancel", close: "Close" },
-  { locale: "uk", native: "Українська", title: "Усі речі", collection: "Колекції", data: "Дані", download: "Завантажити архів", csv: "Експорт CSV", stock: "Запаси", addPhoto: "Додати фото", editTitle: "Редагувати фото", done: "Готово", cancel: "Скасувати", close: "Закрити" },
-  { locale: "sr-Latn", native: "Srpski", title: "Sve stvari", collection: "Kolekcije", data: "Podaci", download: "Preuzmi arhivu", csv: "Izvezi CSV", stock: "Zalihe", addPhoto: "Dodaj fotografiju", editTitle: "Uredi fotografiju", done: "Gotovo", cancel: "Otkaži", close: "Zatvori" },
-  { locale: "zh-Hans", native: "简体中文", title: "全部物品", collection: "收藏集", data: "数据", download: "下载归档", csv: "导出 CSV", stock: "库存", addPhoto: "添加照片", editTitle: "编辑照片", done: "完成", cancel: "取消", close: "关闭" },
+  { locale: "ru", native: "Русский", title: "Все вещи", collection: "Коллекции", data: "Данные", download: "Скачать архив", csv: "Экспорт CSV", import: "Импортировать архив", stock: "Запасы", addPhoto: "Добавить фото", editTitle: "Редактировать фото", done: "Готово", cancel: "Отмена", close: "Закрыть" },
+  { locale: "en", native: "English", title: "All Items", collection: "Collections", data: "Data", download: "Download archive", csv: "Export CSV", import: "Import archive", stock: "Stock", addPhoto: "Add photo", editTitle: "Edit photo", done: "Done", cancel: "Cancel", close: "Close" },
+  { locale: "uk", native: "Українська", title: "Усі речі", collection: "Колекції", data: "Дані", download: "Завантажити архів", csv: "Експорт CSV", import: "Імпортувати архів", stock: "Запаси", addPhoto: "Додати фото", editTitle: "Редагувати фото", done: "Готово", cancel: "Скасувати", close: "Закрити" },
+  { locale: "sr-Latn", native: "Srpski", title: "Sve stvari", collection: "Kolekcije", data: "Podaci", download: "Preuzmi arhivu", csv: "Izvezi CSV", import: "Uvezi arhivu", stock: "Zalihe", addPhoto: "Dodaj fotografiju", editTitle: "Uredi fotografiju", done: "Gotovo", cancel: "Otkaži", close: "Zatvori" },
+  { locale: "zh-Hans", native: "简体中文", title: "全部物品", collection: "收藏集", data: "数据", download: "下载归档", csv: "导出 CSV", import: "导入归档", stock: "库存", addPhoto: "添加照片", editTitle: "编辑照片", done: "完成", cancel: "取消", close: "关闭" },
 ];
 
 async function chooseLocale(page: Page, native: string) {
@@ -41,6 +41,7 @@ test("five local languages render on inventory, details, collections, and photo 
     await expect(page.getByRole("heading", { name: entry.data, level: 1 })).toBeVisible();
     await expect(page.getByRole("button", { name: entry.download })).toBeVisible();
     await expect(page.getByRole("button", { name: entry.csv })).toBeVisible();
+    await expect(page.getByRole("button", { name: entry.import })).toBeVisible();
 
     await page.goto("/");
     await page.locator(".add-dialog-trigger").click();

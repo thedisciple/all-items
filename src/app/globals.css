@@ -471,6 +471,15 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .collection-emoji-palette { display: flex; flex-wrap: wrap; gap: 6px; }
 .collection-emoji-choice { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid #4b5145; border-radius: 7px; background: #20241d; font-size: 21px; cursor: pointer; }
 .collection-emoji-choice[aria-pressed="true"] { border-color: var(--green); background: #293620; }
+.import-panel { margin-top: 25px; padding-top: 22px; border-top: 1px solid var(--line); }
+.import-panel h2 { margin-bottom: 13px; }
+.import-pick-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border-color: #6f8060; font-size: 13px; }
+.import-preview { display: grid; gap: 10px; min-width: 0; }
+.import-preview h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.import-file-name { margin: 0; color: var(--muted); overflow-wrap: anywhere; }
+.import-summary { display: flex; flex-wrap: wrap; gap: 8px 16px; color: #dce5cf; font-size: 13px; }
+.import-actions { display: flex; align-items: center; gap: 10px; }
+.import-actions .add-button,.import-actions .text-button { min-height: 44px; font-size: 13px; }
 @media (max-width: 560px) {
   .crop-dialog { height: calc(100dvh - 20px); max-height: calc(100dvh - 20px); padding-bottom: 0; }
   .crop-dialog .crop-editor-body > .photo-cropper-widget { height: clamp(150px, 32dvh, 320px) !important; }

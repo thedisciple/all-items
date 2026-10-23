@@ -3,6 +3,7 @@ import { lstat, readFile } from "node:fs/promises";
 import path from "node:path";
 import { unzipSync, zipSync } from "fflate";
 import { z } from "zod";
+import type { Client } from "@libsql/client";
 import { getDatabase, dataDirectory } from "@/db/client";
 
 export const ARCHIVE_FORMAT = "all-items-portable-inventory";
@@ -292,9 +293,9 @@ async function readSafeAsset(root: string, relative: string): Promise<Uint8Array
   return new Uint8Array(bytes);
 }
 
-export async function createInventoryArchive() {
-  const db = await getDatabase();
-  const tx = await db.$client.transaction("read");
+export async function createInventoryArchive(context?: { client: Client; directory: string }) {
+  const client = context?.client ?? (await getDatabase()).$client;
+  const tx = await client.transaction("read");
   let snapshot: Record<string, Array<Record<string, unknown>>>;
   try {
     const workspace = await tx.execute({ sql: "SELECT id, name, created_at, next_inventory_number FROM workspaces WHERE id = ?", args: [workspaceId] });
@@ -311,7 +312,7 @@ export async function createInventoryArchive() {
   } catch (error) { await tx.rollback(); throw error; }
   const total = snapshot.media.reduce((count, row) => count + (row.source_storage_path ? 3 : 2), 0) + snapshot.covers.length * 2 + 3;
   if (total > MAX_ARCHIVE_ENTRIES) throw new ArchiveError("This inventory contains too many archive entries.");
-  const mediaRoot = path.join(dataDirectory(), "media");
+  const mediaRoot = path.join(context?.directory ?? dataDirectory(), "media");
   const payload: Record<string, unknown> = {
     workspace: snapshot.workspaces[0] ?? null,
     locations: snapshot.locations,

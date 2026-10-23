@@ -1,5 +1,7 @@
 node_modules/
 .next/
+.next-import-source/
+.next-import-target/
 out/
 coverage/
 test-results/
