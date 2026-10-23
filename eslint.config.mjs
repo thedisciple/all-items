@@ -3,5 +3,5 @@ import tseslint from "typescript-eslint";
 
 export default defineConfig([
   ...tseslint.configs.recommended,
-  globalIgnores([".next/**", ".next-import-*/**", "node_modules/**", "coverage/**", "next-env.d.ts"]),
+  globalIgnores([".next/**", ".next-import-*/**", "node_modules/**", "coverage/**", "test-results/**", "playwright-report/**", "next-env.d.ts"]),
 ]);

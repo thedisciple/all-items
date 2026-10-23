@@ -500,3 +500,22 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
   .crop-toolbar { gap: 6px; }
   .crop-actions button { width: auto; flex: 1 1 auto; }
 }
+
+/* Private media reserves geometry before decoding and after request failure. */
+.private-image-frame { position: relative; display: inline-grid; overflow: hidden; min-width: 0; background: #11130f; border-radius: 7px; }
+.private-image-frame > img { display: block; margin: 0; width: 100%; height: 100%; max-height: none; object-fit: cover; }
+.private-image-placeholder { position: absolute; inset: 0; display: grid; place-items: center; color: #929a87; background: #171a14; }
+.media-thumbnail { width: 54px; height: 54px; flex: 0 0 54px; }
+.media-card { display: grid; width: 100%; height: 150px; }
+.media-cover { display: grid; width: 100%; height: 180px; margin-bottom: 18px; }
+.media-detail { width: 100%; height: 300px; }
+.private-image-frame.media-detail > img { width: 100%; height: 100%; object-fit: contain; }
+.photo-viewer-open .media-detail { height: min(84vh, 900px); }
+.photo-viewer-open .private-image-frame.media-detail > img { height: 100%; width: 100%; }
+.media-preview { display: grid; width: 100%; height: 240px; }
+.private-image-frame.media-preview > img { object-fit: contain; }
+@media (max-width: 560px) {
+  .media-thumbnail { width: 48px; height: 48px; flex-basis: 48px; }
+  .media-card { height: 120px; }
+  .photo-viewer-open .media-detail { height: 80vh; }
+}

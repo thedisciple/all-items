@@ -1,5 +1,7 @@
 "use client";
 
+import { PrivateImage } from "./private-image";
+
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import type CropperJS from "cropperjs";
@@ -254,7 +256,7 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
     }}/>
     <input ref={sourceInputRef} className="visually-hidden" type="file" name={`${name}Source`} aria-hidden="true" tabIndex={-1} disabled={pending}/>
     <input type="hidden" name="crop" value={cropData ? JSON.stringify(cropData) : ""}/>
-    {displayedUrl ? <div className="photo-preview-frame"><img className="photo-preview" src={displayedUrl} alt={selectedFile ? t("photoPreviewSelected") : t("photo")}/></div> : null}
+    {displayedUrl ? <div className="photo-preview-frame"><PrivateImage variant="preview" className="photo-preview" src={displayedUrl} alt={selectedFile ? t("photoPreviewSelected") : t("photo")}/></div> : null}
     <div className="photo-acquisition-actions">
       <button ref={triggerRef} type="button" className={currentPhotoUrl ? "photo-acquisition-secondary" : "photo-acquisition-primary photo-add-primary"} disabled={pending} onClick={() => { setSourceOpen(true); setCameraMessage(""); }}>
         {currentPhotoUrl ? <RefreshCw size={16} aria-hidden="true"/> : <ImagePlus size={16} aria-hidden="true"/>}

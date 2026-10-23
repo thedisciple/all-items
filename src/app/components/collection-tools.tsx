@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { PrivateImage } from "./private-image";
 import { useActionState, useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { addItemsToCollectionAction, removeCollectionMembershipAction, setCollectionCoverAction, type ActionFeedback } from "@/app/actions";
@@ -48,7 +48,7 @@ export function CollectionAddItems({ collectionId, items, existingIds }: { colle
         <div className="collection-item-options" role="group" aria-label={t("collectionAddItems")}>
           {available.length ? available.map((item) => <label className="collection-item-option" key={item.id}>
             <input type="checkbox" checked={selected.includes(item.id)} onChange={(event) => setSelected((value) => event.target.checked ? [...value, item.id] : value.filter((id) => id !== item.id))}/>
-            {item.mediaId ? <Image src={`/media/${item.id}/${item.mediaId}?variant=thumbnail`} alt="" width={52} height={52} unoptimized/> : <span className="item-thumb" aria-hidden="true">{t("photoMissing")}</span>}
+            {item.mediaId ? <PrivateImage variant="thumbnail" src={`/media/${item.id}/${item.mediaId}?variant=thumbnail`} alt="" width={52} height={52}/> : <span className="item-thumb" aria-hidden="true">{t("photoMissing")}</span>}
             <span className="collection-item-choice-text"><strong>{item.name}</strong>{item.model ? <small>{item.model}</small> : null}{item.category ? <small>{item.category}</small> : null}</span>
           </label>) : <p className="collection-items-no-results">{t(existing.size ? "noMatches" : "collectionNoInventory")}</p>}
         </div>
@@ -84,7 +84,7 @@ export function CollectionCoverManager({ collectionId, options }: { collectionId
       <form action={action} className="collection-cover-form"><input type="hidden" name="collectionId" value={collectionId}/>
         <label className="field"><span>{t("collectionCover")}</span><select name="coverType" value={coverType} onChange={(event) => setCoverType(event.target.value)}><option value="default">{t("collectionCoverDefault")}</option><option value="item_photo" disabled={!options.length}>{t("collectionCoverItem")}</option><option value="upload">{t("collectionCoverUpload")}</option><option value="emoji">{t("collectionCoverEmoji")}</option></select></label>
         {coverType === "item_photo" ? <label className="field"><span>{t("collectionCoverPickItem")}</span><select name="selectedPhoto" value={selectedPhoto} required onChange={(event) => setSelectedPhoto(event.target.value)}><option value="">{t("selectCategory")}</option>{options.map((option) => <option key={option.itemId} value={`${option.itemId}:${option.mediaId}`}>{option.name}{option.model ? ` ${option.model}` : ""}</option>)}</select></label> : null}
-        {coverType === "upload" ? <><input ref={coverFile} className="visually-hidden" tabIndex={-1} aria-hidden="true" type="file" name="coverFile" accept="image/jpeg,image/png,image/webp" required onChange={(event: ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; setCoverPreview(file ? URL.createObjectURL(file) : ""); }}/><button type="button" className="photo-source-button collection-cover-pick" onClick={() => coverFile.current?.click()}>{t("collectionCoverUpload")}</button>{coverPreview ? <div className="collection-cover-preview"><Image src={coverPreview} alt={t("collectionCoverPreview")} width={480} height={240} unoptimized/></div> : null}</> : null}
+        {coverType === "upload" ? <><input ref={coverFile} className="visually-hidden" tabIndex={-1} aria-hidden="true" type="file" name="coverFile" accept="image/jpeg,image/png,image/webp" required onChange={(event: ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; setCoverPreview(file ? URL.createObjectURL(file) : ""); }}/><button type="button" className="photo-source-button collection-cover-pick" onClick={() => coverFile.current?.click()}>{t("collectionCoverUpload")}</button>{coverPreview ? <div className="collection-cover-preview"><PrivateImage variant="preview" src={coverPreview} alt={t("collectionCoverPreview")} width={480} height={240}/></div> : null}</> : null}
         {coverType === "emoji" ? <CollectionEmojiField label={t("collectionIcon")} value={icon} onChange={setIcon} required/> : null}
         {feedback.status === "error" && feedback.message ? <p className="inline-status error-status" role="alert">{feedback.message}</p> : null}
         <div className="dialog-actions"><FormSubmitButton className="add-button" pendingLabel={t("savingChanges")}>{t("collectionCoverSave")}</FormSubmitButton><button type="button" className="text-button" onClick={() => setOpen(false)}>{t("cancel")}</button></div>

@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { PrivateImage } from "./private-image";
 import { LibraryBig } from "lucide-react";
 
 export type CollectionVisualData = {
@@ -17,10 +17,10 @@ export function CollectionCoverVisual({ collection, variant }: { collection: Col
   const size = detail ? { width: 1200, height: 480 } : { width: 320, height: 200 };
 
   if (collection.coverType === "item_photo" && collection.coverItemId && collection.coverMediaId) {
-    return <Image className={imageClass} src={`/media/${collection.coverItemId}/${collection.coverMediaId}?variant=${detail ? "image" : "thumbnail"}`} alt="" {...size} unoptimized/>;
+    return <PrivateImage variant={detail ? "cover" : "card"} className={imageClass} src={`/media/${collection.coverItemId}/${collection.coverMediaId}?variant=${detail ? "image" : "thumbnail"}`} alt="" {...size}/>;
   }
   if (collection.coverType === "upload" && collection.coverUploadId) {
-    return <Image className={imageClass} src={`/media/collections/${collection.id}/${collection.coverUploadId}?variant=${detail ? "image" : "thumbnail"}`} alt="" {...size} unoptimized/>;
+    return <PrivateImage variant={detail ? "cover" : "card"} className={imageClass} src={`/media/collections/${collection.id}/${collection.coverUploadId}?variant=${detail ? "image" : "thumbnail"}`} alt="" {...size}/>;
   }
 
   const emoji = collection.coverType === "emoji" ? collection.coverIcon : collection.icon;

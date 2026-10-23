@@ -1,4 +1,5 @@
 const ru = {
+  imageLoading: "Загружаем фото…", imageUnavailable: "Фото недоступно",
   data: "Данные",
   dataBackup: "Резервная копия",
   downloadArchive: "Скачать архив",
@@ -242,6 +243,7 @@ const ru = {
 } as const;
 
 const en: Record<MessageKey, string> = {
+  imageLoading: "Loading photo…", imageUnavailable: "Photo unavailable",
   data: "Data",
   dataBackup: "Backup",
   downloadArchive: "Download archive",
@@ -318,6 +320,7 @@ const en: Record<MessageKey, string> = {
 };
 
 const uk: Record<MessageKey, string> = {
+  imageLoading: "Завантажуємо фото…", imageUnavailable: "Фото недоступне",
   data: "Дані", dataBackup: "Резервна копія", downloadArchive: "Завантажити архів", exportCsv: "Експорт CSV", exportPreparing: "Готуємо файл…", exportArchiveFailed: "Не вдалося підготувати архів. Перевірте вільне місце й спробуйте ще раз.", exportCsvFailed: "Не вдалося підготувати CSV. Спробуйте ще раз.", exportReady: "Файл готовий до завантаження.", exportCsvNote: ".csv · без фото",
   importArchive: "Імпортувати архів", importChecking: "Перевіряємо архів…", importPreview: "Вміст архіву", importItems: "Речей: {count}", importCollections: "Колекцій: {count}", importPhotos: "Фото: {count}", importExported: "Створено: {date}", importConfirm: "Імпортувати", importRunning: "Відновлюємо…", importInvalid: "Архів пошкоджений або містить некоректні дані.", importUnsupported: "Формат архіву не підтримується. Створіть новий архів у поточній версії All Items.", importOccupied: "Для імпорту потрібен порожній інвентар.", importFailed: "Не вдалося відновити архів. Спробуйте ще раз.",
   language:"Мова", primaryNavigation:"Основна навігація", languageRussian:"Русский", languageEnglish:"English", languageUkrainian:"Українська", languageSerbian:"Srpski", languageChinese:"简体中文",
@@ -333,6 +336,7 @@ const uk: Record<MessageKey, string> = {
 };
 
 const srLatn: Record<MessageKey, string> = {
+  imageLoading: "Učitavanje fotografije…", imageUnavailable: "Fotografija nije dostupna",
   data: "Podaci", dataBackup: "Rezervna kopija", downloadArchive: "Preuzmi arhivu", exportCsv: "Izvezi CSV", exportPreparing: "Priprema datoteke…", exportArchiveFailed: "Arhiva nije pripremljena. Proverite slobodan prostor i pokušajte ponovo.", exportCsvFailed: "CSV nije pripremljen. Pokušajte ponovo.", exportReady: "Datoteka je spremna za preuzimanje.", exportCsvNote: ".csv · bez fotografija",
   importArchive: "Uvezi arhivu", importChecking: "Proveravamo arhivu…", importPreview: "Sadržaj arhive", importItems: "Stavke: {count}", importCollections: "Kolekcije: {count}", importPhotos: "Fotografije: {count}", importExported: "Izvezeno: {date}", importConfirm: "Uvezi", importRunning: "Vraćamo podatke…", importInvalid: "Arhiva je oštećena ili sadrži neispravne podatke.", importUnsupported: "Format arhive nije podržan. Napravite novu arhivu u aktuelnoj verziji All Items.", importOccupied: "Za uvoz je potreban prazan inventar.", importFailed: "Arhiva nije vraćena. Pokušajte ponovo.",
   language:"Jezik", primaryNavigation:"Glavna navigacija", languageRussian:"Русский", languageEnglish:"English", languageUkrainian:"Українська", languageSerbian:"Srpski", languageChinese:"简体中文",
@@ -348,6 +352,7 @@ const srLatn: Record<MessageKey, string> = {
 };
 
 const zhHans: Record<MessageKey, string> = {
+  imageLoading: "正在加载照片…", imageUnavailable: "照片暂不可用",
   data: "数据", dataBackup: "备份", downloadArchive: "下载归档", exportCsv: "导出 CSV", exportPreparing: "正在准备文件…", exportArchiveFailed: "无法准备归档。请检查可用空间后重试。", exportCsvFailed: "无法准备 CSV，请重试。", exportReady: "文件已准备好下载。", exportCsvNote: ".csv · 不含照片",
   importArchive: "导入归档", importChecking: "正在检查归档…", importPreview: "归档内容", importItems: "物品：{count}", importCollections: "收藏集：{count}", importPhotos: "照片：{count}", importExported: "导出时间：{date}", importConfirm: "导入", importRunning: "正在恢复…", importInvalid: "归档已损坏或包含无效数据。", importUnsupported: "不支持此归档格式。请在当前版本的 All Items 中重新导出。", importOccupied: "导入需要空的库存。", importFailed: "无法恢复归档，请重试。",
   language:"语言", primaryNavigation:"主导航", languageRussian:"Русский", languageEnglish:"English", languageUkrainian:"Українська", languageSerbian:"Srpski", languageChinese:"简体中文",
