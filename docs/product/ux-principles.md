@@ -25,6 +25,8 @@ These principles apply to product decisions and code review. They summarize the 
 17. **Use symbols as visual anchors.** Map system-category emoji from stable category keys; keep text labels, accessible names, and consistent control geometry. Emoji help recognition but never carry meaning alone or appear beside a duplicate icon.
 18. **Keep media editing recoverable.** Do not call cropper operations until the decoded image is ready; validate dimensions, zoom, crop bounds, and encoded output. When processing fails, retain the selected file and offer the original image as an explicit path to finish item creation. Keep common crop actions compact, with keyboard adjustments disclosed rather than permanently displayed.
 19. **Keep the photo secondary to the item.** Show a compact, contained image beside useful item data; offer a larger viewer on demand. Deletion must be visually distinct from replace/edit controls and require clear confirmation.
+20. **Treat export as a local user action.** Make the complete archive the primary choice and CSV a separate spreadsheet option. A pending state lasts only while the server is preparing the file; errors preserve the page and entered UI state. CSV never claims to include photos or all relationships.
+21. **Localize every application surface.** Keep all five dictionaries key-complete, use Intl for locale-sensitive counts, dates, and numbers, and never translate user content. Language changes keep the route and stored records intact.
 
 ## Practical acceptance questions
 

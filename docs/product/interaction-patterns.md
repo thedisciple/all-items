@@ -61,3 +61,7 @@ Future annotation operations should refer to normalized source coordinates and r
 Local drafts, recently used items, favorites, saved searches, tags, batch upload queue, listing conversion, local achievements, and sharing are proposals, not current interactions. Shared-element card-to-detail transitions may be explored after task-based mobile testing; they must respect reduced-motion preferences and preserve a clear fallback. Do not add complex view-transition infrastructure without reliable browser support and accessibility behavior.
 
 Storage status must distinguish local storage, synchronized storage, offline availability, synchronization state, and backup state. Until those capabilities exist, avoid a status light or text that implies sync, offline guarantees, or backup protection.
+
+## Local data export
+
+The Data view offers one primary ZIP download and one separate CSV option. Both start from explicit user activation, display pending state while the response is prepared, and report failure in an accessible status region. No automatic upload or permanent public URL is used. ZIP is the full-fidelity portable representation; CSV is a spreadsheet view without photos and collection membership details. A completed browser download is not described as verified external backup storage.

@@ -436,7 +436,19 @@ button[aria-label][data-tooltip]:hover::after,button[aria-label][data-tooltip]:f
   .collection-detail-actions { flex-wrap: wrap; }
 }
 .photo-guidance { display: none; }
+.data-content { max-width: 760px; }
+.data-panel { padding: 20px; border: 1px solid #30342c; border-radius: 12px; background: #191c17; }
+.data-panel h2 { margin: 0 0 18px; font-size: 17px; }
+.export-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.export-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; }
+.export-actions button:disabled { cursor: progress; opacity: .68; }
+.export-note { margin: 12px 0 0; color: #aeb3a8; font-size: 13px; }
+.data-panel .form-feedback:empty { display: none; }
+.data-panel .form-feedback { margin: 14px 0 0; }
 @media (max-width: 560px) {
+  .data-panel { padding: 16px; }
+  .export-actions { align-items: stretch; flex-direction: column; }
+  .export-actions button { width: 100%; }
   .side-navigation { margin-top: 0; }
   .photo-acquisition-primary,.photo-acquisition-secondary { flex: 1 1 auto; }
   .photo-viewer-open { padding: 44px 12px 20px; }

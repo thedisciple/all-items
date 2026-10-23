@@ -1,6 +1,6 @@
 # All Items contributor instructions
 
-- Keep UI copy in the Russian and English translation dictionaries; keep code, comments, and public documentation in English.
+- Keep all system UI copy in complete local dictionaries for Russian, English, Ukrainian, Serbian Latin, and Simplified Chinese; keep code, comments, and public documentation in English. Preserve user-entered text without automatic translation.
 - Bind the app to loopback by default. Do not add public or LAN inventory access without server-side authentication and origin protections.
 - Keep SQLite data, backups, generated storage, and private user data outside the repository. Never commit real inventory records, personal media, secrets, or local backups.
 - Store uploaded images only under the configured All Items data directory; never put them in `public/` or serve files by accepting user-supplied paths.
@@ -14,6 +14,9 @@
 - Preserve Add Item text and File state for the lifetime of the application session when its dialog closes. Recovery across full reloads/crashes is not implemented; do not claim it is.
 - Validate edit return destinations as internal inventory or collection routes. Collection cover uploads, source photos, thumbnails, and backups remain outside the repository and use controlled routes.
 - Collection batch membership must use the shared collection domain operation and transaction; changing membership or covers never deletes an item. A cover must be explicitly selected and must not default to the first member.
+- Keep portable archive export independent of React. Use versioned JSON and relative ZIP paths, bounded ZIP resources, checksums and a read-only verifier. CSV is a separate lossy spreadsheet export with formula-injection protection. Never implement archive import without the M3.2 review and scope.
+- Snapshot database rows in a short read transaction, then validate and stage referenced media through generated identifier paths. SQLite and filesystems are not one atomic transaction; abort when referenced media is missing or unsafe. Export never mutates inventory data.
+- Store generated archives and temporary work outside the repository and public directory. Do not expose permanent public download URLs or send exports to external services. Keep exports bounded and report failures without logging private records.
 - Consult `docs/product/ux-principles.md` and `docs/product/interaction-patterns.md` before adding interactions. Prefer simple, reliable workflows; keep technical storage formats out of the UI and preserve entered data on recoverable errors.
 - Review every user-facing change against `docs/product/design-manifesto.md`; minimalism, truthful controls, immediate feedback, and consistent destructive confirmations are product requirements.
 - Record useful product research in `docs/product/design-references.md` and `docs/product/opportunity-register.md`. Distinguish verified facts, design inference, and planned features; do not describe future ideas as implemented.

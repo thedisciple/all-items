@@ -124,7 +124,7 @@ test("waits for image readiness, applies zoom and aspect controls, crops, and op
   await page.mouse.move(handleBounds!.x + handleBounds!.width / 2 + 28, handleBounds!.y + handleBounds!.height / 2 + 18, { steps: 5 });
   await page.mouse.up();
   await expect.poll(async () => (await readCropState(page)).cropBox.width).not.toBeCloseTo(boxBeforeResize.width, 0);
-  await editor.getByRole("button", { name: "Сбросить кадр" }).click();
+  await editor.getByRole("button", { name: "Сбросить правки" }).click();
   await expect.poll(async () => (await readCropState(page)).rotation).toBe(0);
   await expect(aspect).toHaveValue("free");
   await editor.getByRole("button", { name: "Готово" }).click();
@@ -367,7 +367,7 @@ test("recovers from canvas encoding failure and keeps an existing saved photo on
   });
   await createWithCrop(page, "M2D-R1 recovery item");
   await page.evaluate(() => { (window as Window & { failCanvasEncoding?: boolean }).failCanvasEncoding = true; });
-  await page.getByRole("button", { name: "Редактировать" }).click();
+  await page.getByRole("button", { name: "Редактировать фото" }).click();
   const editor = page.getByRole("dialog", { name: "Редактировать фото" });
   await editor.getByRole("button", { name: "Готово" }).click();
   await expect(editor.getByRole("alert")).toBeVisible();

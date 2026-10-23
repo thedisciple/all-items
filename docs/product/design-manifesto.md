@@ -20,6 +20,8 @@ This manifesto governs every user-facing change in All Items. The interface shou
 - Remove repeated totals and explanatory copy from editors when the value is already clear in the item summary or enforced by validation.
 - Motion must clarify a state change, respect reduced-motion preferences, and never delay a task.
 - Keep private inventory, photos, sale intent, and local-first storage private by default. Do not imply synchronization, backup, or availability that is not implemented.
+- Give export one obvious full-archive action and a separate optional CSV action. Show a real pending state and truthful failures; do not invent progress or imply that a download is an automated backup. Explain CSV's photo limitation briefly and in context.
+- Keep language switching local and preserve the current route and entered user data. Native language names supplement, rather than rely on, locally bundled flags.
 
 ## Review questions
 

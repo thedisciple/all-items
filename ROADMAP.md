@@ -72,11 +72,38 @@ M2D-R1 hardens Cropper.js readiness, zoom bounds, crop output validation, and or
 
 M2D-R2 passed the automated suite in Microsoft Edge on Windows: 25 unit tests and 7 Playwright scenarios, with no browser console warnings/errors or failed page responses in the cropper acceptance scenario. Physical touch-device acceptance remains untested.
 
-## M3 — Portability and personal organization — NOT STARTED
+## M3 — Portability and personal organization — IN PROGRESS
 
-- [ ] Versioned ZIP inventory archive with JSON manifest/payload, relative media paths, and per-entry checksums; include item fields and identifiers, stock/locations, collections/memberships, categories/attributes, private sale intent, lists of media assets per item (stable IDs, primary flag, order, editable normalized sources, display images/thumbnails and per-image crop metadata), covers/icons, and portable settings
-- [ ] Separate CSV export for spreadsheet interoperability; CSV does not replace the complete archive
-- [ ] Safe import with schema, archive-size, path, ZIP-slip, and ZIP-bomb validation; duplicate-ID policy; dry-run preview; empty-workspace restore; backup-before-replacement; staged writes, failure recovery, and integrity verification
+### M3.1 UX refinements — COMPLETE
+
+- [x] Unify collection identity and cover display, align management actions, and refine category chips and missing-value presentation
+- [x] Keep photo editor actions visible at representative desktop and 360px viewports; separate clockwise/counterclockwise rotation from reset
+- [x] Simplify stock editing and collection membership controls without changing the underlying data model
+
+### M3.1 Five-language support — COMPLETE
+
+- [x] Bundle complete Russian, English, Ukrainian, Serbian Latin, and Simplified Chinese dictionaries
+- [x] Preserve explicit language selection, map supported browser variants, and format counts, numbers, and dates with Intl
+- [x] Verify dictionary completeness and language switching on inventory, item details, collections, and photo editing in Edge
+
+### M3.1 Portable export — COMPLETE
+
+- [x] Versioned ZIP export with complete JSON and private media, entry checksums, and a read-only verifier
+- [x] Separate CSV spreadsheet export with formula-injection protection
+- [x] Local download UI, isolated fixtures, archive documentation, and Edge download verification
+
+### M3.2 Safe archive import — NOT STARTED
+
+- [ ] Validate archive structure, versions, paths, resource limits, checksums, and media references before preview
+- [ ] Stage imports and provide safe conflict handling, backup, recovery, and integrity verification
+
+### M3.3 Recovery and preferences — PLANNED
+
+- [ ] Crash/reload recovery for drafts and photo Blobs
+- [ ] Portable local preferences that are explicitly implemented by the application
+
+## M3 — Remaining personal organization
+
 - [ ] Optional encrypted archive export as a future security enhancement
 - [ ] Backup and restore workflow; IndexedDB crash/reload recovery for drafts and photo Blobs (M2D only preserves drafts within the active app session)
 - [ ] Flexible item attributes and portable image paths

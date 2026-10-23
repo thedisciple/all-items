@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased — M3.1 UX, localization, and portability
+
+- Unified collection cover rendering across overview and detail pages while keeping identity emoji independent; aligned management controls and preserved uploaded covers while editing identity.
+- Added restrained category chips, neutral missing-value marks, simplified stock and collection membership editors, and a viewport-aware photo editor with separate clockwise/counterclockwise rotation and reset actions.
+- Added complete bundled Russian, English, Ukrainian, Serbian Latin, and Simplified Chinese dictionaries, regional browser fallback, native language names, and locale-aware count/number/date formatting.
+- Verified existing inventory data is unchanged when switching languages in isolated Edge Playwright fixtures.
+- Added the local Data page, bounded version 1 ZIP export, portable JSON/media payload, manifest and SHA-256 checksums, read-only verifier, and a separate UTF-8 formula-safe CSV export.
+- Verified ZIP and CSV downloads in Edge against an isolated database, including a real photo's display image, thumbnail, and editable source; the verifier also checks paths, collection membership, cover references, limits, and checksums.
+
+Archive import has not started and remains M3.2.
+
 ## Unreleased — M2D-R2
 
 - Corrected Cropper image error handling and added regression coverage for full-image Original mode, presets, rotation, zoom, and saved-photo deletion/re-upload.

@@ -1,0 +1,55 @@
+import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+import { unzipSync } from "fflate";
+import sharp from "sharp";
+import { verifyInventoryArchive } from "../src/export/archive";
+
+test("downloads an independently verifiable archive and a separate CSV without changing inventory", async ({ page }) => {
+  const consoleErrors: string[] = [];
+  page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
+  await page.goto("/");
+  await page.locator(".add-dialog-trigger").click();
+  const dialog = page.getByRole("dialog", { name: "Добавить вещь" });
+  await dialog.getByRole("button", { name: "Добавить фото" }).click();
+  await page.locator('input[name="photo"]').setInputFiles({ name: "export.png", mimeType: "image/png", buffer: await sharp({ create: { width: 220, height: 160, channels: 3, background: "#687a54" } }).png().toBuffer() });
+  const photoDialog = page.getByRole("dialog", { name: "Редактировать фото" });
+  await photoDialog.getByRole("button", { name: "Готово" }).click();
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel("Название").fill("Archive export Проверка 中文");
+  await dialog.getByRole("button", { name: "Добавить вещь" }).click();
+  await expect(page).toHaveURL(/added=/);
+  await page.goto("/data");
+  await page.setViewportSize({ width: 360, height: 800 });
+  await expect(page.getByRole("button", { name: "Скачать архив" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Экспорт CSV" })).toBeVisible();
+  await page.setViewportSize({ width: 1365, height: 900 });
+
+  const archiveDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Скачать архив" }).click();
+  const download = await archiveDownload;
+  expect(download.suggestedFilename()).toMatch(/^all-items-backup-\d{4}-\d{2}-\d{2}\.zip$/);
+  const archivePath = await download.path();
+  if (!archivePath) throw new Error("The downloaded archive is missing a local test path.");
+  const archive = new Uint8Array(await readFile(archivePath));
+  expect(verifyInventoryArchive(archive).valid).toBe(true);
+  const files = unzipSync(archive);
+  const inventory = JSON.parse(Buffer.from(files["inventory.json"]!).toString("utf8")) as { items: Array<{ name: string; mediaAssets: Array<{ imagePath: string; thumbnailPath: string; sourcePath: string | null }> }> };
+  const savedItem = inventory.items.find((item) => item.name === "Archive export Проверка 中文");
+  expect(savedItem).toBeTruthy();
+  expect(savedItem!.mediaAssets).toHaveLength(1);
+  expect(files[savedItem!.mediaAssets[0]!.imagePath]).toBeTruthy();
+  expect(files[savedItem!.mediaAssets[0]!.thumbnailPath]).toBeTruthy();
+  expect(savedItem!.mediaAssets[0]!.sourcePath).toBeTruthy();
+  expect(files[savedItem!.mediaAssets[0]!.sourcePath!]).toBeTruthy();
+
+  const csvDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Экспорт CSV" }).click();
+  const csv = await csvDownload;
+  expect(csv.suggestedFilename()).toMatch(/^all-items-inventory-\d{4}-\d{2}-\d{2}\.csv$/);
+  const csvPath = await csv.path();
+  if (!csvPath) throw new Error("The downloaded CSV is missing a local test path.");
+  expect(await readFile(csvPath, "utf8")).toContain("Archive export Проверка 中文");
+  await page.goto("/");
+  await expect(page.getByRole("link", { name: /Archive export Проверка 中文/ })).toBeVisible();
+  expect(consoleErrors).toEqual([]);
+});
