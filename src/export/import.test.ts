@@ -106,7 +106,17 @@ describe("current and transitional archive restore", () => {
     const revision2 = modifiedArchive(files => {
       const manifest = JSON.parse(Buffer.from(files["manifest.json"]!).toString("utf8")); manifest.version=2; files["manifest.json"]=Buffer.from(JSON.stringify(manifest));
       const inventory=JSON.parse(Buffer.from(files["inventory.json"]!).toString("utf8"));
-      for (const item of inventory.items) delete item.categories;
+      for (const item of inventory.items) {
+        delete item.categories;
+        for (const media of item.mediaAssets) for (const [key,suffix] of [["imagePath","main"],["thumbnailPath","thumbnail"],["sourcePath","editable"]]) {
+          const old = media[key];
+          if (!old) continue;
+          const historical = `Items/${item.inventory_number} - ${item.name}/${item.name} - ${media.id.slice(0,8)} - ${suffix}.webp`;
+          files[historical] = files[old]!; delete files[old]; media[key] = historical;
+          manifest.entries.find((entry: {path:string}) => entry.path === old).path = historical;
+        }
+      }
+      files["manifest.json"]=Buffer.from(JSON.stringify(manifest));
       files["inventory.json"]=Buffer.from(JSON.stringify(inventory));
     });
     const target=await installation(path.join(root,"revision2"));

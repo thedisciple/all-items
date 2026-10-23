@@ -68,6 +68,8 @@ Storage status must distinguish local storage, synchronized storage, offline ava
 
 The Data view offers one primary ZIP download and one separate CSV option. Both start from explicit user activation, display pending state while the response is prepared, and report failure in an accessible status region. No automatic upload or permanent public URL is used. ZIP is the full-fidelity portable representation; CSV is a spreadsheet view without photos and collection membership details. A completed browser download is not described as verified external backup storage.
 
+The short CSV note sits directly under its own action. Collection covers reserve the same height while loading and after filtering; a stable scrollbar gutter avoids width changes. Filter navigation preserves the scroll offset when the new document supports it. When a shorter result set makes that impossible, the offset clamps predictably with the filters in view. Back/Forward continues to use browser history.
+
 ## M3.2 archive restoration
 
 The Data view accepts a local revision 2 ZIP and shows a validated preview of item, collection, and media counts. Preview leaves the current workspace untouched. The user explicitly confirms restoration; the action is disabled or refused when the inventory is populated. A pending state, concise localized error, and retained selected file make recoverable failure clear. Successful restoration refreshes the visible inventory. Keep the source archive until items, memberships, and photos have been checked. Revision 1 and unknown revisions receive an unsupported-format message; there is no silent conversion. The ZIP remains a complete archive; CSV and a future styled XLSX are spreadsheet views rather than restore formats.

@@ -32,9 +32,8 @@ export function ExportControls({ locale }: { locale: Locale }) {
   return <>
     <div className="export-actions">
       <button className="add-button" type="button" disabled={pending !== null} onClick={() => void download("archive")}>{pending === "archive" ? <Download size={16} aria-hidden="true"/> : <Archive size={16} aria-hidden="true"/>}{pending === "archive" ? translate(locale, "exportPreparing") : translate(locale, "downloadArchive")}</button>
-      <button className="quiet-button" type="button" disabled={pending !== null} onClick={() => void download("csv")}>{pending === "csv" ? <Download size={16} aria-hidden="true"/> : <FileSpreadsheet size={16} aria-hidden="true"/>}{pending === "csv" ? translate(locale, "exportPreparing") : translate(locale, "exportCsv")}</button>
+      <div className="export-option"><button className="quiet-button" type="button" disabled={pending !== null} onClick={() => void download("csv")}>{pending === "csv" ? <Download size={16} aria-hidden="true"/> : <FileSpreadsheet size={16} aria-hidden="true"/>}{pending === "csv" ? translate(locale, "exportPreparing") : translate(locale, "exportCsv")}</button><p className="export-note">{translate(locale, "exportCsvNote")}</p></div>
     </div>
-    <p className="export-note">{translate(locale, "exportCsvNote")}</p>
     {feedback ? <p className="form-feedback error" role="alert">{feedback}</p> : null}
   </>;
 }

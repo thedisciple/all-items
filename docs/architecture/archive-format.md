@@ -9,18 +9,18 @@ README.txt
 manifest.json
 inventory.json
 checksums.sha256
-Items/INV-000001 - FT232RL module/FT232RL module - 1234abcd - main.webp
-Items/INV-000001 - FT232RL module/FT232RL module - 1234abcd - thumbnail.webp
-Items/INV-000001 - FT232RL module/FT232RL module - 1234abcd - editable.webp
-Collections/DIY - 9876abcd/DIY - cover.webp
-Collections/DIY - 9876abcd/DIY - thumbnail.webp
+Items/INV-000001 - FT232RL module/main.webp
+Items/INV-000001 - FT232RL module/thumbnail.webp
+Items/INV-000001 - FT232RL module/editable.webp
+Collections/DIY - 9876abcd/cover.webp
+Collections/DIY - 9876abcd/thumbnail.webp
 ```
 
 Readable names are presentation only. `inventory.json` retains item, collection and media UUIDs, inventory numbers, stock, locations, memberships, crop data, cover selection, private sale metadata and timestamps. Each media record explicitly references its archive-relative files. Legacy item photos without editable sources have `sourcePath: null`. No identity is parsed from a folder name. The archive does not contain the SQLite database, absolute data paths or raw uploaded originals.
 
 Category arrays contain stable system keys or exact custom labels; order has no meaning and duplicates are invalid. The retained single `category` field is an inert snapshot of the old column for preservation, never the source of current assignments. Importing revision 3 uses only the array. Exporting after a revision 2 restore writes revision 3 with the adapted assignments.
 
-Filenames use NFC Unicode, preserving readable Cyrillic, Latin, Chinese and emoji. Unsafe Windows characters and control characters are replaced, trailing spaces and periods removed, device names replaced, and names shortened by UTF-8 byte length. Item folders include the inventory number. Item photo names include a stable media-ID prefix. Collection folders include a stable collection-ID prefix. The exporter rejects any residual case-insensitive or Unicode-normalized collision and any path above 240 UTF-8 bytes. Private live media filenames are unchanged.
+Filenames use NFC Unicode, preserving readable Cyrillic, Latin, Chinese and emoji. Unsafe Windows characters and control characters are replaced, trailing spaces and periods removed, device names replaced, and names shortened by UTF-8 byte length without splitting code points. Item folders include the inventory number. A single photo uses main/thumbnail/editable filenames; an archive with several assets uses `photo-01.webp`, `photo-01-thumbnail.webp`, `photo-01-editable.webp`, then photo-02, and so on in exported media order. This naming convention does not implement a photo gallery. Collection folders include a stable collection-ID prefix. JSON explicitly maps every asset ID to its files. The exporter rejects any residual case-insensitive or Unicode-normalized collision and any path above 240 UTF-8 bytes. Private live media filenames are unchanged. Revision 2 imports retain their original longer paths during validation and use identifier-derived live destinations.
 
 `manifest.json` declares the format identifier, revision, UTC export time, application version and every payload entry except the manifest and checksum file. Each entry has a relative path, uncompressed size and SHA-256 digest. `checksums.sha256` repeats each entry as `<digest><two spaces><path>` with LF endings. `README.txt` is included in the manifest and checksum list.
 

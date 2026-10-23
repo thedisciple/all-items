@@ -118,3 +118,52 @@ test("one item save retains a failed draft and commits type, stock and multiple 
   await expect(form.locator(".stock-row")).toHaveCount(2);
   await expect(form.locator(".category-selection .category-chip")).toHaveCount(1);
 });
+
+test("collection filters keep uploaded cover geometry and a predictable scroll anchor on desktop and mobile", async ({ page }) => {
+  test.setTimeout(90_000);
+  for (let index=0;index<3;index++) {
+    await page.goto("/"); await page.locator(".add-dialog-trigger").click();
+    const add = page.getByRole("dialog", { name: "Добавить вещь" });
+    await add.getByLabel("Название").fill(`R1 geometry ${index}`);
+    await add.locator(".category-picker summary").click();
+    await add.locator(".category-options input").nth(index === 0 ? 0 : 2).check();
+    if (index === 0) await add.locator(".category-options input").nth(2).check();
+    await add.getByRole("button", { name: "Добавить вещь", exact: true }).click();
+    await expect(page).toHaveURL(/added=/);
+  }
+  await page.goto("/collections"); await page.getByRole("button", { name: "Создать коллекцию" }).click();
+  const create = page.getByRole("dialog", { name: "Создать коллекцию" });
+  await create.getByLabel("Название коллекции").fill("R1 stable header");
+  await create.getByRole("button", { name: "Создать коллекцию" }).click();
+  await expect(page).toHaveURL(/\/collections\//);
+  await page.getByRole("button", { name: "Добавить вещи", exact: true }).click();
+  const members = page.getByRole("dialog", { name: "Добавить вещи" });
+  for (let index=0;index<3;index++) await members.locator(".collection-item-option").filter({hasText:`R1 geometry ${index}`}).getByRole("checkbox").check();
+  await members.getByRole("button", { name: /Добавить вещи/ }).click();
+  await expect(page.locator(".item-row")).toHaveCount(3);
+  await page.getByRole("button", { name: "Изменить обложку" }).click();
+  const cover = page.getByRole("dialog", { name: "Обложка коллекции" });
+  await cover.getByLabel("Обложка коллекции").selectOption("upload");
+  await cover.locator('input[type="file"]').setInputFiles({name:"synthetic-cover.png",mimeType:"image/png",buffer:await sharp({create:{width:400,height:200,channels:3,background:"#675786"}}).png().toBuffer()});
+  await cover.getByRole("button", { name: "Сохранить обложку" }).click();
+  await expect(page.locator(".media-cover")).toHaveAttribute("data-image-state","loaded");
+  for (const viewport of [{width:1365,height:600},{width:360,height:640}]) {
+    await page.setViewportSize(viewport);
+    const before = await page.locator(".media-cover").boundingBox();
+    await page.locator(".filter-bar").scrollIntoViewIfNeeded();
+    const scroll = await page.evaluate(()=>window.scrollY);
+    await page.locator(".filter-bar").getByLabel("Категория",{exact:true}).selectOption("electronics");
+    await expect(page.locator(".item-row")).toHaveCount(1);
+    await expect(page).toHaveURL(/category=electronics/);
+    const after = await page.locator(".media-cover").boundingBox();
+    expect(after!.width).toBe(before!.width); expect(after!.height).toBe(before!.height);
+    const position = await page.evaluate(()=>({y:window.scrollY,max:Math.max(0,document.documentElement.scrollHeight-window.innerHeight)}));
+    expect(position.y).toBeLessThanOrEqual(position.max);
+    if (scroll <= position.max) expect(Math.abs(position.y-scroll)).toBeLessThanOrEqual(2);
+    await expect(page.locator(".filter-bar")).toBeInViewport();
+    await page.locator(".filter-bar .clear-filters-button").click();
+    await expect(page.locator(".item-row")).toHaveCount(3);
+    await page.goBack(); await expect(page.locator(".item-row")).toHaveCount(1);
+    await page.goForward(); await expect(page.locator(".item-row")).toHaveCount(3);
+  }
+});

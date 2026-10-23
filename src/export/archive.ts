@@ -23,24 +23,25 @@ const pathKey = (value: string) => value.normalize("NFKC").toLocaleLowerCase("en
 function readableStem(value: unknown, fallback: string, maxBytes = 70) {
   let stem = (typeof value === "string" ? value : "").normalize("NFC").replace(/[\\/:*?"<>|\u0000-\u001f\u007f]/gu, " ").replace(/\s+/gu, " ").trim().replace(/[. ]+$/gu, "");
   if (!stem || windowsDevice.test(stem)) stem = fallback;
-  while (Buffer.byteLength(stem, "utf8") > maxBytes) stem = stem.slice(0, -1);
+  const points = [...stem];
+  while (Buffer.byteLength(stem, "utf8") > maxBytes) { points.pop(); stem = points.join(""); }
   return stem.replace(/[. ]+$/gu, "") || fallback;
 }
 
-export function itemArchivePaths(item: Record<string, unknown>, asset: Record<string, unknown>) {
+export function itemArchivePaths(item: Record<string, unknown>, _asset: Record<string, unknown>, index = 0, count = 1) {
   const number = readableStem(item.inventory_number, "item", 32);
   const name = readableStem(item.name, "Item", 64);
-  const mediaSuffix = typeof asset.id === "string" ? asset.id.slice(0, 8) : "photo";
   const folder = `Items/${number} - ${name}`;
-  const base = `${folder}/${name} - ${mediaSuffix}`;
-  return { imagePath: `${base} - main.webp`, thumbnailPath: `${base} - thumbnail.webp`, sourcePath: `${base} - editable.webp` };
+  if (count === 1) return { imagePath: `${folder}/main.webp`, thumbnailPath: `${folder}/thumbnail.webp`, sourcePath: `${folder}/editable.webp` };
+  const base = `${folder}/photo-${String(index+1).padStart(2,"0")}`;
+  return { imagePath: `${base}.webp`, thumbnailPath: `${base}-thumbnail.webp`, sourcePath: `${base}-editable.webp` };
 }
 
 export function collectionArchivePaths(collection: Record<string, unknown>) {
   const name = readableStem(collection.name, "Collection", 70);
   const suffix = typeof collection.id === "string" ? collection.id.slice(0, 8) : "cover";
-  const base = `Collections/${name} - ${suffix}/${name}`;
-  return { path: `${base} - cover.webp`, thumbnailPath: `${base} - thumbnail.webp` };
+  const folder = `Collections/${name} - ${suffix}`;
+  return { path: `${folder}/cover.webp`, thumbnailPath: `${folder}/thumbnail.webp` };
 }
 
 function canonicalizeInventory(inventory: Record<string, unknown>, assets: Record<string, Uint8Array>) {
@@ -54,8 +55,9 @@ function canonicalizeInventory(inventory: Record<string, unknown>, assets: Recor
   };
   for (const item of (Array.isArray(copy.items) ? copy.items : []) as Array<Record<string, unknown>>) {
     item.categories ??= canonicalCategories(typeof item.category === "string" ? [item.category] : []);
-    for (const asset of (Array.isArray(item.mediaAssets) ? item.mediaAssets : []) as Array<Record<string, unknown>>) {
-      const paths = itemArchivePaths(item, asset);
+    const photos = (Array.isArray(item.mediaAssets) ? item.mediaAssets : []) as Array<Record<string, unknown>>;
+    for (const [index, asset] of photos.entries()) {
+      const paths = itemArchivePaths(item, asset, index, photos.length);
       move(asset, "imagePath", paths.imagePath);
       move(asset, "thumbnailPath", paths.thumbnailPath);
       if (asset.sourcePath !== null) move(asset, "sourcePath", paths.sourcePath);
@@ -198,13 +200,11 @@ function validateReferences(inventory: Record<string, unknown>, files: Record<st
     for (const asset of item.mediaAssets as Array<Record<string, unknown>>) for (const key of ["imagePath", "thumbnailPath", "sourcePath"]) {
       const value = asset[key];
       if (value === null && key === "sourcePath") continue;
-      if (typeof value !== "string" || !safePath(value) || !files[value]) throw new ArchiveError("An item references a missing or unsafe media asset.");
+      if (typeof value !== "string" || !safePath(value) || !value.startsWith("Items/") || !files[value] || assetPaths.has(value)) throw new ArchiveError("An item references a missing, shared or unsafe media asset.");
       assetPaths.add(value);
     }
     for (const asset of item.mediaAssets as Array<Record<string, unknown>>) {
       if (typeof asset.id !== "string" || !z.string().uuid().safeParse(asset.id).success || mediaIds.has(asset.id) || allMediaIds.has(asset.id) || typeof asset.isPrimary !== "boolean") throw new ArchiveError("An item has invalid media identity metadata.");
-      const paths = itemArchivePaths(item, asset);
-      if (asset.imagePath !== paths.imagePath || asset.thumbnailPath !== paths.thumbnailPath || (asset.sourcePath !== null && asset.sourcePath !== paths.sourcePath)) throw new ArchiveError("An item media path does not match its identifiers.");
       mediaIds.add(asset.id);
       allMediaIds.add(asset.id);
       if (asset.isPrimary) primaryCount++;
@@ -225,8 +225,7 @@ function validateReferences(inventory: Record<string, unknown>, files: Record<st
     const thumbnailPath = typeof uploadCover === "object" && uploadCover !== null ? (uploadCover as Record<string, unknown>).thumbnailPath : null;
     if (collection.cover_type === "upload") {
       const cover = typeof uploadCover === "object" && uploadCover !== null ? uploadCover as Record<string, unknown> : {};
-      const paths = collectionArchivePaths(collection);
-      if (typeof cover.id !== "string" || !z.string().uuid().safeParse(cover.id).success || cover.id !== collection.cover_upload_id || coverPath !== paths.path || thumbnailPath !== paths.thumbnailPath || !files[coverPath] || !files[thumbnailPath]) throw new ArchiveError("A collection references a missing or unsafe cover.");
+      if (typeof cover.id !== "string" || !z.string().uuid().safeParse(cover.id).success || cover.id !== collection.cover_upload_id || typeof coverPath !== "string" || typeof thumbnailPath !== "string" || !coverPath.startsWith("Collections/") || !thumbnailPath.startsWith("Collections/") || coverPath === thumbnailPath || assetPaths.has(coverPath) || assetPaths.has(thumbnailPath) || !files[coverPath] || !files[thumbnailPath]) throw new ArchiveError("A collection references a missing or unsafe cover.");
       assetPaths.add(coverPath); assetPaths.add(thumbnailPath);
     } else if (uploadCover !== null) throw new ArchiveError("A collection has unselected cover files.");
     if (collection.cover_type === "item_photo") {

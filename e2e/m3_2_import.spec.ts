@@ -16,6 +16,9 @@ test("downloads a complete archive and restores it through the browser into a fr
   await page.locator('input[name="photo"]').setInputFiles({ name: "synthetic.png", mimeType: "image/png", buffer: image });
   await page.getByRole("dialog", { name: "Редактировать фото" }).getByRole("button", { name: "Готово" }).click();
   await add.getByLabel("Название").fill("Restored gadget 中文");
+  await add.locator(".category-picker summary").click();
+  await add.locator(".category-options input").nth(0).check();
+  await add.locator(".category-options input").nth(2).check();
   await add.getByRole("button", { name: "Добавить вещь" }).click();
   await expect(page).toHaveURL(/added=/);
 
@@ -63,6 +66,7 @@ test("downloads a complete archive and restores it through the browser into a fr
   await expect(page).toHaveURL("http://127.0.0.1:3103/");
   await page.getByRole("link", { name: /Restored gadget 中文/ }).click();
   await expect(page.getByRole("heading", { name: "Restored gadget 中文", level: 1 })).toBeVisible();
+  await expect(page.locator(".item-summary .category-chip")).toHaveCount(2);
   await expect.poll(() => page.locator(".detail-photo").first().evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
   await page.goto("http://127.0.0.1:3103/collections");
   await page.locator(".collection-card").filter({ hasText: "Portable DIY" }).click();

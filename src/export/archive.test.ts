@@ -35,8 +35,9 @@ describe("portable inventory archive", () => {
     });
     expect(verifyInventoryArchive(archive).valid).toBe(true);
     const files = unzipSync(archive);
-    expect(Object.keys(files)).toContain("Items/IT-1 - Смарт-годинник/Смарт-годинник - 33333333 - main.webp");
-    expect(Object.keys(files)).toContain("Collections/Bašta сад - 22222222/Bašta сад - cover.webp");
+    expect(Object.keys(files)).toContain("Items/IT-1 - Смарт-годинник/photo-01.webp");
+    expect(Object.keys(files)).toContain("Items/IT-1 - Смарт-годинник/photo-02-editable.webp");
+    expect(Object.keys(files)).toContain("Collections/Bašta сад - 22222222/cover.webp");
     expect(Buffer.from(files["README.txt"]!).toString("utf8")).toContain("Items/");
   });
 
@@ -55,7 +56,7 @@ describe("portable inventory archive", () => {
     unsupported["manifest.json"] = Buffer.from(JSON.stringify(manifest));
     expect(() => verifyInventoryArchive(zipSync(unsupported))).toThrow(/Unsupported archive format/);
     expect(() => buildInventoryArchive({ items: [], collections: [] }, { "media/../outside": new Uint8Array([1]) })).toThrow(ArchiveError);
-    expect(() => verifyInventoryArchive(buildInventoryArchive({ workspace: null, locations: [], items: [{ id: "11111111-1111-4111-8111-111111111111", inventory_number: "INV-000001", stock: [], collectionIds: [], mediaAssets: [{ id: "33333333-3333-4333-8333-333333333333", isPrimary: true, imagePath: "media/items/11111111-1111-4111-8111-111111111111/33333333-3333-4333-8333-333333333333.webp", thumbnailPath: "media/items/11111111-1111-4111-8111-111111111111/33333333-3333-4333-8333-333333333333-thumb.webp", sourcePath: null }] }], collections: [], memberships: [] }))).toThrow(/missing or unsafe media/);
+    expect(() => verifyInventoryArchive(buildInventoryArchive({ workspace: null, locations: [], items: [{ id: "11111111-1111-4111-8111-111111111111", inventory_number: "INV-000001", stock: [], collectionIds: [], mediaAssets: [{ id: "33333333-3333-4333-8333-333333333333", isPrimary: true, imagePath: "media/items/11111111-1111-4111-8111-111111111111/33333333-3333-4333-8333-333333333333.webp", thumbnailPath: "media/items/11111111-1111-4111-8111-111111111111/33333333-3333-4333-8333-333333333333-thumb.webp", sourcePath: null }] }], collections: [], memberships: [] }))).toThrow(/missing, shared or unsafe media/);
   });
 
   it("makes readable, bounded, collision-safe paths from unsafe and Unicode names", () => {

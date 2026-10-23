@@ -533,3 +533,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .custom-category-row { display: flex; gap: 8px; }
 .custom-category-row input { min-width: 0; width: 100%; }
 .category-chip { overflow-wrap: anywhere; }
+
+html { scrollbar-gutter: stable; }
+.export-option { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+.export-option .export-note { margin: 0; }
