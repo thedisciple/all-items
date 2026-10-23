@@ -20,8 +20,8 @@ async function selectPhoto(page: Page, name = "synthetic.png", buffer?: Buffer) 
   buffer ??= await syntheticPhoto();
   await page.getByRole("button", { name: "Добавить фото" }).click();
   await page.locator('input[name="photo"]').setInputFiles({ name, mimeType: "image/png", buffer });
-  const editor = page.getByRole("dialog", { name: "Обрезать фотографию" });
-  await expect(editor.getByRole("button", { name: "Подтвердить кадр" })).toBeEnabled();
+  const editor = page.getByRole("dialog", { name: "Редактировать фото" });
+  await expect(editor.getByRole("button", { name: "Готово" })).toBeEnabled();
   return editor;
 }
 
@@ -30,7 +30,18 @@ async function createWithCrop(page: Page, name: string) {
   await page.locator(".add-dialog-trigger").click();
   const addDialog = page.getByRole("dialog", { name: "Добавить вещь" });
   const editor = await selectPhoto(page);
-  await editor.getByRole("button", { name: "Подтвердить кадр" }).click();
+  const closeBox = await editor.locator(".crop-close-button").boundingBox();
+  const closeIconBox = await editor.locator(".crop-close-button svg").boundingBox();
+  expect(closeBox && closeIconBox).toBeTruthy();
+  expect(Math.abs((closeIconBox!.x + closeIconBox!.width / 2) - (closeBox!.x + closeBox!.width / 2))).toBeLessThan(1);
+  expect(Math.abs((closeIconBox!.y + closeIconBox!.height / 2) - (closeBox!.y + closeBox!.height / 2))).toBeLessThan(1);
+  await page.setViewportSize({ width: 360, height: 800 });
+  await expect(editor.getByRole("button", { name: "Готово" })).toBeInViewport();
+  await expect(editor.locator(".crop-actions").getByRole("button", { name: "Отмена" })).toBeInViewport();
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await expect(editor.getByRole("button", { name: "Готово" })).toBeInViewport();
+  await page.setViewportSize({ width: 1365, height: 900 });
+  await editor.getByRole("button", { name: "Готово" }).click();
   await addDialog.getByLabel("Название").fill(name);
   await addDialog.getByRole("button", { name: "Добавить вещь" }).click();
   await expect(page).toHaveURL(/added=/);
@@ -87,7 +98,7 @@ test("waits for image readiness, applies zoom and aspect controls, crops, and op
   expect(Math.abs(originalFrame.cropBox.width / originalFrame.cropBox.height - 4 / 3)).toBeLessThan(0.03);
   expect(Math.abs(originalFrame.cropBox.width - originalFrame.canvas.width)).toBeLessThan(2);
   expect(Math.abs(originalFrame.cropBox.height - originalFrame.canvas.height)).toBeLessThan(2);
-  await editor.getByRole("button", { name: "Повернуть на 90°" }).click();
+  await editor.getByRole("button", { name: "Повернуть по часовой стрелке на 90°" }).click();
   await expect.poll(async () => (await readCropState(page)).rotation).toBe(90);
   const rotatedOriginalFrame = await readCropState(page);
   expect(Math.abs(rotatedOriginalFrame.cropBox.width / rotatedOriginalFrame.cropBox.height - 3 / 4)).toBeLessThan(0.05);
@@ -116,7 +127,7 @@ test("waits for image readiness, applies zoom and aspect controls, crops, and op
   await editor.getByRole("button", { name: "Сбросить кадр" }).click();
   await expect.poll(async () => (await readCropState(page)).rotation).toBe(0);
   await expect(aspect).toHaveValue("free");
-  await editor.getByRole("button", { name: "Подтвердить кадр" }).click();
+  await editor.getByRole("button", { name: "Готово" }).click();
   await addDialog.getByLabel("Название").fill("M2D-R1 cropped item");
   await addDialog.getByRole("button", { name: "Добавить вещь" }).click();
   await expect(page).toHaveURL(/added=/);
@@ -175,8 +186,8 @@ test("deletes a saved photo immediately and allows a replacement without a reloa
   await photoLessRow.click();
   await page.getByRole("button", { name: "Добавить фото" }).click();
   await page.locator('input[name="photo"]').setInputFiles({ name: "replacement.png", mimeType: "image/png", buffer: await syntheticPhoto() });
-  const editor = page.getByRole("dialog", { name: "Обрезать фотографию" });
-  await editor.getByRole("button", { name: "Подтвердить кадр" }).click();
+  const editor = page.getByRole("dialog", { name: "Редактировать фото" });
+  await editor.getByRole("button", { name: "Готово" }).click();
   await expect(page.locator(".photo-viewer-image img.detail-photo")).toBeVisible();
   await expect(page.locator(".photo-viewer-image img.detail-photo")).not.toHaveAttribute("src", /^blob:/);
   expect(pageErrors).toEqual([]);
@@ -272,10 +283,23 @@ test("collection name, icon, cover and deletion are contextual and immediately v
   await expect(page.locator(".collection-detail-heading h1")).toHaveText(/📷 Renamed collection/);
   await page.getByRole("button", { name: "Change cover" }).click();
   const coverDialog = page.getByRole("dialog", { name: "Collection cover" });
-  await coverDialog.getByLabel("Collection cover").selectOption("upload");
-  await coverDialog.locator('input[type="file"]').setInputFiles({ name: "collection-cover.png", mimeType: "image/png", buffer: await syntheticPhoto(640, 320) });
-  await expect(coverDialog.getByRole("img", { name: "Cover preview" })).toBeVisible();
+  await coverDialog.getByLabel("Collection cover").selectOption("emoji");
+  await coverDialog.getByLabel("Collection icon").selectOption("🔧");
   await coverDialog.getByRole("button", { name: "Save cover" }).click();
+  await expect(page.locator(".collection-detail-cover-placeholder")).toContainText("🔧");
+  await page.getByRole("link", { name: "Collections", exact: true }).click();
+  const emojiCard = page.locator(".collection-card").filter({ hasText: "Renamed collection" });
+  await expect(emojiCard.locator(".collection-card-placeholder")).toContainText("🔧");
+  await expect(emojiCard.locator(".collection-title-icon")).toContainText("📷");
+  await emojiCard.click();
+  await expect(page.locator(".collection-detail-cover-placeholder")).toContainText("🔧");
+  await expect(page.locator(".collection-detail-heading h1")).toContainText("📷");
+  await page.getByRole("button", { name: "Change cover" }).click();
+  const photoCoverDialog = page.getByRole("dialog", { name: "Collection cover" });
+  await photoCoverDialog.getByLabel("Collection cover").selectOption("upload");
+  await photoCoverDialog.locator('input[type="file"]').setInputFiles({ name: "collection-cover.png", mimeType: "image/png", buffer: await syntheticPhoto(640, 320) });
+  await expect(photoCoverDialog.getByRole("img", { name: "Cover preview" })).toBeVisible();
+  await photoCoverDialog.getByRole("button", { name: "Save cover" }).click();
   await expect(page.locator(".collection-detail-cover")).toBeVisible();
   await expect(page.locator(".collection-detail-cover")).toHaveAttribute("src", /media\/collections/);
   await expect.poll(() => page.locator(".collection-detail-cover").evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
@@ -303,7 +327,7 @@ test("Original crop covers portrait source and rotated orientation", async ({ pa
   expect(Math.abs(state.cropBox.width / state.cropBox.height - 0.75)).toBeLessThan(0.04);
   expect(Math.abs(state.cropBox.width - state.canvas.width)).toBeLessThan(2);
   expect(Math.abs(state.cropBox.height - state.canvas.height)).toBeLessThan(2);
-  await editor.getByRole("button", { name: "Повернуть на 90°" }).click();
+  await editor.getByRole("button", { name: "Повернуть по часовой стрелке на 90°" }).click();
   await expect.poll(async () => (await readCropState(page)).rotation).toBe(90);
   state = await readCropState(page);
   expect(Math.abs(state.cropBox.width / state.cropBox.height - 4 / 3)).toBeLessThan(0.05);
@@ -322,7 +346,7 @@ test("rejects invalid crop coordinates and allows item creation with the origina
     const image = root.querySelector<HTMLImageElement>(":scope > img") as (HTMLImageElement & { cropper?: { setData: (data: { width: number; height: number }) => void } }) | null;
     image?.cropper?.setData({ width: 20, height: 20 });
   });
-  await editor.getByRole("button", { name: "Подтвердить кадр" }).click();
+  await editor.getByRole("button", { name: "Готово" }).click();
   await expect(editor.getByText(/Кадр слишком маленький/)).toBeVisible();
   await editor.getByRole("button", { name: "Продолжить без кадрирования" }).click();
   await addDialog.getByLabel("Название").fill("M2D-R1 original fallback item");
@@ -344,8 +368,8 @@ test("recovers from canvas encoding failure and keeps an existing saved photo on
   await createWithCrop(page, "M2D-R1 recovery item");
   await page.evaluate(() => { (window as Window & { failCanvasEncoding?: boolean }).failCanvasEncoding = true; });
   await page.getByRole("button", { name: "Редактировать" }).click();
-  const editor = page.getByRole("dialog", { name: "Обрезать фотографию" });
-  await editor.getByRole("button", { name: "Подтвердить кадр" }).click();
+  const editor = page.getByRole("dialog", { name: "Редактировать фото" });
+  await editor.getByRole("button", { name: "Готово" }).click();
   await expect(editor.getByRole("alert")).toBeVisible();
   await editor.getByRole("button", { name: "Продолжить без кадрирования" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Фото сохранено" })).toBeAttached();

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
+import { ChevronDown } from "lucide-react";
 import { setLanguageAction } from "@/app/actions";
 import { useI18n } from "@/i18n/provider";
 
@@ -39,7 +40,7 @@ export function LanguageSwitcher() {
   return <div ref={rootRef} className="language-switcher-wrap" onKeyDown={onKeyDown}>
     <button ref={triggerRef} className="language-switcher" type="button" aria-label={t("language")} aria-haspopup="menu" aria-expanded={open} disabled={pending} onClick={() => setOpen((value) => !value)}>
       <img src={locale === "ru" ? "/flags/ru.svg" : "/flags/gb.svg"} alt="" width="20" height="15"/>
-      <span>{locale === "ru" ? t("languageRussian") : t("languageEnglish")}</span><span aria-hidden="true">⌄</span>
+      <span>{locale === "ru" ? t("languageRussian") : t("languageEnglish")}</span><ChevronDown size={15} aria-hidden="true"/>
     </button>
     {open ? <div className="language-menu" role="menu" aria-label={t("language")} ref={menuRef}>
       <button type="button" role="menuitemradio" aria-checked={locale === "ru"} onClick={() => choose("ru")}><img src="/flags/ru.svg" alt="" width="20" height="15"/>{t("languageRussian")}</button>

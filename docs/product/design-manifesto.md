@@ -13,6 +13,11 @@ This manifesto governs every user-facing change in All Items. The interface shou
 - Preserve entered work after recoverable errors. Never require a manual refresh to see a saved change.
 - Destructive actions use one consistent explicit confirmation with a clear consequence, Cancel, and one final action.
 - Provide keyboard access, visible focus, accessible status and error announcements, and layouts that work at 360px.
+- Use semantic icons consistently (edit, add, delete, rotate, reset); use a restrained tooltip for icon-only controls while keeping an independent accessible name.
+- Present categories as quiet informational chips, and represent an unspecified optional value with a neutral dash when its context is clear.
+- Keep collection identity (name and optional emoji) separate from its selected cover (emoji, photo, or default), and render the same cover choice in overview and detail views.
+- In editing surfaces, keep essential actions reachable in the viewport. Let the working area flex before making controls require scrolling; allow controlled scrolling on short screens rather than clipping controls.
+- Remove repeated totals and explanatory copy from editors when the value is already clear in the item summary or enforced by validation.
 - Motion must clarify a state change, respect reduced-motion preferences, and never delay a task.
 - Keep private inventory, photos, sale intent, and local-first storage private by default. Do not imply synchronization, backup, or availability that is not implemented.
 

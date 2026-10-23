@@ -6,6 +6,7 @@ import { createCollectionAction, deleteCollectionAction, renameCollectionAction,
 import { FormSubmitButton } from "./form-submit-button";
 import { DestructiveConfirmation } from "./destructive-confirmation";
 import { useI18n } from "@/i18n/provider";
+import { Pencil } from "lucide-react";
 
 const idle: ActionFeedback = { status: "idle", message: "" };
 
@@ -60,7 +61,7 @@ export function CollectionManageForms({ id, name, icon }: { id: string; name: st
   useEffect(() => { if (editing) { nameInput.current?.focus(); nameInput.current?.select(); } }, [editing]);
   return <div className="collection-manage-forms">
     <div className="collection-rename-panel">
-      {!editing ? <button type="button" className="text-button collection-edit-trigger" onClick={() => { setDraftName(name); setDraftIcon(icon ?? ""); setEditing(true); }}>{t("collectionEdit")}</button> : <form action={renameAction} className="collection-rename-form" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); setEditing(false); } }}>
+      {!editing ? <button type="button" className="quiet-button collection-edit-trigger" onClick={() => { setDraftName(name); setDraftIcon(icon ?? ""); setEditing(true); }}><Pencil size={15} aria-hidden="true"/>{t("collectionEdit")}</button> : <form action={renameAction} className="collection-rename-form" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); setEditing(false); } }}>
         <input type="hidden" name="id" value={id}/>
         <label className="field"><span>{t("collectionRenameTitle")}</span><input ref={nameInput} name="name" value={draftName} maxLength={120} required onChange={(event) => setDraftName(event.target.value)}/></label>
         <label className="field"><span>{t("collectionIcon")}</span><select name="icon" value={draftIcon} onChange={(event) => setDraftIcon(event.target.value)}><option value="">{t("collectionIconNone")}</option>{collectionIconOptions(t).map(([value, label]) => <option key={value} value={value}>{value} {label}</option>)}</select></label>

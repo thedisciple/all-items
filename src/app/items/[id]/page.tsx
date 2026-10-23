@@ -13,8 +13,9 @@ import { getItem, listItems } from "@/items/service";
 import { getPrimaryPhoto } from "@/media/service";
 import { getLocale } from "@/i18n/server";
 import { translate } from "@/i18n/messages";
-import { categoryEmoji, categoryKeyForStoredValue, categoryMessageKey } from "@/items/categories";
+import { categoryKeyForStoredValue } from "@/items/categories";
 import { LanguageSwitcher } from "@/app/components/language-switcher";
+import { CategoryTag } from "@/app/components/category-tag";
 
 export const dynamic = "force-dynamic";
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ from?: string }> };
@@ -48,7 +49,7 @@ export default async function ItemPage({ params, searchParams }: Props) {
         <section className="item-summary" aria-label={t("itemSummary")}>
           <div><span>{t("total")}</span><strong>{new Intl.NumberFormat(locale).format(item.quantity)}</strong></div>
           <div><span>{t("locations")}</span><strong>{locations.length ? locations.join(", ") : t("locationUnknown")}</strong></div>
-          <div><span>{t("category")}</span><strong>{item.category ? `${categoryKeyForStoredValue(String(item.category)) ? `${categoryEmoji[categoryKeyForStoredValue(String(item.category))!]} ` : ""}${categoryMessageKey(String(item.category)) ? t(categoryMessageKey(String(item.category))!) : item.category}` : t("categoryUnknown")}</strong></div>
+          <div><span>{t("category")}</span><strong>{item.category ? categoryKeyForStoredValue(String(item.category)) ? <CategoryTag value={String(item.category)} locale={locale}/> : <span className="category-chip">{String(item.category)}</span> : t("categoryUnknown")}</strong></div>
         </section>
         <section className="photo-detail-panel" aria-label={t("photo")}>
           <PhotoReplacement itemId={id} photoUrl={photo ? `/media/${id}/${photo.id}?v=${photo.id}` : null} itemName={item.name}/>
