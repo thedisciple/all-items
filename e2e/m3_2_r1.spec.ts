@@ -68,6 +68,7 @@ test("delayed and interrupted thumbnails remain clickable during navigation and 
 });
 
 test("one item save retains a failed draft and commits type, stock and multiple categories together", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
   await page.goto("/");
   await page.locator(".add-dialog-trigger").click();
   const add = page.getByRole("dialog", { name: "Добавить вещь" });
@@ -117,6 +118,7 @@ test("one item save retains a failed draft and commits type, stock and multiple 
   await expect(form.getByLabel("Тип учёта")).toHaveValue("consumable");
   await expect(form.locator(".stock-row")).toHaveCount(2);
   await expect(form.locator(".category-selection .category-chip")).toHaveCount(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
 test("collection filters keep uploaded cover geometry and a predictable scroll anchor on desktop and mobile", async ({ page }) => {

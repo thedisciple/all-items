@@ -282,11 +282,17 @@ export async function updateItem(id: string, input: ItemFields, stock?: unknown)
 }
 
 export async function saveStock(id: string, input: unknown) {
-  const item = await getItem(id);
-  if (!item) throw new Error("Item not found");
-  return updateItem(id, { name: item.name, model: item.model ?? "", brand: item.brand ?? "", categories: item.categories,
-    originalMarking: item.original_marking ?? "", notes: item.notes ?? "", description: item.description ?? "", identificationStatus: item.identification_status as ItemFields["identificationStatus"], trackingMode: item.tracking_mode as ItemFields["trackingMode"],
-    saleIntent: item.sale_intent as ItemFields["saleIntent"], askingPrice: item.asking_price_minor === null ? "" : String(item.asking_price_minor/100), askingCurrency: (item.asking_currency ?? "RUB") as ItemFields["askingCurrency"] }, input);
+  id = itemIdInput.parse(id);
+  return serializeLocalWrite(async () => {
+    const { db, workspaceId } = await initializeWorkspace();
+    const tx = await beginWriteTransaction(db);
+    try {
+      const item = await tx.execute({sql:"SELECT tracking_mode FROM items WHERE id=? AND workspace_id=?",args:[id,workspaceId]});
+      if (!item.rows.length) throw new Error("Item not found");
+      await replaceStock(tx,id,workspaceId,normalizedStock(input,String(item.rows[0]!.tracking_mode)),new Date().toISOString());
+      await tx.commit();
+    } catch (error) { await tx.rollback(); throw error; }
+  });
 }
 
 export async function deleteItem(id: string) {

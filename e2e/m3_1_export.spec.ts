@@ -23,6 +23,10 @@ test("downloads an independently verifiable archive and a separate CSV without c
   await expect(page.getByRole("button", { name: "Скачать архив" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Экспорт CSV" })).toBeVisible();
   await page.setViewportSize({ width: 1365, height: 900 });
+  const zipButton = await page.getByRole("button", { name: "Скачать архив" }).boundingBox();
+  const csvButton = await page.getByRole("button", { name: "Экспорт CSV" }).boundingBox();
+  expect(Math.abs(zipButton!.y-csvButton!.y)).toBeLessThanOrEqual(1);
+  await expect(page.locator(".export-option .export-note")).toHaveText(".csv (без фото)");
 
   const archiveDownload = page.waitForEvent("download");
   await page.getByRole("button", { name: "Скачать архив" }).click();
@@ -37,6 +41,7 @@ test("downloads an independently verifiable archive and a separate CSV without c
   const savedItem = inventory.items.find((item) => item.name === "Archive export Проверка 中文");
   expect(savedItem).toBeTruthy();
   expect(savedItem!.mediaAssets).toHaveLength(1);
+  expect(savedItem!.mediaAssets[0]!.imagePath).toMatch(/\/main\.webp$/);
   expect(files[savedItem!.mediaAssets[0]!.imagePath]).toBeTruthy();
   expect(files[savedItem!.mediaAssets[0]!.thumbnailPath]).toBeTruthy();
   expect(savedItem!.mediaAssets[0]!.sourcePath).toBeTruthy();

@@ -26,7 +26,7 @@ export function ItemEditForm({ itemId, initial, initialRows, returnTo = "/" }: {
   useEffect(() => { if (feedback.status === "success") router.push(returnTo); }, [feedback, returnTo, router]);
   const field = (key: keyof Draft) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setDraft((value) => ({ ...value, [key]: event.target.value }));
 
-  return <form onSubmit={event => { event.preventDefault(); if (!pending) { const data = new FormData(event.currentTarget); startTransition(() => action(data)); } }} className="detail-panel item-edit-form">
+  return <form aria-busy={pending} onSubmit={event => { event.preventDefault(); if (!pending) { const data = new FormData(event.currentTarget); startTransition(() => action(data)); } }} className="detail-panel item-edit-form">
     <input type="hidden" name="id" value={itemId}/><input type="hidden" name="returnTo" value={returnTo}/>
     <div className="section-heading"><div><h2>{t("details")}</h2></div></div>
     <div className="detail-grid basic-item-fields">

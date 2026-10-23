@@ -4,7 +4,7 @@ import path from "node:path";
 import { unzipSync, zipSync } from "fflate";
 import { z } from "zod";
 import type { Client } from "@libsql/client";
-import { canonicalCategories } from "@/items/categories";
+import { canonicalCategories, canonicalCategory } from "@/items/categories";
 import { getDatabase, dataDirectory } from "@/db/client";
 
 export const ARCHIVE_FORMAT = "all-items-portable-inventory";
@@ -133,7 +133,7 @@ export function readInventoryArchive(input: Uint8Array) {
   }
   if (manifest.version === 3) for (const item of inventory.items as Array<Record<string, unknown>>) {
     const parsed = z.array(z.string().min(1).max(80)).max(20).safeParse(item.categories);
-    if (!parsed.success || new Set(parsed.data).size !== parsed.data.length || parsed.data.some(value => !value.trim())) throw new ArchiveError("An item has invalid category assignments.");
+    if (!parsed.success || new Set(parsed.data).size !== parsed.data.length || parsed.data.some(value => !value.trim() || canonicalCategory(value) !== value)) throw new ArchiveError("An item has invalid category assignments.");
   }
   validateReferences(inventory, files);
   return { manifest, inventory, files };

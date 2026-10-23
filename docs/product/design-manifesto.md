@@ -27,6 +27,7 @@ This manifesto governs every user-facing change in All Items. The interface shou
 - Keep language switching local and preserve the current route and entered user data. Native language names supplement, rather than rely on, locally bundled flags.
 - Reserve image geometry during loading and failure, and show a neutral placeholder independently of alt text. Decorative thumbnails beside item names use empty alt; standalone informative photos have meaningful alt. A failed thumbnail must not block opening the item. Reconnection may retry once per source; repeated automatic retry loops are forbidden.
 - Fields in one logical item edit share one Save. Inventory type changes the draft controls immediately; categories support multiple assignments independently of collections. Empty draft rows create no persistent clutter, and recoverable failures preserve text, selected options and stock together.
+- Filtering changes results while header and cover geometry remain stable. Preserve the current scroll offset where possible; if the shorter document requires adjustment, keep filters visible. Avoid layout shifts caused by image decoding or scrollbar width changes.
 
 ## Review questions
 

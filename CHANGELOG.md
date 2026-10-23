@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased - M3.2-R1 editing, categories and media reliability
+
+- Added reusable private-image loading/error placeholders, stable geometry, appropriate decorative/informative alt semantics and one reconnect retry. Fast pre-hydration failures are handled; the original reported RSC incident remains unconfirmed.
+- Unified inventory type, metadata, categories and stock in one transactional Save with immediate type-specific controls and full draft retention after errors. Single-item conversions reject incompatible stock; blank zero rows are omitted and unchanged stock identities survive.
+- Added migration 0007 and canonical item_categories assignments, preserving legacy rows and custom values. Migration/startup creates a verified SQLite/media backup before pending migrations on an existing installation.
+- Exported revision 3 category arrays with short readable photo names and retained a tested revision 2 recovery adapter. CSV categories use an unambiguous JSON array cell; the short CSV note sits under its own action.
+- Stabilized collection covers and filter scroll behavior, retained URL/history navigation, and upgraded ESLint to 10.13.0. Optional Next lint plugin and database-client changes were evaluated separately; maintenance notes explain retained notices.
+- Documented M3.3A multiple inventories and import-as-new, preserving draft recovery/preferences as M3.3B. Neither next stage is implemented.
+
 ## Unreleased — M3.2 readable archive and safe import
 
 - Kept photo editor controls reachable on short screens, aligned crop and zoom focus treatment, removed duplicate focus rings, and simplified cover selection and collection emoji editing.

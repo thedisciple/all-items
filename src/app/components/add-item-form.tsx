@@ -22,10 +22,10 @@ export function AddItemForm() {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
   const router = useRouter();
-  const photoDirty = useRef(false);
+  const [photoDirty, setPhotoDirty] = useState(false);
   const submitLocked = useRef(false);
   const [resetToken, setResetToken] = useState(0);
-  const dirty = Boolean(draft.name || draft.model || draft.brand || draft.categories.length || draft.originalMarking || draft.description || draft.notes || draft.trackingMode !== "unique" || rows.some(row => row.location || row.quantity !== "1")) || photoDirty.current;
+  const dirty = Boolean(draft.name || draft.model || draft.brand || draft.categories.length || draft.originalMarking || draft.description || draft.notes || draft.identificationStatus !== "unknown" || draft.saleIntent !== "not_for_sale" || draft.askingPrice || draft.askingCurrency !== "RUB" || draft.trackingMode !== "unique" || rows.some(row => row.location || row.quantity !== "1")) || photoDirty;
   const update = (key: keyof Draft) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setDraft((current) => ({ ...current, [key]: event.target.value }));
 
   useEffect(() => {
@@ -34,7 +34,7 @@ export function AddItemForm() {
       setDraft({ name: "", model: "", brand: "", categories: [], trackingMode: "unique", originalMarking: "", description: "", notes: "", identificationStatus: "unknown", saleIntent: "not_for_sale", askingPrice: "", askingCurrency: "RUB" });
       setRows([{ location: "", quantity: "1" }]);
       setResetToken((value) => value + 1);
-      photoDirty.current = false;
+      setPhotoDirty(false);
       setOpen(false);
       router.push(`/?added=${feedback.itemId}`);
     }
@@ -60,8 +60,8 @@ export function AddItemForm() {
         else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
       }}>
         <div className="dialog-heading"><h2 id="add-item-title">{t("addItem")}</h2><button type="button" className="icon-button" aria-label={t("close")} onClick={() => { setOpen(false); triggerRef.current?.focus(); }}>×</button></div>
-        <form className="photo-add-form" onSubmit={(event) => { event.preventDefault(); if (!submitLocked.current) { submitLocked.current = true; const data = new FormData(event.currentTarget); startTransition(() => action(data)); } }}>
-          <PhotoAcquisition name="photo" resetToken={resetToken} onDraftChange={(value) => { photoDirty.current = value; }}/>
+        <form aria-busy={pending} className="photo-add-form" onSubmit={(event) => { event.preventDefault(); if (!submitLocked.current) { submitLocked.current = true; const data = new FormData(event.currentTarget); startTransition(() => action(data)); } }}>
+          <PhotoAcquisition name="photo" resetToken={resetToken} onDraftChange={(value) => { setPhotoDirty(value); }}/>
           <div className="photo-add-fields">
             <label className="field"><span>{t("itemName")}</span><input name="name" value={draft.name} placeholder={t("itemNamePlaceholder")} maxLength={160} onChange={update("name")}/></label>
             <label className="field"><span>{t("itemModel")}</span><input name="model" value={draft.model} placeholder={t("itemModelPlaceholder")} maxLength={160} onChange={update("model")}/></label>
@@ -80,7 +80,7 @@ export function AddItemForm() {
           </div></details>
 
           {feedback.status === "error" && feedback.message ? <p className="form-error" role="alert">{feedback.message}</p> : null}
-          <div className="dialog-actions"><FormSubmitButton className="add-button" disabled={pending || !validStockDraft(rows, draft.trackingMode)} pendingLabel={t("addingItem")}><Plus size={16} aria-hidden="true"/><span>{pending ? t("addingItem") : t("addItem")}</span></FormSubmitButton><button type="button" className="text-button" onClick={() => { setOpen(false); triggerRef.current?.focus(); }}>{t("close")}</button>{dirty ? <button type="button" className="text-button" onClick={() => { if (window.confirm(t("discardDraftConfirm"))) { setDraft({ name: "", model: "", brand: "", categories: [], trackingMode: "unique", originalMarking: "", description: "", notes: "", identificationStatus: "unknown", saleIntent: "not_for_sale", askingPrice: "", askingCurrency: "RUB" }); setRows([{ location: "", quantity: "1" }]); setResetToken((value) => value + 1); photoDirty.current = false; } }}>{t("discardDraft")}</button> : null}</div>
+          <div className="dialog-actions"><FormSubmitButton className="add-button" disabled={pending || !validStockDraft(rows, draft.trackingMode)} pendingLabel={t("addingItem")}><Plus size={16} aria-hidden="true"/><span>{pending ? t("addingItem") : t("addItem")}</span></FormSubmitButton><button type="button" className="text-button" onClick={() => { setOpen(false); triggerRef.current?.focus(); }}>{t("close")}</button>{dirty ? <button type="button" className="text-button" onClick={() => { if (window.confirm(t("discardDraftConfirm"))) { setDraft({ name: "", model: "", brand: "", categories: [], trackingMode: "unique", originalMarking: "", description: "", notes: "", identificationStatus: "unknown", saleIntent: "not_for_sale", askingPrice: "", askingCurrency: "RUB" }); setRows([{ location: "", quantity: "1" }]); setResetToken((value) => value + 1); setPhotoDirty(false); } }}>{t("discardDraft")}</button> : null}</div>
         </form>
       </section>
     </div>

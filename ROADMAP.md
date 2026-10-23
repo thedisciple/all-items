@@ -100,9 +100,29 @@ M2D-R2 passed the automated suite in Microsoft Edge on Windows: 25 unit tests an
 - [x] Restore into an empty inventory through private staging, a write transaction, integrity checks, rollback cleanup, and next-attempt interruption cleanup
 - [x] Verify a synthetic full-fidelity round trip and isolated Edge export/import flow
 
-Revision 1 was experimental and is unsupported for import. Import does not merge or replace a populated workspace. Preserve the source archive until the restore is checked; automated backup and broader recovery remain future work. Styled XLSX is planned as a distinct spreadsheet export.
+M3.2-R1 now exports revision 3 and retains a tested revision 2 import adapter. Revision 1 was experimental and is unsupported for import. Import does not merge or replace a populated workspace. Preserve the source archive until the restore is checked; automated backup and broader recovery remain future work. Styled XLSX is planned as a distinct spreadsheet export.
 
-### M3.3 Recovery and preferences — PLANNED
+### M3.2-R1 Consolidation and pre-workspace architecture — COMPLETE
+
+- [x] Private image loading/error placeholders, alt semantics, bounded reconnect retry and synthetic Edge diagnostics
+- [x] One mode-aware item/stock/category editor and transactional Save; retain meaningful drafts on errors
+- [x] Additive item_categories migration with verified pre-migration SQLite/media backup and legacy preservation
+- [x] Revision 3 category arrays, shorter photo paths and tested revision 2 recovery adapter
+- [x] Stable collection cover geometry, predictable filter scrolling and corrected CSV note
+- [x] ESLint 10 migration and documented dependency audit; implementation-ready multiple-inventory ADR
+
+Validated with 38 unit tests, typecheck, lint, production build, the 13-scenario Edge suite, separate archive restoration and focused mobile/export checks. Physical touch-device testing remains separate. The original reported RSC/network incident was not conclusively reproduced; controlled media failures are covered.
+
+### M3.3A Multiple Inventories & Non-destructive Import - NOT STARTED
+
+- [ ] Explicit inventory context and additive cross-inventory integrity checks across every read/write/media boundary
+- [ ] Inventory switcher, create/rename, independent sequences, scoped search/collections and local selection preference
+- [ ] Validated import as a new inventory with full ID/reference remapping, private staging and interruption recovery
+- [ ] Scoped deletion with explicit confirmation and preservation tests; no global Clear All or replacement shortcut
+
+Follow [the architecture decision](docs/architecture/adr-multiple-inventories.md). Future accounts remain a separate authorization boundary. Populated-inventory import protection stays enabled until the new workflow is complete.
+
+### M3.3B Recovery and preferences - NOT STARTED
 
 - [ ] Crash/reload recovery for drafts and photo Blobs
 - [ ] Portable local preferences that are explicitly implemented by the application

@@ -29,6 +29,7 @@ These principles apply to product decisions and code review. They summarize the 
 21. **Localize every application surface.** Keep all five dictionaries key-complete, use Intl for locale-sensitive counts, dates, and numbers, and never translate user content. Language changes keep the route and stored records intact.
 22. **Restore deliberately.** Preview only a verified current archive; require explicit confirmation and an empty target. Keep the original archive for recovery, and explain unsupported experimental revisions without guessing how to convert them.
 23. **Edit one logical item once.** Inventory type is essential, updates stock fields immediately, and saves with metadata and categories. Failed saves preserve the full controlled draft, including selected options; avoid native form resets after rejected actions. Empty zero location placeholders create no additional persistent data. An incompatible switch to Single item requires correction and never silently drops meaningful stock.
+24. **Keep filtering spatially stable.** Reserve cover/image geometry, retain URL/history state and preserve scroll while results change. If the shorter document cannot retain the previous offset, keep the filters visible with a predictable adjustment.
 
 ## Practical acceptance questions
 

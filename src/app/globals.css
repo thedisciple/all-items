@@ -439,7 +439,7 @@ button[aria-label][data-tooltip]:hover::after,button[aria-label][data-tooltip]:f
 .data-content { max-width: 760px; }
 .data-panel { padding: 20px; border: 1px solid #30342c; border-radius: 12px; background: #191c17; }
 .data-panel h2 { margin: 0 0 18px; font-size: 17px; }
-.export-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.export-actions { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 10px; }
 .export-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; }
 .export-actions button:disabled { cursor: progress; opacity: .68; }
 .export-note { margin: 12px 0 0; color: #aeb3a8; font-size: 13px; }
