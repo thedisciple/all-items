@@ -6,7 +6,7 @@ import { z } from "zod";
 import { getDatabase, dataDirectory } from "@/db/client";
 
 export const ARCHIVE_FORMAT = "all-items-portable-inventory";
-export const ARCHIVE_VERSION = 1;
+export const ARCHIVE_VERSION = 2;
 export const MAX_ARCHIVE_BYTES = 128 * 1024 * 1024;
 export const MAX_ENTRY_BYTES = 32 * 1024 * 1024;
 export const MAX_ARCHIVE_ENTRIES = 20_000;
@@ -14,7 +14,61 @@ export const MAX_ARCHIVE_PATH = 240;
 const workspaceId = "00000000-0000-4000-8000-000000000001";
 
 const digest = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
-const safePath = (value: string) => Buffer.byteLength(value, "utf8") > 0 && Buffer.byteLength(value, "utf8") <= MAX_ARCHIVE_PATH && !/[\u0000-\u001f\u007f]/.test(value) && !value.startsWith("/") && !value.includes("\\") && !value.split("/").some((part) => part === "" || part === "." || part === "..") && !/^[A-Za-z]:/.test(value);
+const windowsDevice = /^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)/i;
+const safePath = (value: string) => Buffer.byteLength(value, "utf8") > 0 && Buffer.byteLength(value, "utf8") <= MAX_ARCHIVE_PATH && value === value.normalize("NFC") && !value.startsWith("/") && value.split("/").every((part) => part.length > 0 && part !== "." && part !== ".." && !/[\\:*?"<>|\u0000-\u001f\u007f]/u.test(part) && !/[. ]$/.test(part) && !windowsDevice.test(part));
+const pathKey = (value: string) => value.normalize("NFKC").toLocaleLowerCase("en-US");
+
+function readableStem(value: unknown, fallback: string, maxBytes = 70) {
+  let stem = (typeof value === "string" ? value : "").normalize("NFC").replace(/[\\/:*?"<>|\u0000-\u001f\u007f]/gu, " ").replace(/\s+/gu, " ").trim().replace(/[. ]+$/gu, "");
+  if (!stem || windowsDevice.test(stem)) stem = fallback;
+  while (Buffer.byteLength(stem, "utf8") > maxBytes) stem = stem.slice(0, -1);
+  return stem.replace(/[. ]+$/gu, "") || fallback;
+}
+
+export function itemArchivePaths(item: Record<string, unknown>, asset: Record<string, unknown>) {
+  const number = readableStem(item.inventory_number, "item", 32);
+  const name = readableStem(item.name, "Item", 64);
+  const mediaSuffix = typeof asset.id === "string" ? asset.id.slice(0, 8) : "photo";
+  const folder = `Items/${number} - ${name}`;
+  const base = `${folder}/${name} - ${mediaSuffix}`;
+  return { imagePath: `${base} - main.webp`, thumbnailPath: `${base} - thumbnail.webp`, sourcePath: `${base} - editable.webp` };
+}
+
+export function collectionArchivePaths(collection: Record<string, unknown>) {
+  const name = readableStem(collection.name, "Collection", 70);
+  const suffix = typeof collection.id === "string" ? collection.id.slice(0, 8) : "cover";
+  const base = `Collections/${name} - ${suffix}/${name}`;
+  return { path: `${base} - cover.webp`, thumbnailPath: `${base} - thumbnail.webp` };
+}
+
+function canonicalizeInventory(inventory: Record<string, unknown>, assets: Record<string, Uint8Array>) {
+  const copy = structuredClone(inventory);
+  const mapped: Record<string, Uint8Array> = {};
+  const move = (record: Record<string, unknown>, key: string, newPath: string) => {
+    const oldPath = record[key];
+    if (typeof oldPath !== "string") return;
+    record[key] = newPath;
+    if (assets[oldPath]) mapped[newPath] = assets[oldPath];
+  };
+  for (const item of (Array.isArray(copy.items) ? copy.items : []) as Array<Record<string, unknown>>) {
+    for (const asset of (Array.isArray(item.mediaAssets) ? item.mediaAssets : []) as Array<Record<string, unknown>>) {
+      const paths = itemArchivePaths(item, asset);
+      move(asset, "imagePath", paths.imagePath);
+      move(asset, "thumbnailPath", paths.thumbnailPath);
+      if (asset.sourcePath !== null) move(asset, "sourcePath", paths.sourcePath);
+    }
+  }
+  for (const collection of (Array.isArray(copy.collections) ? copy.collections : []) as Array<Record<string, unknown>>) {
+    const cover = collection.uploadCover;
+    if (cover && typeof cover === "object") {
+      const paths = collectionArchivePaths(collection);
+      move(cover as Record<string, unknown>, "path", paths.path);
+      move(cover as Record<string, unknown>, "thumbnailPath", paths.thumbnailPath);
+    }
+  }
+  if (Object.keys(mapped).length !== Object.keys(assets).length) throw new ArchiveError("The archive contains unreferenced or duplicate media paths.");
+  return { inventory: copy, assets: mapped };
+}
 const manifestSchema = z.object({
   format: z.literal(ARCHIVE_FORMAT), version: z.literal(ARCHIVE_VERSION), exportedAt: z.string().datetime(), applicationVersion: z.string(),
   entries: z.array(z.object({ path: z.string(), size: z.number().int().nonnegative(), sha256: z.string().regex(/^[0-9a-f]{64}$/) })).max(MAX_ARCHIVE_ENTRIES),
@@ -30,13 +84,13 @@ const portableInventorySchema = z.object({
 export type ArchiveVerification = { valid: true; format: string; version: number; entryCount: number };
 export class ArchiveError extends Error { constructor(message: string) { super(message); this.name = "ArchiveError"; } }
 
-export function verifyInventoryArchive(input: Uint8Array): ArchiveVerification {
+export function readInventoryArchive(input: Uint8Array) {
   if (!input.length || input.length > MAX_ARCHIVE_BYTES) throw new ArchiveError("Archive size is outside the supported limit.");
-  preflightZip(input);
+  const directoryNames = preflightZip(input);
   let files: Record<string, Uint8Array>;
   try { files = unzipSync(input); } catch { throw new ArchiveError("The ZIP archive is damaged or invalid."); }
   const names = Object.keys(files);
-  if (names.length < 3 || names.length > MAX_ARCHIVE_ENTRIES) throw new ArchiveError("The archive has an invalid number of entries.");
+  if (names.length < 4 || names.length > MAX_ARCHIVE_ENTRIES || names.length !== directoryNames.size || names.some((name) => !directoryNames.has(name))) throw new ArchiveError("The archive has an invalid number of entries.");
   for (const name of names) {
     if (!safePath(name)) throw new ArchiveError("The archive contains an unsafe path.");
     if (files[name]!.byteLength > MAX_ENTRY_BYTES) throw new ArchiveError("An archive entry exceeds the supported size.");
@@ -44,17 +98,21 @@ export function verifyInventoryArchive(input: Uint8Array): ArchiveVerification {
   const manifestBytes = files["manifest.json"];
   const inventoryBytes = files["inventory.json"];
   const checksumBytes = files["checksums.sha256"];
-  if (!manifestBytes || !inventoryBytes || !checksumBytes) throw new ArchiveError("The archive is missing a required entry.");
+  if (!manifestBytes || !inventoryBytes || !checksumBytes || !files["README.txt"]) throw new ArchiveError("The archive is missing a required entry.");
   let manifest: z.infer<typeof manifestSchema>;
   let inventory: Record<string, unknown>;
-  try { manifest = manifestSchema.parse(JSON.parse(Buffer.from(manifestBytes).toString("utf8"))); inventory = portableInventorySchema.parse(JSON.parse(Buffer.from(inventoryBytes).toString("utf8"))); }
-  catch { throw new ArchiveError("The archive metadata is invalid or uses an unsupported version."); }
+  let rawManifest: unknown;
+  try { rawManifest = JSON.parse(Buffer.from(manifestBytes).toString("utf8")); }
+  catch { throw new ArchiveError("The archive manifest is invalid."); }
+  if (typeof rawManifest !== "object" || rawManifest === null || (rawManifest as Record<string, unknown>).format !== ARCHIVE_FORMAT || (rawManifest as Record<string, unknown>).version !== ARCHIVE_VERSION) throw new ArchiveError("Unsupported archive format. Regenerate the archive from the current All Items installation.");
+  try { manifest = manifestSchema.parse(rawManifest); inventory = portableInventorySchema.parse(JSON.parse(Buffer.from(inventoryBytes).toString("utf8"))); }
+  catch { throw new ArchiveError("The archive metadata is invalid."); }
   const expected = new Map<string, { size: number; sha256: string }>();
   for (const entry of manifest.entries) {
     if (!safePath(entry.path) || entry.path === "checksums.sha256" || expected.has(entry.path)) throw new ArchiveError("The manifest contains an invalid path.");
     expected.set(entry.path, entry);
   }
-  if (expected.size !== names.length - 2) throw new ArchiveError("The archive entries do not match the manifest.");
+  if (expected.size !== names.length - 2 || names.some((name) => name !== "manifest.json" && name !== "checksums.sha256" && !expected.has(name))) throw new ArchiveError("The archive entries do not match the manifest.");
   for (const [name, meta] of expected) {
     const bytes = files[name];
     if (!bytes || bytes.byteLength !== meta.size || digest(bytes) !== meta.sha256) throw new ArchiveError(`Archive integrity check failed for ${name}.`);
@@ -69,7 +127,12 @@ export function verifyInventoryArchive(input: Uint8Array): ArchiveVerification {
     checksumPaths.add(match[2]!);
   }
   validateReferences(inventory, files);
-  return { valid: true, format: manifest.format, version: manifest.version, entryCount: names.length };
+  return { manifest, inventory, files };
+}
+
+export function verifyInventoryArchive(input: Uint8Array): ArchiveVerification {
+  const { manifest, files } = readInventoryArchive(input);
+  return { valid: true, format: manifest.format, version: manifest.version, entryCount: Object.keys(files).length };
 }
 
 function preflightZip(input: Uint8Array) {
@@ -83,6 +146,9 @@ function preflightZip(input: Uint8Array) {
   let offset = view.getUint32(eocd + 16, true);
   if (entries > MAX_ARCHIVE_ENTRIES || offset + centralSize > eocd) throw new ArchiveError("The ZIP directory exceeds supported limits.");
   let expanded = 0;
+  const names = new Set<string>();
+  const equivalent = new Set<string>();
+  const decoder = new TextDecoder("utf-8", { fatal: true });
   for (let index = 0; index < entries; index++) {
     if (offset + 46 > input.byteLength || view.getUint32(offset, true) !== 0x02014b50) throw new ArchiveError("The ZIP directory is invalid.");
     const flags = view.getUint16(offset + 8, true);
@@ -92,20 +158,34 @@ function preflightZip(input: Uint8Array) {
     const nameLength = view.getUint16(offset + 28, true);
     const extraLength = view.getUint16(offset + 30, true);
     const commentLength = view.getUint16(offset + 32, true);
+    const external = view.getUint32(offset + 38, true);
+    if (offset + 46 + nameLength + extraLength + commentLength > eocd) throw new ArchiveError("The ZIP directory is invalid.");
+    let name: string;
+    try { name = decoder.decode(input.subarray(offset + 46, offset + 46 + nameLength)); }
+    catch { throw new ArchiveError("The ZIP contains an invalid filename."); }
+    if (!safePath(name) || names.has(name) || equivalent.has(pathKey(name))) throw new ArchiveError("The archive contains an unsafe or duplicate path.");
+    names.add(name); equivalent.add(pathKey(name));
+    const fileType = (external >>> 16) & 0o170000;
+    if (fileType && fileType !== 0o100000) throw new ArchiveError("The ZIP contains an unsupported entry type.");
     if ((flags & 1) !== 0 || (method !== 0 && method !== 8) || uncompressed > MAX_ENTRY_BYTES || compressed === 0 && uncompressed > 0 || compressed > 0 && uncompressed / compressed > 100) throw new ArchiveError("The ZIP contains an unsupported or oversized entry.");
     expanded += uncompressed;
     if (expanded > MAX_ARCHIVE_BYTES) throw new ArchiveError("The ZIP expands beyond the supported limit.");
     offset += 46 + nameLength + extraLength + commentLength;
   }
   if (offset !== view.getUint32(eocd + 16, true) + centralSize) throw new ArchiveError("The ZIP directory size is invalid.");
+  return names;
 }
 
 function validateReferences(inventory: Record<string, unknown>, files: Record<string, Uint8Array>) {
   const assetPaths = new Set<string>();
   const values = Array.isArray(inventory.items) ? inventory.items : [];
   const itemsById = new Map<string, Set<string>>();
+  const allMediaIds = new Set<string>();
+  const numbers = new Set<string>();
   for (const item of values as Array<Record<string, unknown>>) {
     if (typeof item.id !== "string" || !z.string().uuid().safeParse(item.id).success || !Array.isArray(item.mediaAssets)) throw new ArchiveError("An item has invalid media references.");
+    if (itemsById.has(item.id) || typeof item.inventory_number !== "string" || numbers.has(item.inventory_number)) throw new ArchiveError("The archive contains duplicate item identities or inventory numbers.");
+    numbers.add(item.inventory_number);
     const mediaIds = new Set<string>();
     let primaryCount = 0;
     for (const asset of item.mediaAssets as Array<Record<string, unknown>>) for (const key of ["imagePath", "thumbnailPath", "sourcePath"]) {
@@ -115,9 +195,11 @@ function validateReferences(inventory: Record<string, unknown>, files: Record<st
       assetPaths.add(value);
     }
     for (const asset of item.mediaAssets as Array<Record<string, unknown>>) {
-      if (typeof asset.id !== "string" || !z.string().uuid().safeParse(asset.id).success || mediaIds.has(asset.id) || typeof asset.isPrimary !== "boolean") throw new ArchiveError("An item has invalid media identity metadata.");
-      if (asset.imagePath !== `media/items/${item.id}/${asset.id}.webp` || asset.thumbnailPath !== `media/items/${item.id}/${asset.id}-thumb.webp` || (asset.sourcePath !== null && asset.sourcePath !== `media/items/${item.id}/${asset.id}-source.webp`)) throw new ArchiveError("An item media path does not match its identifiers.");
+      if (typeof asset.id !== "string" || !z.string().uuid().safeParse(asset.id).success || mediaIds.has(asset.id) || allMediaIds.has(asset.id) || typeof asset.isPrimary !== "boolean") throw new ArchiveError("An item has invalid media identity metadata.");
+      const paths = itemArchivePaths(item, asset);
+      if (asset.imagePath !== paths.imagePath || asset.thumbnailPath !== paths.thumbnailPath || (asset.sourcePath !== null && asset.sourcePath !== paths.sourcePath)) throw new ArchiveError("An item media path does not match its identifiers.");
       mediaIds.add(asset.id);
+      allMediaIds.add(asset.id);
       if (asset.isPrimary) primaryCount++;
     }
     if (mediaIds.size > 0 && primaryCount !== 1) throw new ArchiveError("An item must have exactly one primary media asset when it has photos.");
@@ -136,7 +218,8 @@ function validateReferences(inventory: Record<string, unknown>, files: Record<st
     const thumbnailPath = typeof uploadCover === "object" && uploadCover !== null ? (uploadCover as Record<string, unknown>).thumbnailPath : null;
     if (collection.cover_type === "upload") {
       const cover = typeof uploadCover === "object" && uploadCover !== null ? uploadCover as Record<string, unknown> : {};
-      if (typeof cover.id !== "string" || !z.string().uuid().safeParse(cover.id).success || cover.id !== collection.cover_upload_id || coverPath !== `media/collections/${collection.id}/${cover.id}.webp` || thumbnailPath !== `media/collections/${collection.id}/${cover.id}-thumb.webp` || !files[coverPath] || !files[thumbnailPath]) throw new ArchiveError("A collection references a missing or unsafe cover.");
+      const paths = collectionArchivePaths(collection);
+      if (typeof cover.id !== "string" || !z.string().uuid().safeParse(cover.id).success || cover.id !== collection.cover_upload_id || coverPath !== paths.path || thumbnailPath !== paths.thumbnailPath || !files[coverPath] || !files[thumbnailPath]) throw new ArchiveError("A collection references a missing or unsafe cover.");
       assetPaths.add(coverPath); assetPaths.add(thumbnailPath);
     } else if (uploadCover !== null) throw new ArchiveError("A collection has unselected cover files.");
     if (collection.cover_type === "item_photo") {
@@ -160,20 +243,24 @@ function validateReferences(inventory: Record<string, unknown>, files: Record<st
   for (const collection of collectionsById.values()) for (const itemId of collection.itemIds as string[]) listedPairs.add(`${collection.id}\u0000${itemId}`);
   if (listedPairs.size !== membershipPairs.size || [...listedPairs].some((pair) => !membershipPairs.has(pair))) throw new ArchiveError("Collection membership lists are incomplete.");
   for (const item of values as Array<Record<string, unknown>>) if (!Array.isArray(item.collectionIds) || item.collectionIds.some((id) => typeof id !== "string" || !collectionsById.get(id)?.itemIds || !(collectionsById.get(id)!.itemIds as unknown[]).includes(item.id))) throw new ArchiveError("An item's collection list is inconsistent.");
-  const packagedAssets = Object.keys(files).filter((name) => name.startsWith("media/"));
-  if ([...assetPaths].some((asset) => !asset.startsWith("media/")) || packagedAssets.length !== assetPaths.size || packagedAssets.some((asset) => !assetPaths.has(asset))) throw new ArchiveError("The archive contains missing or unreferenced media files.");
+  const packagedAssets = Object.keys(files).filter((name) => name !== "README.txt" && name !== "manifest.json" && name !== "inventory.json" && name !== "checksums.sha256");
+  if ([...assetPaths].some((asset) => !asset.startsWith("Items/") && !asset.startsWith("Collections/")) || packagedAssets.length !== assetPaths.size || packagedAssets.some((asset) => !assetPaths.has(asset))) throw new ArchiveError("The archive contains missing or unreferenced media files.");
 }
 
 export function buildInventoryArchive(inventory: Record<string, unknown>, assets: Record<string, Uint8Array> = {}) {
   const entries: Record<string, Uint8Array> = {};
+  const canonical = canonicalizeInventory(inventory, assets);
   let totalSize = 0;
-  for (const [name, bytes] of Object.entries(assets)) {
-    if (!safePath(name) || !name.startsWith("media/") || bytes.byteLength > MAX_ENTRY_BYTES) throw new ArchiveError("An archive asset has an invalid path or size.");
+  for (const [name, bytes] of Object.entries(canonical.assets)) {
+    if (!safePath(name) || (!name.startsWith("Items/") && !name.startsWith("Collections/")) || bytes.byteLength > MAX_ENTRY_BYTES) throw new ArchiveError("An archive asset has an invalid path or size.");
     totalSize += bytes.byteLength;
-    if (Object.keys(entries).length + 3 > MAX_ARCHIVE_ENTRIES || totalSize > MAX_ARCHIVE_BYTES) throw new ArchiveError("The inventory exceeds the supported archive limits.");
+    if (Object.keys(entries).length + 4 > MAX_ARCHIVE_ENTRIES || totalSize > MAX_ARCHIVE_BYTES) throw new ArchiveError("The inventory exceeds the supported archive limits.");
     entries[name] = bytes;
   }
-  entries["inventory.json"] = Buffer.from(JSON.stringify(inventory, null, 2), "utf8");
+  const keys = Object.keys(entries).map(pathKey);
+  if (new Set(keys).size !== keys.length) throw new ArchiveError("The archive contains colliding media names.");
+  entries["README.txt"] = Buffer.from("All Items inventory archive\n\nItem photographs are in Items/. Uploaded collection covers are in Collections/.\nmanifest.json, inventory.json and checksums.sha256 are used by All Items to restore the inventory.\n", "utf8");
+  entries["inventory.json"] = Buffer.from(JSON.stringify(canonical.inventory, null, 2), "utf8");
   if (entries["inventory.json"]!.byteLength > MAX_ENTRY_BYTES || totalSize + entries["inventory.json"]!.byteLength > MAX_ARCHIVE_BYTES) throw new ArchiveError("Inventory metadata exceeds the supported archive limits.");
   const exportedAt = new Date().toISOString();
   const archiveManifest = { format: ARCHIVE_FORMAT, version: ARCHIVE_VERSION, exportedAt, applicationVersion: "0.1.0", entries: Object.entries(entries).map(([entryPath, data]) => ({ path: entryPath, size: data.length, sha256: digest(data) })) };

@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { unzipSync, zipSync } from "fflate";
-import { ArchiveError, buildInventoryArchive, formatInventoryCsv, verifyInventoryArchive } from "./archive";
+import { ArchiveError, buildInventoryArchive, collectionArchivePaths, formatInventoryCsv, itemArchivePaths, verifyInventoryArchive } from "./archive";
 
 describe("portable inventory archive", () => {
   it("builds and verifies an empty valid archive", () => {
     const result = verifyInventoryArchive(buildInventoryArchive({ workspace: null, locations: [], items: [], collections: [], memberships: [], preferences: null }));
-    expect(result).toMatchObject({ valid: true, version: 1, entryCount: 3 });
+    expect(result).toMatchObject({ valid: true, version: 2, entryCount: 4 });
   });
 
   it("keeps photo arrays, crop information, collection links, and Unicode references portable", () => {
@@ -18,7 +18,7 @@ describe("portable inventory archive", () => {
     const inventory = {
       workspace: { name: "我的收藏", next_inventory_number: 3 },
       locations: [{ id: "77777777-7777-4777-8777-777777777777", name: "Shelf A" }, { id: "88888888-8888-4888-8888-888888888888", name: "库房" }],
-      items: [{ id: itemId, inventory_number: "IT-1", category: "Garden tools", sale_intent: "willing_to_sell", stock: [{ id: "stock-a", location_id: "77777777-7777-4777-8777-777777777777", quantity: 2 }, { id: "stock-b", location_id: "88888888-8888-4888-8888-888888888888", quantity: 1 }], collectionIds: [collectionId, secondCollectionId], mediaAssets: [
+      items: [{ id: itemId, name: "Смарт-годинник", inventory_number: "IT-1", category: "Garden tools", sale_intent: "willing_to_sell", stock: [{ id: "stock-a", location_id: "77777777-7777-4777-8777-777777777777", quantity: 2 }, { id: "stock-b", location_id: "88888888-8888-4888-8888-888888888888", quantity: 1 }], collectionIds: [collectionId, secondCollectionId], mediaAssets: [
         { id: photoId, isPrimary: true, displayOrder: null, cropData: "{\"rotation\":90}", imagePath: `media/items/${itemId}/${photoId}.webp`, thumbnailPath: `media/items/${itemId}/${photoId}-thumb.webp`, sourcePath: null },
         { id: editablePhotoId, isPrimary: false, displayOrder: 1, cropData: null, imagePath: `media/items/${itemId}/${editablePhotoId}.webp`, thumbnailPath: `media/items/${itemId}/${editablePhotoId}-thumb.webp`, sourcePath: `media/items/${itemId}/${editablePhotoId}-source.webp` },
       ] }],
@@ -34,6 +34,10 @@ describe("portable inventory archive", () => {
       [`media/collections/${collectionId}/${uploadedCoverId}.webp`]: new Uint8Array([6]), [`media/collections/${collectionId}/${uploadedCoverId}-thumb.webp`]: new Uint8Array([7]),
     });
     expect(verifyInventoryArchive(archive).valid).toBe(true);
+    const files = unzipSync(archive);
+    expect(Object.keys(files)).toContain("Items/IT-1 - Смарт-годинник/Смарт-годинник - 33333333 - main.webp");
+    expect(Object.keys(files)).toContain("Collections/Bašta сад - 22222222/Bašta сад - cover.webp");
+    expect(Buffer.from(files["README.txt"]!).toString("utf8")).toContain("Items/");
   });
 
   it("rejects checksum corruption, malformed references, and unsafe archive paths", () => {
@@ -47,11 +51,21 @@ describe("portable inventory archive", () => {
     expect(() => verifyInventoryArchive(zipSync(missingEntry))).toThrow(/invalid number|missing a required entry/);
     const unsupported = unzipSync(valid);
     const manifest = JSON.parse(Buffer.from(unsupported["manifest.json"]!).toString("utf8")) as { version: number };
-    manifest.version = 2;
+    manifest.version = 1;
     unsupported["manifest.json"] = Buffer.from(JSON.stringify(manifest));
-    expect(() => verifyInventoryArchive(zipSync(unsupported))).toThrow(/unsupported version/);
+    expect(() => verifyInventoryArchive(zipSync(unsupported))).toThrow(/Unsupported archive format/);
     expect(() => buildInventoryArchive({ items: [], collections: [] }, { "media/../outside": new Uint8Array([1]) })).toThrow(ArchiveError);
-    expect(() => verifyInventoryArchive(buildInventoryArchive({ workspace: null, locations: [], items: [{ id: "11111111-1111-4111-8111-111111111111", stock: [], collectionIds: [], mediaAssets: [{ id: "33333333-3333-4333-8333-333333333333", isPrimary: true, imagePath: "media/items/11111111-1111-4111-8111-111111111111/33333333-3333-4333-8333-333333333333.webp", thumbnailPath: "media/items/11111111-1111-4111-8111-111111111111/33333333-3333-4333-8333-333333333333-thumb.webp", sourcePath: null }] }], collections: [], memberships: [] }))).toThrow(/missing or unsafe media/);
+    expect(() => verifyInventoryArchive(buildInventoryArchive({ workspace: null, locations: [], items: [{ id: "11111111-1111-4111-8111-111111111111", inventory_number: "INV-000001", stock: [], collectionIds: [], mediaAssets: [{ id: "33333333-3333-4333-8333-333333333333", isPrimary: true, imagePath: "media/items/11111111-1111-4111-8111-111111111111/33333333-3333-4333-8333-333333333333.webp", thumbnailPath: "media/items/11111111-1111-4111-8111-111111111111/33333333-3333-4333-8333-333333333333-thumb.webp", sourcePath: null }] }], collections: [], memberships: [] }))).toThrow(/missing or unsafe media/);
+  });
+
+  it("makes readable, bounded, collision-safe paths from unsafe and Unicode names", () => {
+    const item = { id: "11111111-1111-4111-8111-111111111111", inventory_number: "INV-000001", name: "CON:/设备\\時計?" + "🧰".repeat(100) };
+    const paths = itemArchivePaths(item, { id: "33333333-3333-4333-8333-333333333333" });
+    expect(paths.imagePath).toMatch(/^Items\/INV-000001 - /);
+    expect(paths.imagePath).toContain("设备");
+    expect(Buffer.byteLength(paths.imagePath, "utf8")).toBeLessThanOrEqual(240);
+    expect(paths.imagePath).not.toMatch(/[\\:*?"<>|]/);
+    expect(collectionArchivePaths({ id: "22222222-2222-4222-8222-222222222222", name: "con" }).path).toContain("Collection - 22222222");
   });
 });
 

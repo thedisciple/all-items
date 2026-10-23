@@ -1,33 +1,33 @@
 # Portable inventory archive format
 
-All Items M3.1 exports a local ZIP file using format identifier `all-items-portable-inventory`, currently version `1`. The archive is an interchange representation, not a SQLite database copy. Paths are UTF-8, relative ZIP paths; no configured directory, database filename, or absolute machine path is included.
+All Items exports a local ZIP with format identifier `all-items-portable-inventory` and experimental revision `2`. Revision 2 is the only supported format for export and import. Earlier pre-release revision 1 archives should be regenerated from the original local inventory. Existing archive files are never deleted automatically. Before external beta, a stable format contract and compatibility policy will be defined; after public distribution, older format support must be a deliberate product decision.
 
-## Entries
+## Layout
 
-- `manifest.json` declares the format identifier, version, UTC export timestamp, application version, and a manifest entry for each payload file except `manifest.json` and `checksums.sha256`. Each manifest entry contains its relative `path`, uncompressed byte `size`, and lowercase SHA-256 digest.
-- `inventory.json` contains workspace metadata, locations, items, stock rows, collection records, memberships, category values, private sale intent, prices, timestamps, and media metadata. It records `preferences` only when the application has supported preferences; version 1 has none and omits that field.
-- `media/items/<item UUID>/<media UUID>.webp`, the corresponding `-thumb.webp`, and optional `-source.webp` preserve each supported item media asset. Each item's `mediaAssets` is an array with stable media ID, `isPrimary`, nullable `displayOrder`, crop metadata, dimensions, filename, and relative image, thumbnail, and optional source paths. A legacy asset with no editable source keeps `sourcePath: null`.
-- `media/collections/<collection UUID>/<cover UUID>.webp` and its `-thumb.webp` preserve uploaded collection covers. The collection record separately retains the selected cover type, emoji/item/media identifiers, membership list, and nullable `uploadCover` metadata (`id`, dimensions, creation time, path, thumbnail path).
-- `checksums.sha256` uses one UTF-8 line per manifest entry: `<lowercase SHA-256><two spaces><relative path>`, terminated by LF. It intentionally does not checksum itself.
+```text
+README.txt
+manifest.json
+inventory.json
+checksums.sha256
+Items/INV-000001 - FT232RL module/FT232RL module - 1234abcd - main.webp
+Items/INV-000001 - FT232RL module/FT232RL module - 1234abcd - thumbnail.webp
+Items/INV-000001 - FT232RL module/FT232RL module - 1234abcd - editable.webp
+Collections/DIY - 9876abcd/DIY - cover.webp
+Collections/DIY - 9876abcd/DIY - thumbnail.webp
+```
 
-No user's display name, absolute filesystem location, private data-directory path, or raw SQLite file is required to interpret the archive. Unknown/custom category values remain verbatim. Collection membership and cover selection are distinct from item records. Multi-photo fields are arrays now even though the current UI exposes one primary image.
+Readable names are presentation only. `inventory.json` retains item, collection and media UUIDs, inventory numbers, stock, locations, memberships, crop data, cover selection, private sale metadata and timestamps. Each media record explicitly references its archive-relative files. Legacy item photos without editable sources have `sourcePath: null`. No identity is parsed from a folder name. The archive does not contain the SQLite database, absolute data paths or raw uploaded originals.
 
-## Integrity and verification
+Filenames use NFC Unicode, preserving readable Cyrillic, Latin, Chinese and emoji. Unsafe Windows characters and control characters are replaced, trailing spaces and periods removed, device names replaced, and names shortened by UTF-8 byte length. Item folders include the inventory number. Item photo names include a stable media-ID prefix. Collection folders include a stable collection-ID prefix. The exporter rejects any residual case-insensitive or Unicode-normalized collision and any path above 240 UTF-8 bytes. Private live media filenames are unchanged.
 
-The read-only `verifyInventoryArchive` service first bounds the ZIP directory and expansion sizes, rejects encrypted or unsupported entries and unsafe paths, then checks the required structure, version, manifest sizes, SHA-256 values, checksum-list completeness, and media references. It does not connect to or change the live database. A verifier success means the package is structurally and cryptographically consistent; it does not prove that an archive came from a trusted sender or that a future importer can restore it.
+`manifest.json` declares the format identifier, revision, UTC export time, application version and every payload entry except the manifest and checksum file. Each entry has a relative path, uncompressed size and SHA-256 digest. `checksums.sha256` repeats each entry as `<digest><two spaces><path>` with LF endings. `README.txt` is included in the manifest and checksum list.
 
-Version 1 limits the compressed archive and total expanded payload to 128 MiB, individual entries to 32 MiB, entry count to 20,000, path length to 240 characters, and ZIP expansion ratio to 100:1. The export uses stored ZIP entries (no compression), so expansion-ratio risk is effectively absent in generated files. If a referenced private file is missing, exceeds limits, or includes a symbolic link, export fails rather than emitting a valid-looking incomplete archive.
+## Verification and limits
 
-## Snapshot and filesystem consistency
+The read-only verifier checks the ZIP central directory before expansion, file types, encryption, paths, normalized collisions, entry count, compressed and expanded sizes, expansion ratios, required entries, manifest and checksum agreement, JSON shape and every media reference. It rejects unsupported revisions with a regeneration message. It does not establish provenance or authenticity: a party able to rewrite an archive can also rewrite its checksums.
 
-Export reads workspace, inventory, stock, locations, collections, memberships, and media metadata in one short SQLite read transaction, then commits before reading files. Media paths are recomputed from stored UUID identifiers and compared with their expected generated layout; symlinks are rejected. If an asset is concurrently removed after the database snapshot, reading it fails and the archive is not returned. Asset identifiers are unique and replacement writes new media IDs, so a successfully read old asset cannot silently become a newer image at the same path. SQLite and the filesystem are separate resources and do not form one atomic transaction; the implementation fails closed on missing or invalid referenced media rather than claiming cross-resource atomicity.
-
-The export route returns a private, non-cacheable attachment. Preparation and browser Blob creation are bounded by the archive-size limit; an unusual inventory larger than the limit must be reduced before export. Temporary media and archive data is not written under the repository or public directory. No automatic external upload occurs.
+Limits are 128 MiB compressed and expanded, 32 MiB per entry, 20,000 entries, 240 UTF-8 bytes per path and a 100:1 expansion ratio. Generated ZIP entries are stored without compression. Exports snapshot database rows in a short read transaction, then read identifier-derived private files, rejecting missing files and symbolic links. SQLite and filesystem snapshots are not jointly atomic; concurrent media deletion aborts export. The download is private, non-cacheable and local only.
 
 ## CSV
 
-CSV is a separate spreadsheet-oriented view containing inventory number, name, model, brand, category, quantity, locations, identification status, private sale intent, asking price/currency, description, and notes. It is UTF-8 with BOM, RFC-style quoted cells, doubled embedded quotes, and CRLF row endings. Text starting with spreadsheet formula operators (including after leading whitespace/control characters) is prefixed with an apostrophe. CSV does not contain photographs, collection membership, complete metadata, or restoration information.
-
-## Future changes
-
-Any incompatible structure change requires a new archive version and a verifier test fixture for each supported version decision. This document describes export and verification only. M3.2 import, migration, conflict resolution, restore, and database replacement are not implemented by M3.1.
+CSV remains a separate UTF-8 spreadsheet view with BOM, quoted fields, CRLF row endings and formula-injection protection. It excludes photographs and complete restoration relationships. CSV cannot contain visual cell styling; a styled XLSX export is a future opportunity.
