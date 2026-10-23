@@ -519,3 +519,17 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
   .media-card { height: 120px; }
   .photo-viewer-open .media-detail { height: 80vh; }
 }
+
+.inventory-stock-fields { display: grid; gap: 14px; margin-block: 18px; }
+.inventory-stock-fields > .quiet-button { justify-self: start; }
+.category-selection,.category-tags { display: inline-flex; gap: 5px; flex-wrap: wrap; min-width: 0; max-width: 100%; }
+.category-selection .category-chip { display: inline-flex; align-items: center; gap: 4px; }
+.category-selection .icon-button { width: 28px; min-width: 28px; height: 28px; min-height: 28px; }
+.category-picker { border: 1px solid #353a31; border-radius: 7px; padding: 10px; }
+.category-picker summary { cursor: pointer; }
+.category-options { display: grid; grid-template-columns: repeat(auto-fit,minmax(170px,1fr)); gap: 9px; padding: 12px 0; }
+.category-options label { display: flex; align-items: center; gap: 7px; }
+.category-options input { width: 18px; height: 18px; }
+.custom-category-row { display: flex; gap: 8px; }
+.custom-category-row input { min-width: 0; width: 100%; }
+.category-chip { overflow-wrap: anywhere; }

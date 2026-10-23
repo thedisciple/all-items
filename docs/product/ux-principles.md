@@ -28,6 +28,7 @@ These principles apply to product decisions and code review. They summarize the 
 20. **Treat export as a local user action.** Make the complete archive the primary choice and CSV a separate spreadsheet option. A pending state lasts only while the server is preparing the file; errors preserve the page and entered UI state. CSV never claims to include photos or all relationships.
 21. **Localize every application surface.** Keep all five dictionaries key-complete, use Intl for locale-sensitive counts, dates, and numbers, and never translate user content. Language changes keep the route and stored records intact.
 22. **Restore deliberately.** Preview only a verified current archive; require explicit confirmation and an empty target. Keep the original archive for recovery, and explain unsupported experimental revisions without guessing how to convert them.
+23. **Edit one logical item once.** Inventory type is essential, updates stock fields immediately, and saves with metadata and categories. Failed saves preserve the full controlled draft, including selected options; avoid native form resets after rejected actions. Empty zero location placeholders create no additional persistent data. An incompatible switch to Single item requires correction and never silently drops meaningful stock.
 
 ## Practical acceptance questions
 

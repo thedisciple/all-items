@@ -45,7 +45,7 @@ test("downloads a complete archive and restores it through the browser into a fr
   const archivePath = await download.path();
   if (!archivePath) throw new Error("The test archive was not downloaded.");
   const archive = new Uint8Array(await readFile(archivePath));
-  expect(verifyInventoryArchive(archive).version).toBe(2);
+  expect(verifyInventoryArchive(archive).version).toBe(3);
   expect((await previewInventoryArchive(archive)).items).toBe(1);
 
   await page.goto("http://127.0.0.1:3103/data");

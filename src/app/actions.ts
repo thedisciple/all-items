@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { z } from "zod";
-import { createItem, photoFirstItemValues, saveStock, updateItem, type ItemFields } from "@/items/service";
+import { createItem, photoFirstItemValues, updateItem, type ItemFields } from "@/items/service";
 import { createItemWithPhoto, deleteItemWithMedia, removePrimaryPhoto, replacePrimaryPhoto, MediaValidationError } from "@/media/service";
 import { addItemToCollection, addItemsToCollection, createCollection, deleteCollection, removeItemFromCollection, renameCollection, setCollectionCover } from "@/items/collections";
 import { replaceCollectionCoverUpload } from "@/media/collection-covers";
@@ -22,6 +22,9 @@ export async function setLanguageAction(formData: FormData) {
 function errorMessage(error: unknown, fallback: MessageKey, locale: Locale) {
   if (!(error instanceof Error) || !error.message) return translate(locale, fallback);
   const known: Record<string, MessageKey> = {
+    "Item not found": "itemNotFound",
+    "Single item requires one unit and one location": "stockModeConflict",
+    "Duplicate stock locations": "stockLocationsDuplicate",
     "Вещь не найдена": "itemNotFound",
     "Коллекция не найдена.": "collectionNotFound",
     "Такая коллекция уже есть.": "collectionAlreadyExists",
@@ -34,7 +37,7 @@ function errorMessage(error: unknown, fallback: MessageKey, locale: Locale) {
 function formValues(formData: FormData) {
   return {
     name: String(formData.get("name") ?? ""), model: String(formData.get("model") ?? ""), brand: String(formData.get("brand") ?? ""),
-    category: String(formData.get("category") ?? ""), originalMarking: String(formData.get("originalMarking") ?? ""),
+    categories: formData.getAll("categories"), originalMarking: String(formData.get("originalMarking") ?? ""),
     notes: String(formData.get("notes") ?? ""), description: String(formData.get("description") ?? ""),
     identificationStatus: String(formData.get("identificationStatus") ?? "unknown"), trackingMode: String(formData.get("trackingMode") ?? "unique"),
     saleIntent: String(formData.get("saleIntent") ?? "not_for_sale"), askingPrice: String(formData.get("askingPrice") ?? ""),
@@ -56,8 +59,8 @@ export async function addItemAction(_previous: ActionFeedback, formData: FormDat
   let item: { id: string };
   try {
     item = file
-      ? await createItemWithPhoto(values as ItemFields, file, sourceFile ?? file, cropValue)
-      : await createItem(values as ItemFields);
+      ? await createItemWithPhoto(values as ItemFields, file, sourceFile ?? file, cropValue, JSON.parse(String(formData.get("stock") ?? "[]")))
+      : await createItem(values as ItemFields, JSON.parse(String(formData.get("stock") ?? "[]")));
   } catch (error) {
     if (error instanceof MediaValidationError) return { status: "error", message: t("invalidPhoto") };
     return { status: "error", message: file ? t("itemSaveFailed") : errorMessage(error, "itemSaveGeneric", locale) };
@@ -104,35 +107,10 @@ export async function updateItemAction(_previous: ActionFeedback, formData: Form
   const returnTo = z.union([z.literal("/"), z.string().regex(/^\/collections\/[0-9a-f-]{36}$/i)]).safeParse(returnValue);
   if (!returnTo.success) return { status: "error", message: t("itemUpdateGeneric") };
   try {
-    await updateItem(id.data, formValues(formData) as ItemFields);
+    await updateItem(id.data, formValues(formData) as ItemFields, JSON.parse(String(formData.get("stock") ?? "[]")));
     revalidatePath("/"); revalidatePath(`/items/${id.data}`); revalidatePath("/collections");
     return { status: "success", message: t("changesSaved"), collectionId: returnTo.data.startsWith("/collections/") ? returnTo.data.split("/")[2] : undefined };
   } catch (error) { return { status: "error", message: errorMessage(error, "itemUpdateGeneric", locale) }; }
-}
-
-export async function updateStockAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
-  const locale = await getLocale();
-  const t = (key: MessageKey) => translate(locale, key);
-  const id = z.string().uuid().safeParse(String(formData.get("id") ?? ""));
-  if (!id.success) return { status: "error", message: t("missingItemId") };
-  const locations = formData.getAll("location");
-  const quantities = formData.getAll("quantity");
-  const parsedLocations = z.array(z.string()).max(50).safeParse(locations);
-  const parsedQuantities = z.array(z.string()).max(50).safeParse(quantities);
-  if (!parsedLocations.success || !parsedQuantities.success || locations.length !== quantities.length || locations.length > 50) {
-    return { status: "error", message: t("stockRowsInvalid") };
-  }
-  const rows = z.array(z.object({ location: z.string().max(120), quantity: z.string().regex(/^\d{1,7}$/) })).max(50).safeParse(
-    locations.map((location, index) => ({ location, quantity: quantities[index] })),
-  );
-  if (!rows.success) return { status: "error", message: t("stockQuantityInvalid") };
-  try {
-    await saveStock(id.data, rows.data.map((row) => ({ location: row.location, quantity: Number(row.quantity) })));
-    revalidatePath("/"); revalidatePath(`/items/${id.data}`);
-    return { status: "success", message: t("stockSaved") };
-  } catch (error) {
-    return { status: "error", message: errorMessage(error, "stockSaveGeneric", locale) };
-  }
 }
 
 export async function createCollectionAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {

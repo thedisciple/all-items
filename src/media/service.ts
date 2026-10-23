@@ -168,9 +168,9 @@ async function setPrimaryPhoto(itemId: string, image: Awaited<ReturnType<typeof 
   return { id: mediaId, width: image.width, height: image.height, createdAt: new Date().toISOString() };
 }
 
-export async function createItemWithPhoto(input: ItemFields, file: File, sourceFile: File = file, cropValue = "") {
+export async function createItemWithPhoto(input: ItemFields, file: File, sourceFile: File = file, cropValue = "", stock?: unknown) {
   const image = await processImage(file, sourceFile, cropValue);
-  const item = await createItem(input);
+  const item = await createItem(input, stock);
   try {
     await setPrimaryPhoto(item.id, image);
     return item;

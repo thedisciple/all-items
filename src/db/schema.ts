@@ -44,6 +44,11 @@ export const stockEntries = sqliteTable("stock_entries", {
   updatedAt: text("updated_at").notNull(),
 });
 
+export const itemCategories = sqliteTable("item_categories", {
+  itemId: text("item_id").notNull().references(() => items.id, { onDelete: "cascade" }),
+  category: text("category").notNull(),
+}, table => [uniqueIndex("item_categories_pair_idx").on(table.itemId, table.category)]);
+
 export const mediaAssets = sqliteTable("media_assets", {
   id: text("id").primaryKey(),
   itemId: text("item_id").notNull().references(() => items.id, { onDelete: "cascade" }),

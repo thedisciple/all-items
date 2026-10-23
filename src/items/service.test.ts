@@ -63,7 +63,7 @@ describe("M1 inventory", () => {
     expect((await listItems({ status: "user_confirmed" })).map((item) => item.id)).toContain(first.id);
     expect((await listItems({ search: "Резисторы" }))[0]).not.toHaveProperty("sale_intent");
     await expect(saveStock(second.id, [{ location: "Полка", quantity: -1 }])).rejects.toThrow();
-    await expect(saveStock(second.id, [{ location: "Полка", quantity: 2 }])).rejects.toThrow("уникальной");
+    await expect(saveStock(second.id, [{ location: "Полка", quantity: 2 }])).rejects.toThrow("Single item");
     await deleteItem(first.id);
     expect(await getItem(first.id)).toBeNull();
     expect((await listItems()).map((item) => item.id)).not.toContain(first.id);
@@ -104,6 +104,27 @@ describe("M1 inventory", () => {
     ]);
   });
 
+  it("saves mode, stock and multiple categories in one transaction and omits blank stock drafts", async () => {
+    const created = await createItem({ name: "Combined draft", categories: ["electronics", "tools", "Bench custom"], trackingMode: "bulk" }, [{ location: "  Shelf X  ", quantity: 2 }, { location: "  ", quantity: 0 }]);
+    const saved = await getItem(created.id);
+    expect(saved?.categories).toEqual(["Bench custom", "electronics", "tools"]);
+    expect(saved?.stock).toEqual([{ location: "Shelf X", quantity: 2 }]);
+    expect((await listItems({ category: "tools" })).filter(item => item.id === created.id)).toHaveLength(1);
+    await expect(updateItem(created.id, { name: "Do not persist", categories: ["home"], trackingMode: "unique" }, [{ location: "Shelf X", quantity: 2 }])).rejects.toThrow("Single item");
+    expect(await getItem(created.id)).toEqual(saved);
+    await client.execute("CREATE TRIGGER r1_fail_stock BEFORE INSERT ON stock_entries WHEN NEW.quantity=17 BEGIN SELECT RAISE(ABORT,'injected stock failure'); END");
+    try {
+      await expect(updateItem(created.id, { name: "Rollback metadata", categories: ["home"], trackingMode: "consumable" }, [{ location: "Rollback location", quantity: 17 }])).rejects.toThrow();
+      expect(await getItem(created.id)).toEqual(saved);
+      expect((await client.execute("SELECT id FROM locations WHERE name='Rollback location'")).rows).toHaveLength(0);
+    } finally { await client.execute("DROP TRIGGER r1_fail_stock"); }
+    await updateItem(created.id, { name: "Combined saved", categories: ["tools", "tools", "Bench custom"], trackingMode: "consumable" }, [{ location: "", quantity: 1 }, { location: "Shelf Z", quantity: 3 }, { location: " ", quantity: 0 }]);
+    expect(await getItem(created.id)).toMatchObject({ name: "Combined saved", tracking_mode: "consumable", quantity: 4, categories: ["Bench custom", "tools"] });
+    await updateItem(created.id, { name: "Single saved", trackingMode: "unique" }, [{ location: "Shelf Z", quantity: 1 }]);
+    expect(await getItem(created.id)).toMatchObject({ name: "Single saved", tracking_mode: "unique", quantity: 1, categories: ["Bench custom", "tools"] });
+    await expect(client.execute({ sql: "INSERT INTO item_categories (item_id,category) VALUES (?,?)", args: [created.id,"tools"] })).rejects.toThrow();
+    await deleteItem(created.id);
+  });
   it("allocates distinct sequential inventory numbers during concurrent creates", async () => {
     const created = await Promise.all(Array.from({ length: 8 }, (_, index) => createItem({ name: `Concurrent ${index}`, trackingMode: "bulk" })));
     const numbers = created.map((item) => item.inventoryNumber);
@@ -115,7 +136,7 @@ describe("M1 inventory", () => {
   it("applies migrations repeatedly without duplicating schema", async () => {
     await applyMigrations(client, migrations);
     const names = await client.execute("SELECT name FROM _all_items_migrations ORDER BY name");
-    expect(names.rows.map((row) => row.name)).toEqual(["0001_foundation", "0002_inventory_management", "0003_private_media", "0004_collections", "0005_editable_media_source", "0006_collection_covers"]);
+    expect(names.rows.map((row) => row.name)).toEqual(["0001_foundation", "0002_inventory_management", "0003_private_media", "0004_collections", "0005_editable_media_source", "0006_collection_covers", "0007_item_categories"]);
   });
 });
 

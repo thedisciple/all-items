@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { initializeWorkspace } from "@/db/client";
-import { categoryFilterValues, categoryKeyForStoredValue } from "./categories";
+import { canonicalCategories, categoryKeyForStoredValue } from "./categories";
 
 const optionalText = (max: number) => z.string().trim().max(max).optional().transform((value) => value || null);
 export const itemFields = z.object({
@@ -8,6 +8,7 @@ export const itemFields = z.object({
   model: optionalText(160),
   brand: optionalText(120),
   category: optionalText(80),
+  categories: z.array(z.string().min(1).max(80)).max(20).optional(),
   originalMarking: optionalText(160),
   notes: optionalText(2000),
   description: optionalText(4000),
@@ -31,7 +32,7 @@ export function photoFirstItemValues(input: ItemFields, hasPhoto: boolean): Item
 
 export const stockInput = z.array(z.object({
   location: z.string().trim().max(120).optional().transform((value) => value || ""),
-  quantity: z.coerce.number().int().min(0).max(1000000),
+  quantity: z.union([z.number(), z.string().regex(/^\d{1,7}$/).transform(Number)]).pipe(z.number().int().min(0).max(1000000)),
 })).max(50);
 const itemIdInput = z.string().uuid();
 export type StockEntryDTO = { quantity: number; location: string | null };
@@ -42,6 +43,7 @@ export type ItemDetailDTO = {
   inventory_number: string;
   brand: string | null;
   category: string | null;
+  categories: string[];
   original_marking: string | null;
   notes: string | null;
   description: string | null;
@@ -89,9 +91,10 @@ async function beginWriteTransaction(db: Awaited<ReturnType<typeof initializeWor
   }
 }
 
-export async function createItem(input: ItemFields) {
+export async function createItem(input: ItemFields, stock?: unknown) {
   return serializeLocalWrite(async () => {
   const parsed = itemFields.parse(input);
+  const rows = normalizedStock(stock ?? [{ location: "", quantity: parsed.trackingMode === "unique" ? 1 : 0 }], parsed.trackingMode);
   const { db, workspaceId } = await initializeWorkspace();
   const tx = await beginWriteTransaction(db);
   try {
@@ -104,11 +107,12 @@ export async function createItem(input: ItemFields) {
     await tx.execute({
       sql: `INSERT INTO items (id, workspace_id, name, model, inventory_number, brand, category, original_marking, notes, description, identification_status, tracking_mode, sale_intent, asking_price_minor, asking_currency, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      args: [id, workspaceId, parsed.name, parsed.model, `INV-${String(sequence).padStart(6, "0")}`, parsed.brand, parsed.category,
+      args: [id, workspaceId, parsed.name, parsed.model, `INV-${String(sequence).padStart(6, "0")}`, parsed.brand, null,
         parsed.originalMarking, parsed.notes, parsed.description, parsed.identificationStatus, parsed.trackingMode, parsed.saleIntent,
         parsed.askingPrice === null ? null : Math.round(parsed.askingPrice * 100), parsed.askingPrice !== null ? parsed.askingCurrency : null, now, now],
     });
-    await tx.execute({ sql: "INSERT INTO stock_entries (id, item_id, location_id, quantity, created_at, updated_at) VALUES (?, ?, NULL, ?, ?, ?)", args: [crypto.randomUUID(), id, parsed.trackingMode === "unique" ? 1 : 0, now, now] });
+    await replaceCategories(tx, id, parsed.categories ?? (parsed.category ? [parsed.category] : []));
+    await replaceStock(tx, id, workspaceId, rows, now);
     await tx.commit();
     return { id, inventoryNumber: `INV-${String(sequence).padStart(6, "0")}` };
   } catch (error) {
@@ -118,7 +122,7 @@ export async function createItem(input: ItemFields) {
   });
 }
 
-export async function listItems(filters: { search?: string; category?: string; status?: string; sort?: string; direction?: string; collectionId?: string } = {}) {
+export async function listItems(filters: { search?: string; category?: string; status?: string; sort?: string; direction?: string; collectionId?: string } = {}): Promise<Array<Record<string, unknown> & { categories: string[] }>> {
   const parsedFilters = itemListFilters.parse(filters);
   const { db, workspaceId } = await initializeWorkspace();
   const search = parsedFilters.search || "";
@@ -126,15 +130,14 @@ export async function listItems(filters: { search?: string; category?: string; s
   const args: (string | number)[] = [workspaceId];
   if (search) {
     clauses.push(`(i.name LIKE ? OR i.model LIKE ? OR i.original_marking LIKE ? OR i.brand LIKE ? OR i.notes LIKE ?
-      OR i.inventory_number LIKE ? OR i.description LIKE ? OR i.category LIKE ?
+      OR i.inventory_number LIKE ? OR i.description LIKE ? OR EXISTS (SELECT 1 FROM item_categories sca WHERE sca.item_id = i.id AND sca.category LIKE ?)
       OR EXISTS (SELECT 1 FROM stock_entries ss INNER JOIN locations sl ON sl.id = ss.location_id WHERE ss.item_id = i.id AND sl.name LIKE ?)
       OR EXISTS (SELECT 1 FROM item_collection_memberships sicm INNER JOIN collections sc ON sc.id = sicm.collection_id WHERE sicm.item_id = i.id AND sc.name LIKE ?))`);
     const match = `%${search}%`; args.push(match, match, match, match, match, match, match, match, match, match);
   }
   if (parsedFilters.category) {
-    const values = categoryFilterValues(categoryKeyForStoredValue(parsedFilters.category) ?? parsedFilters.category);
-    clauses.push(`i.category IN (${values.map(() => "?").join(",")})`);
-    args.push(...values);
+    clauses.push("EXISTS (SELECT 1 FROM item_categories ic WHERE ic.item_id = i.id AND ic.category = ?)");
+    args.push(categoryKeyForStoredValue(parsedFilters.category) ?? parsedFilters.category);
   }
   if (parsedFilters.status) { clauses.push("i.identification_status = ?"); args.push(parsedFilters.status); }
   if (parsedFilters.collectionId) {
@@ -144,12 +147,12 @@ export async function listItems(filters: { search?: string; category?: string; s
   const order = parsedFilters.sort === "name" ? "i.name" : parsedFilters.sort === "quantity" ? "quantity" : "i.created_at";
   const direction = parsedFilters.direction ? parsedFilters.direction === "asc" ? "ASC" : "DESC" : parsedFilters.sort === "name" ? "ASC" : "DESC";
   const result = await db.$client.execute({
-    sql: `SELECT i.id, i.name, i.model, i.brand, i.category, i.original_marking, i.inventory_number, i.identification_status, i.tracking_mode, i.created_at AS createdAt, COALESCE(SUM(s.quantity), 0) AS quantity, GROUP_CONCAT(DISTINCT l.name) AS locations,
+    sql: `SELECT i.id, i.name, i.model, i.brand, (SELECT json_group_array(category) FROM (SELECT category FROM item_categories WHERE item_id=i.id ORDER BY category)) AS categories_json, i.original_marking, i.inventory_number, i.identification_status, i.tracking_mode, i.created_at AS createdAt, COALESCE(SUM(s.quantity), 0) AS quantity, GROUP_CONCAT(DISTINCT l.name) AS locations,
                  (SELECT m.id FROM media_assets m WHERE m.item_id = i.id AND m.is_primary = 1 LIMIT 1) AS primary_media_id
           FROM items i LEFT JOIN stock_entries s ON s.item_id = i.id LEFT JOIN locations l ON l.id = s.location_id
           WHERE ${clauses.join(" AND ")} GROUP BY i.id ORDER BY ${order} ${direction}, i.id ASC`, args,
   });
-  return result.rows.map((row) => rowObject(row as Record<string, unknown>));
+  return result.rows.map((row) => { const categories = JSON.parse(String(row.categories_json)) as string[]; return { ...rowObject(row as Record<string, unknown>), categories, category: categories[0] ?? null }; });
 }
 
 export async function listCategoryValues(collectionIdValue?: unknown) {
@@ -160,7 +163,7 @@ export async function listCategoryValues(collectionIdValue?: unknown) {
     : "";
   const args = collectionId ? [workspaceId, collectionId] : [workspaceId];
   const result = await db.$client.execute({
-    sql: "SELECT DISTINCT i.category FROM items i WHERE i.workspace_id = ? AND i.category IS NOT NULL AND trim(i.category) <> '' " + membership + " ORDER BY lower(i.category), i.category",
+    sql: "SELECT DISTINCT ic.category FROM item_categories ic JOIN items i ON i.id=ic.item_id WHERE i.workspace_id = ? " + membership + " ORDER BY lower(ic.category), ic.category",
     args,
   });
   return result.rows.map((row) => String(row.category));
@@ -176,7 +179,7 @@ export async function getItem(id: string): Promise<ItemDetailDTO | null> {
   id = itemIdInput.parse(id);
   const { db, workspaceId } = await initializeWorkspace();
   const result = await db.$client.execute({
-    sql: `SELECT i.id, i.name, i.model, i.inventory_number, i.brand, i.category, i.original_marking,
+    sql: `SELECT i.id, i.name, i.model, i.inventory_number, i.brand, (SELECT json_group_array(category) FROM (SELECT category FROM item_categories WHERE item_id=i.id ORDER BY category)) AS categories_json, i.original_marking,
                  i.notes, i.description, i.identification_status, i.tracking_mode, i.sale_intent,
                  i.asking_price_minor, i.asking_currency, i.created_at, i.updated_at,
                  COALESCE(SUM(s.quantity), 0) AS quantity,
@@ -197,7 +200,8 @@ export async function getItem(id: string): Promise<ItemDetailDTO | null> {
     model: row.model == null ? null : String(row.model),
     inventory_number: String(row.inventory_number),
     brand: row.brand == null ? null : String(row.brand),
-    category: row.category == null ? null : String(row.category),
+    category: (JSON.parse(String(row.categories_json)) as string[])[0] ?? null,
+    categories: JSON.parse(String(row.categories_json)) as string[],
     original_marking: row.original_marking == null ? null : String(row.original_marking),
     notes: row.notes == null ? null : String(row.notes),
     description: row.description == null ? null : String(row.description),
@@ -214,53 +218,75 @@ export async function getItem(id: string): Promise<ItemDetailDTO | null> {
   };
 }
 
-export async function updateItem(id: string, input: ItemFields) {
+type StockValues = ReturnType<typeof stockInput.parse>;
+export function normalizedStock(input: unknown, mode: string): StockValues {
+  const rows = stockInput.parse(input).filter(entry => entry.location || entry.quantity > 0);
+  const names = rows.map(entry => entry.location.toLocaleLowerCase("ru-RU"));
+  if (new Set(names).size !== names.length) throw new Error("Duplicate stock locations");
+  if (mode === "unique" && (rows.length !== 1 || rows[0]!.quantity !== 1)) throw new Error("Single item requires one unit and one location");
+  return rows;
+}
+
+async function replaceCategories(tx: Awaited<ReturnType<typeof beginWriteTransaction>>, id: string, values: string[]) {
+  const parsed = z.array(z.string().min(1).max(80)).max(20).parse(values);
+  const categories = canonicalCategories(parsed);
+  await tx.execute({ sql: "DELETE FROM item_categories WHERE item_id = ?", args: [id] });
+  for (const category of categories) await tx.execute({ sql: "INSERT INTO item_categories (item_id,category) VALUES (?,?)", args: [id,category] });
+}
+
+async function replaceStock(tx: Awaited<ReturnType<typeof beginWriteTransaction>>, id: string, workspaceId: string, rows: StockValues, now: string) {
+  const current = await tx.execute({ sql: "SELECT id,location_id,quantity FROM stock_entries WHERE item_id=?", args: [id] });
+  const retained = new Set<string>();
+  const desired = rows.length ? rows : [{ location: "", quantity: 0 }];
+  for (const entry of desired) {
+    let locationId: string | null = null;
+    if (entry.location) {
+      const found = await tx.execute({ sql: "SELECT id FROM locations WHERE workspace_id = ? AND name = ?", args: [workspaceId,entry.location] });
+      locationId = found.rows.length ? String(found.rows[0]!.id) : crypto.randomUUID();
+      if (!found.rows.length) await tx.execute({ sql: "INSERT INTO locations (id,workspace_id,name,created_at) VALUES (?,?,?,?)", args: [locationId,workspaceId,entry.location,now] });
+    }
+    const existing = current.rows.find(row => row.location_id === locationId);
+    if (existing) {
+      retained.add(String(existing.id));
+      if (Number(existing.quantity) !== entry.quantity) await tx.execute({ sql: "UPDATE stock_entries SET quantity=?,updated_at=? WHERE id=?", args: [entry.quantity,now,String(existing.id)] });
+    } else {
+      const stockId=crypto.randomUUID(); retained.add(stockId);
+      await tx.execute({ sql: "INSERT INTO stock_entries (id,item_id,location_id,quantity,created_at,updated_at) VALUES (?,?,?,?,?,?)", args: [stockId,id,locationId,entry.quantity,now,now] });
+    }
+  }
+  for (const row of current.rows) if (!retained.has(String(row.id))) await tx.execute({sql:"DELETE FROM stock_entries WHERE id=?",args:[String(row.id)]});
+
+}
+
+export async function updateItem(id: string, input: ItemFields, stock?: unknown) {
   id = itemIdInput.parse(id);
   const parsed = itemFields.parse(input);
-  const { db, workspaceId } = await initializeWorkspace();
-  if (parsed.trackingMode === "unique") {
-    const stock = await db.$client.execute({ sql: "SELECT COALESCE(SUM(quantity), 0) AS quantity FROM stock_entries WHERE item_id = ?", args: [id] });
-    if (Number(stock.rows[0]?.quantity ?? 0) !== 1) throw new Error("Для уникальной вещи количество должно быть равно 1");
-  }
-  const result = await db.$client.execute({
-    sql: `UPDATE items SET name=?, model=?, brand=?, category=?, original_marking=?, notes=?, description=?, identification_status=?, tracking_mode=?, sale_intent=?, asking_price_minor=?, asking_currency=?, updated_at=? WHERE id=? AND workspace_id=?`,
-    args: [parsed.name, parsed.model, parsed.brand, parsed.category, parsed.originalMarking, parsed.notes, parsed.description,
-      parsed.identificationStatus, parsed.trackingMode, parsed.saleIntent, parsed.askingPrice === null ? null : Math.round(parsed.askingPrice * 100),
-      parsed.askingPrice !== null ? parsed.askingCurrency : null, new Date().toISOString(), id, workspaceId],
+  return serializeLocalWrite(async () => {
+    const { db, workspaceId } = await initializeWorkspace();
+    const tx = await beginWriteTransaction(db);
+    try {
+      const existing = await tx.execute({ sql: "SELECT id FROM items WHERE id=? AND workspace_id=?", args: [id,workspaceId] });
+      if (!existing.rows.length) throw new Error("Item not found");
+      const current = await tx.execute({ sql: "SELECT s.quantity,l.name AS location FROM stock_entries s LEFT JOIN locations l ON l.id=s.location_id WHERE s.item_id=?", args: [id] });
+      const rows = normalizedStock(stock ?? current.rows.map(row => ({quantity: Number(row.quantity), location: String(row.location ?? "")})), parsed.trackingMode);
+      const now = new Date().toISOString();
+      await tx.execute({
+        sql: `UPDATE items SET name=?,model=?,brand=?,original_marking=?,notes=?,description=?,identification_status=?,tracking_mode=?,sale_intent=?,asking_price_minor=?,asking_currency=?,updated_at=? WHERE id=? AND workspace_id=?`,
+        args: [parsed.name,parsed.model,parsed.brand,parsed.originalMarking,parsed.notes,parsed.description,parsed.identificationStatus,parsed.trackingMode,parsed.saleIntent,parsed.askingPrice === null ? null : Math.round(parsed.askingPrice*100),parsed.askingPrice !== null ? parsed.askingCurrency : null,now,id,workspaceId],
+      });
+      if (parsed.categories !== undefined || input.category !== undefined) await replaceCategories(tx,id,parsed.categories ?? (parsed.category ? [parsed.category] : []));
+      if (stock !== undefined) await replaceStock(tx,id,workspaceId,rows,now);
+      await tx.commit();
+    } catch (error) { await tx.rollback(); throw error; }
   });
-  if (!result.rowsAffected) throw new Error("Вещь не найдена");
 }
 
 export async function saveStock(id: string, input: unknown) {
-  id = itemIdInput.parse(id);
-  const parsed = stockInput.parse(input);
   const item = await getItem(id);
-  if (!item) throw new Error("Вещь не найдена");
-  const total = parsed.reduce((sum, entry) => sum + entry.quantity, 0);
-  if ((item as Record<string, unknown>).tracking_mode === "unique" && total !== 1) throw new Error("Для уникальной вещи количество должно быть равно 1");
-  const nonEmpty = parsed.filter((entry) => entry.location || entry.quantity > 0);
-  const names = nonEmpty.map((entry) => entry.location.toLocaleLowerCase("ru-RU"));
-  if (new Set(names).size !== names.length) throw new Error("Укажите каждое место хранения один раз");
-  const { db, workspaceId } = await initializeWorkspace();
-  const tx = await beginWriteTransaction(db);
-  try {
-    await tx.execute({ sql: "DELETE FROM stock_entries WHERE item_id = ?", args: [id] });
-    const now = new Date().toISOString();
-    for (const entry of nonEmpty) {
-      let locationId: string | null = null;
-      if (entry.location) {
-        const locationResult = await tx.execute({ sql: "SELECT id FROM locations WHERE workspace_id = ? AND name = ?", args: [workspaceId, entry.location] });
-        if (locationResult.rows.length) locationId = String(locationResult.rows[0].id);
-        else {
-          locationId = crypto.randomUUID();
-          await tx.execute({ sql: "INSERT INTO locations (id, workspace_id, name, created_at) VALUES (?, ?, ?, ?)", args: [locationId, workspaceId, entry.location, now] });
-        }
-      }
-      await tx.execute({ sql: "INSERT INTO stock_entries (id, item_id, location_id, quantity, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", args: [crypto.randomUUID(), id, locationId, entry.quantity, now, now] });
-    }
-    if (!nonEmpty.length) await tx.execute({ sql: "INSERT INTO stock_entries (id, item_id, location_id, quantity, created_at, updated_at) VALUES (?, ?, NULL, 0, ?, ?)", args: [crypto.randomUUID(), id, now, now] });
-    await tx.commit();
-  } catch (error) { await tx.rollback(); throw error; }
+  if (!item) throw new Error("Item not found");
+  return updateItem(id, { name: item.name, model: item.model ?? "", brand: item.brand ?? "", categories: item.categories,
+    originalMarking: item.original_marking ?? "", notes: item.notes ?? "", description: item.description ?? "", identificationStatus: item.identification_status as ItemFields["identificationStatus"], trackingMode: item.tracking_mode as ItemFields["trackingMode"],
+    saleIntent: item.sale_intent as ItemFields["saleIntent"], askingPrice: item.asking_price_minor === null ? "" : String(item.asking_price_minor/100), askingCurrency: (item.asking_currency ?? "RUB") as ItemFields["askingCurrency"] }, input);
 }
 
 export async function deleteItem(id: string) {

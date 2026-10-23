@@ -4,10 +4,11 @@ import path from "node:path";
 import { unzipSync, zipSync } from "fflate";
 import { z } from "zod";
 import type { Client } from "@libsql/client";
+import { canonicalCategories } from "@/items/categories";
 import { getDatabase, dataDirectory } from "@/db/client";
 
 export const ARCHIVE_FORMAT = "all-items-portable-inventory";
-export const ARCHIVE_VERSION = 2;
+export const ARCHIVE_VERSION = 3;
 export const MAX_ARCHIVE_BYTES = 128 * 1024 * 1024;
 export const MAX_ENTRY_BYTES = 32 * 1024 * 1024;
 export const MAX_ARCHIVE_ENTRIES = 20_000;
@@ -52,6 +53,7 @@ function canonicalizeInventory(inventory: Record<string, unknown>, assets: Recor
     if (assets[oldPath]) mapped[newPath] = assets[oldPath];
   };
   for (const item of (Array.isArray(copy.items) ? copy.items : []) as Array<Record<string, unknown>>) {
+    item.categories ??= canonicalCategories(typeof item.category === "string" ? [item.category] : []);
     for (const asset of (Array.isArray(item.mediaAssets) ? item.mediaAssets : []) as Array<Record<string, unknown>>) {
       const paths = itemArchivePaths(item, asset);
       move(asset, "imagePath", paths.imagePath);
@@ -71,7 +73,7 @@ function canonicalizeInventory(inventory: Record<string, unknown>, assets: Recor
   return { inventory: copy, assets: mapped };
 }
 const manifestSchema = z.object({
-  format: z.literal(ARCHIVE_FORMAT), version: z.literal(ARCHIVE_VERSION), exportedAt: z.string().datetime(), applicationVersion: z.string(),
+  format: z.literal(ARCHIVE_FORMAT), version: z.union([z.literal(2), z.literal(ARCHIVE_VERSION)]), exportedAt: z.string().datetime(), applicationVersion: z.string(),
   entries: z.array(z.object({ path: z.string(), size: z.number().int().nonnegative(), sha256: z.string().regex(/^[0-9a-f]{64}$/) })).max(MAX_ARCHIVE_ENTRIES),
 });
 const portableInventorySchema = z.object({
@@ -105,7 +107,7 @@ export function readInventoryArchive(input: Uint8Array) {
   let rawManifest: unknown;
   try { rawManifest = JSON.parse(Buffer.from(manifestBytes).toString("utf8")); }
   catch { throw new ArchiveError("The archive manifest is invalid."); }
-  if (typeof rawManifest !== "object" || rawManifest === null || (rawManifest as Record<string, unknown>).format !== ARCHIVE_FORMAT || (rawManifest as Record<string, unknown>).version !== ARCHIVE_VERSION) throw new ArchiveError("Unsupported archive format. Regenerate the archive from the current All Items installation.");
+  if (typeof rawManifest !== "object" || rawManifest === null || (rawManifest as Record<string, unknown>).format !== ARCHIVE_FORMAT || ![2, ARCHIVE_VERSION].includes(Number((rawManifest as Record<string, unknown>).version))) throw new ArchiveError("Unsupported archive format. Regenerate the archive from the current All Items installation.");
   try { manifest = manifestSchema.parse(rawManifest); inventory = portableInventorySchema.parse(JSON.parse(Buffer.from(inventoryBytes).toString("utf8"))); }
   catch { throw new ArchiveError("The archive metadata is invalid."); }
   const expected = new Map<string, { size: number; sha256: string }>();
@@ -126,6 +128,10 @@ export function readInventoryArchive(input: Uint8Array) {
     const match = /^([0-9a-f]{64})  (.+)$/.exec(line);
     if (!match || !safePath(match[2]!) || checksumPaths.has(match[2]!) || expected.get(match[2]!)?.sha256 !== match[1]) throw new ArchiveError("The checksum list is invalid.");
     checksumPaths.add(match[2]!);
+  }
+  if (manifest.version === 3) for (const item of inventory.items as Array<Record<string, unknown>>) {
+    const parsed = z.array(z.string().min(1).max(80)).max(20).safeParse(item.categories);
+    if (!parsed.success || new Set(parsed.data).size !== parsed.data.length || parsed.data.some(value => !value.trim())) throw new ArchiveError("An item has invalid category assignments.");
   }
   validateReferences(inventory, files);
   return { manifest, inventory, files };
@@ -301,13 +307,14 @@ export async function createInventoryArchive(context?: { client: Client; directo
     const workspace = await tx.execute({ sql: "SELECT id, name, created_at, next_inventory_number FROM workspaces WHERE id = ?", args: [workspaceId] });
     const items = await tx.execute({ sql: "SELECT * FROM items WHERE workspace_id = ? ORDER BY inventory_number", args: [workspaceId] });
     const locations = await tx.execute({ sql: "SELECT * FROM locations WHERE workspace_id = ? ORDER BY name", args: [workspaceId] });
+    const categoryAssignments = await tx.execute("SELECT ic.* FROM item_categories ic JOIN items i ON i.id=ic.item_id WHERE i.workspace_id='00000000-0000-4000-8000-000000000001' ORDER BY ic.item_id,ic.category");
     const stock = await tx.execute("SELECT * FROM stock_entries ORDER BY item_id, created_at, id");
     const media = await tx.execute("SELECT * FROM media_assets ORDER BY item_id, created_at, id");
     const collections = await tx.execute({ sql: "SELECT * FROM collections WHERE workspace_id = ? ORDER BY created_at, id", args: [workspaceId] });
     const memberships = await tx.execute("SELECT * FROM item_collection_memberships ORDER BY collection_id, item_id");
     const covers = await tx.execute({ sql: `SELECT ca.* FROM collection_cover_assets ca JOIN collections c ON c.id = ca.collection_id
       WHERE c.workspace_id = ? AND c.cover_type = 'upload' AND c.cover_upload_id = ca.id ORDER BY ca.collection_id, ca.id`, args: [workspaceId] });
-    snapshot = { workspaces: workspace.rows as unknown as Array<Record<string, unknown>>, items: items.rows as unknown as Array<Record<string, unknown>>, locations: locations.rows as unknown as Array<Record<string, unknown>>, stock: stock.rows as unknown as Array<Record<string, unknown>>, media: media.rows as unknown as Array<Record<string, unknown>>, collections: collections.rows as unknown as Array<Record<string, unknown>>, memberships: memberships.rows as unknown as Array<Record<string, unknown>>, covers: covers.rows as unknown as Array<Record<string, unknown>> };
+    snapshot = { categoryAssignments: categoryAssignments.rows as unknown as Array<Record<string, unknown>>, workspaces: workspace.rows as unknown as Array<Record<string, unknown>>, items: items.rows as unknown as Array<Record<string, unknown>>, locations: locations.rows as unknown as Array<Record<string, unknown>>, stock: stock.rows as unknown as Array<Record<string, unknown>>, media: media.rows as unknown as Array<Record<string, unknown>>, collections: collections.rows as unknown as Array<Record<string, unknown>>, memberships: memberships.rows as unknown as Array<Record<string, unknown>>, covers: covers.rows as unknown as Array<Record<string, unknown>> };
     await tx.commit();
   } catch (error) { await tx.rollback(); throw error; }
   const total = snapshot.media.reduce((count, row) => count + (row.source_storage_path ? 3 : 2), 0) + snapshot.covers.length * 2 + 3;
@@ -316,7 +323,7 @@ export async function createInventoryArchive(context?: { client: Client; directo
   const payload: Record<string, unknown> = {
     workspace: snapshot.workspaces[0] ?? null,
     locations: snapshot.locations,
-    items: snapshot.items.map((item) => ({ ...item, stock: snapshot.stock.filter((row) => row.item_id === item.id), collectionIds: snapshot.memberships.filter((row) => row.item_id === item.id).map((row) => row.collection_id), mediaAssets: snapshot.media.filter((row) => row.item_id === item.id).map((asset) => ({ id: asset.id, isPrimary: Boolean(asset.is_primary), displayOrder: null, originalFilename: asset.original_filename, mimeType: asset.mime_type, width: asset.width, height: asset.height, cropData: asset.crop_data, createdAt: asset.created_at, imagePath: `media/items/${asset.storage_path}`, thumbnailPath: `media/items/${asset.thumbnail_path}`, sourcePath: asset.source_storage_path ? `media/items/${asset.source_storage_path}` : null })) })),
+    items: snapshot.items.map((item) => ({ ...item, categories: snapshot.categoryAssignments.filter(row => row.item_id === item.id).map(row => row.category), stock: snapshot.stock.filter((row) => row.item_id === item.id), collectionIds: snapshot.memberships.filter((row) => row.item_id === item.id).map((row) => row.collection_id), mediaAssets: snapshot.media.filter((row) => row.item_id === item.id).map((asset) => ({ id: asset.id, isPrimary: Boolean(asset.is_primary), displayOrder: null, originalFilename: asset.original_filename, mimeType: asset.mime_type, width: asset.width, height: asset.height, cropData: asset.crop_data, createdAt: asset.created_at, imagePath: `media/items/${asset.storage_path}`, thumbnailPath: `media/items/${asset.thumbnail_path}`, sourcePath: asset.source_storage_path ? `media/items/${asset.source_storage_path}` : null })) })),
     collections: snapshot.collections.map((collection) => { const cover = snapshot.covers.find((asset) => asset.collection_id === collection.id); return { ...collection, itemIds: snapshot.memberships.filter((row) => row.collection_id === collection.id).map((row) => row.item_id), uploadCover: cover ? { id: cover.id, width: cover.width, height: cover.height, createdAt: cover.created_at, path: `media/${collectionCoverPath(String(cover.storage_path))}`, thumbnailPath: `media/${collectionCoverPath(String(cover.thumbnail_path))}` } : null }; }),
     memberships: snapshot.memberships,
   };
@@ -340,12 +347,12 @@ export function csvCell(value: unknown) {
 }
 
 export function formatInventoryCsv(rows: Array<Record<string, unknown>>) {
-  const columns = ["Inventory number", "Name", "Model", "Brand", "Category", "Quantity", "Locations", "Identification status", "Sale intent", "Asking price", "Currency", "Description", "Notes"];
-  return Buffer.from(`\uFEFF${[columns, ...rows.map((row) => [row.inventory_number, row.name, row.model, row.brand, row.category, row.quantity, row.locations, row.identification_status, row.sale_intent, row.asking_price_minor == null ? null : (Number(row.asking_price_minor) / 100).toFixed(2), row.asking_currency, row.description, row.notes])].map((row) => row.map(csvCell).join(",")).join("\r\n")}\r\n`, "utf8");
+  const columns = ["Inventory number", "Name", "Model", "Brand", "Categories", "Quantity", "Locations", "Identification status", "Sale intent", "Asking price", "Currency", "Description", "Notes"];
+  return Buffer.from(`\uFEFF${[columns, ...rows.map((row) => [row.inventory_number, row.name, row.model, row.brand, JSON.stringify(row.categories ?? (row.category ? [row.category] : [])), row.quantity, row.locations, row.identification_status, row.sale_intent, row.asking_price_minor == null ? null : (Number(row.asking_price_minor) / 100).toFixed(2), row.asking_currency, row.description, row.notes])].map((row) => row.map(csvCell).join(",")).join("\r\n")}\r\n`, "utf8");
 }
 
 export async function createInventoryCsv() {
   const db = await getDatabase();
-  const rows = await db.$client.execute({ sql: `SELECT i.inventory_number, i.name, i.model, i.brand, i.category, i.identification_status, i.sale_intent, i.asking_price_minor, i.asking_currency, i.description, i.notes, COALESCE(SUM(s.quantity), 0) AS quantity, GROUP_CONCAT(l.name, '; ') AS locations FROM items i LEFT JOIN stock_entries s ON s.item_id = i.id LEFT JOIN locations l ON l.id = s.location_id WHERE i.workspace_id = ? GROUP BY i.id ORDER BY i.inventory_number`, args: [workspaceId] });
-  return formatInventoryCsv(rows.rows as unknown as Array<Record<string, unknown>>);
+  const rows = await db.$client.execute({ sql: `SELECT i.inventory_number, i.name, i.model, i.brand, (SELECT json_group_array(category) FROM (SELECT category FROM item_categories WHERE item_id=i.id ORDER BY category)) AS categories_json, i.identification_status, i.sale_intent, i.asking_price_minor, i.asking_currency, i.description, i.notes, COALESCE(SUM(s.quantity), 0) AS quantity, GROUP_CONCAT(l.name, '; ') AS locations FROM items i LEFT JOIN stock_entries s ON s.item_id = i.id LEFT JOIN locations l ON l.id = s.location_id WHERE i.workspace_id = ? GROUP BY i.id ORDER BY i.inventory_number`, args: [workspaceId] });
+  return formatInventoryCsv(rows.rows.map(row => ({ ...row, categories: JSON.parse(String(row.categories_json)) })));
 }

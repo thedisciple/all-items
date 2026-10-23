@@ -4,6 +4,7 @@ import { lstat, mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/
 import path from "node:path";
 import sharp, { type Metadata } from "sharp";
 import { z } from "zod";
+import { canonicalCategories } from "@/items/categories";
 import { dataDirectory, getDatabase } from "@/db/client";
 import { cropDataSchema } from "@/media/crop-data";
 import { readInventoryArchive } from "./archive";
@@ -17,7 +18,7 @@ const stockSchema = z.object({ id, item_id: id, location_id: id.nullable(), quan
 const mediaSchema = z.object({ id, isPrimary: z.boolean(), displayOrder: z.number().int().nonnegative().nullable(), originalFilename: z.string().max(255), mimeType: z.literal("image/webp"), width: z.number().int().positive().max(12_000), height: z.number().int().positive().max(12_000), cropData: nullableText, createdAt: timestamp, imagePath: z.string(), thumbnailPath: z.string(), sourcePath: z.string().nullable() });
 const itemSchema = z.object({
   id, workspace_id: z.literal(workspaceId), inventory_number: z.string().regex(/^INV-\d{6,}$/), name: z.string().min(1).max(160), model: nullableText, brand: nullableText,
-  category: nullableText, original_marking: nullableText, notes: nullableText, description: nullableText,
+  category: nullableText, categories: z.array(z.string().min(1).max(80)).max(20), original_marking: nullableText, notes: nullableText, description: nullableText,
   identification_status: z.enum(["unknown", "user_confirmed", "source_verified"]), tracking_mode: z.enum(["unique", "bulk", "consumable"]),
   sale_intent: z.enum(["not_for_sale", "considering", "willing_to_sell"]), asking_price_minor: z.number().int().nonnegative().nullable(), asking_currency: nullableText,
   created_at: timestamp, updated_at: timestamp, stock: z.array(stockSchema).min(1).max(50), collectionIds: z.array(id), mediaAssets: z.array(mediaSchema),
@@ -59,6 +60,7 @@ function validatedRecords(value: unknown): Inventory {
   for (const item of inventory.items) {
     if (itemIds.has(item.id) || numbers.has(item.inventory_number)) throw new ImportError("The archive contains duplicate items.");
     itemIds.add(item.id); numbers.add(item.inventory_number);
+    if (item.categories.some(value => !value.trim()) || new Set(item.categories).size !== item.categories.length) throw new ImportError("Duplicate or empty category assignments.");
     largestNumber = Math.max(largestNumber, Number(item.inventory_number.slice(4)));
     const stockLocations = new Set<string>();
     let total = 0;
@@ -108,7 +110,8 @@ async function validateImage(bytes: Uint8Array, expected?: { width: number; heig
 
 async function validatedArchive(input: Uint8Array) {
   const { manifest, inventory: untyped, files } = readInventoryArchive(input);
-  const inventory = validatedRecords(untyped);
+  const records = manifest.version === 2 ? { ...untyped, items: (untyped.items as Array<Record<string, unknown>>).map(item => ({ ...item, categories: canonicalCategories(typeof item.category === "string" ? [item.category] : []) })) } : untyped;
+  const inventory = validatedRecords(records);
   const promotions: Promotion[] = [];
   for (const item of inventory.items) for (const media of item.mediaAssets) {
     const base = `media/items/${item.id}/${media.id}`;
@@ -224,6 +227,7 @@ async function persistInventoryInTransaction(client: Executor, inventory: Invent
   for (const location of inventory.locations) await insertRow(client, "locations", ["id", "workspace_id", "name", "created_at"], location);
   for (const item of inventory.items) {
     await insertRow(client, "items", ["id", "workspace_id", "name", "model", "inventory_number", "brand", "category", "original_marking", "notes", "description", "identification_status", "tracking_mode", "sale_intent", "asking_price_minor", "asking_currency", "created_at", "updated_at"], item);
+    for (const category of item.categories) await insertRow(client, "item_categories", ["item_id", "category"], { item_id: item.id, category });
     for (const stock of item.stock) await insertRow(client, "stock_entries", ["id", "item_id", "location_id", "quantity", "created_at", "updated_at"], stock);
     for (const media of item.mediaAssets) await insertRow(client, "media_assets", ["id", "item_id", "storage_path", "thumbnail_path", "source_storage_path", "crop_data", "original_filename", "mime_type", "width", "height", "created_at", "is_primary"], {
       id: media.id, item_id: item.id, storage_path: `${item.id}/${media.id}.webp`, thumbnail_path: `${item.id}/${media.id}-thumb.webp`, source_storage_path: media.sourcePath ? `${item.id}/${media.id}-source.webp` : null,

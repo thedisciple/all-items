@@ -26,6 +26,7 @@ This manifesto governs every user-facing change in All Items. The interface shou
 - Give export one obvious full-archive action and a separate optional CSV action. Show a real pending state and truthful failures; do not invent progress or imply that a download is an automated backup. Explain CSV's photo limitation briefly and in context. Import preview must state scope before confirmation and refuse a populated inventory without suggesting it was changed.
 - Keep language switching local and preserve the current route and entered user data. Native language names supplement, rather than rely on, locally bundled flags.
 - Reserve image geometry during loading and failure, and show a neutral placeholder independently of alt text. Decorative thumbnails beside item names use empty alt; standalone informative photos have meaningful alt. A failed thumbnail must not block opening the item. Reconnection may retry once per source; repeated automatic retry loops are forbidden.
+- Fields in one logical item edit share one Save. Inventory type changes the draft controls immediately; categories support multiple assignments independently of collections. Empty draft rows create no persistent clutter, and recoverable failures preserve text, selected options and stock together.
 
 ## Review questions
 

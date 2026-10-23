@@ -4,6 +4,14 @@ export const categories = [
 
 export type CategoryKey = typeof categories[number];
 
+export function canonicalCategory(value: string) {
+  return categoryKeyForStoredValue(value.trim()) ?? value;
+}
+
+export function canonicalCategories(values: string[]) {
+  return [...new Set(values.filter(value => value.trim()).map(canonicalCategory))];
+}
+
 export const categoryEmoji: Record<CategoryKey, string> = {
   electronics: "🔌", computers: "💻", tools: "🛠️", antiques: "🏺", clothing: "👕", plants: "🌿",
   home: "🏠", books_hobbies: "📚", sports: "⚽", kids: "🧸", other: "📦",

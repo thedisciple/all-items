@@ -46,6 +46,7 @@ async function seed() {
     [itemB, "智慧手表 🧰", "INV-000008", "bulk", "Власна категорія", "willing_to_sell"],
   ]) await c.execute({ sql: `INSERT INTO items (id,workspace_id,name,model,inventory_number,brand,category,original_marking,notes,description,identification_status,tracking_mode,sale_intent,asking_price_minor,asking_currency,created_at,updated_at)
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, args: [id, workspaceId, name, null, number, null, category, null, "Synthetic note", "Synthetic description", "user_confirmed", mode, sale, 1250, "EUR", date, date] });
+  for (const [item,category] of [[itemA,"electronics"],[itemA,"tools"],[itemB,"Custom category"]]) await c.execute({ sql: "INSERT INTO item_categories (item_id,category) VALUES (?,?)", args: [item,category] });
   for (const [id, item, location, quantity] of [[randomUUID(), itemA, locationA, 1], [randomUUID(), itemB, locationA, 2], [randomUUID(), itemB, locationB, 3]]) await c.execute({ sql: "INSERT INTO stock_entries (id,item_id,location_id,quantity,created_at,updated_at) VALUES (?,?,?,?,?,?)", args: [id, item, location, quantity, date, date] });
   const crop = JSON.stringify({ x: 0, y: 0, width: 64, height: 64, rotate: 0, scaleX: 1, scaleY: 1 });
   await c.execute({ sql: "INSERT INTO media_assets (id,item_id,storage_path,thumbnail_path,source_storage_path,crop_data,original_filename,mime_type,width,height,created_at,is_primary) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", args: [photoId, itemA, `${itemA}/${photoId}.webp`, `${itemA}/${photoId}-thumb.webp`, `${itemA}/${photoId}-source.webp`, crop, "synthetic.png", "image/webp", 64, 64, date, 1] });
@@ -85,7 +86,7 @@ beforeAll(async () => {
 });
 afterAll(async () => { await source?.client.close(); await destination?.client.close(); if (root) try { await rm(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 }); } catch (error) { if (!(error instanceof Error && "code" in error && error.code === "EBUSY")) throw error; } }, 30_000);
 
-describe("revision 2 archive restore", () => {
+describe("current and transitional archive restore", () => {
   it("rejects malformed, unsupported and inconsistent archives without changing the installation", async () => {
     await expect(previewInventoryArchive(new Uint8Array([1, 2, 3]))).rejects.toThrow();
     const old = modifiedArchive((files) => { const manifest = JSON.parse(Buffer.from(files["manifest.json"]!).toString("utf8")) as { version: number }; manifest.version = 1; files["manifest.json"] = Buffer.from(JSON.stringify(manifest)); });
@@ -99,6 +100,24 @@ describe("revision 2 archive restore", () => {
     const badMode = modifiedArchive((files) => { const inventory = JSON.parse(Buffer.from(files["inventory.json"]!).toString("utf8")) as { items: Array<{ tracking_mode: string }> }; inventory.items[0]!.tracking_mode = "wrong"; files["inventory.json"] = Buffer.from(JSON.stringify(inventory)); });
     await expect(previewInventoryArchive(badMode)).rejects.toThrow();
     await emptyDestination();
+  });
+
+  it("restores the unchanged revision 2 schema through the transition adapter", async () => {
+    const revision2 = modifiedArchive(files => {
+      const manifest = JSON.parse(Buffer.from(files["manifest.json"]!).toString("utf8")); manifest.version=2; files["manifest.json"]=Buffer.from(JSON.stringify(manifest));
+      const inventory=JSON.parse(Buffer.from(files["inventory.json"]!).toString("utf8"));
+      for (const item of inventory.items) delete item.categories;
+      files["inventory.json"]=Buffer.from(JSON.stringify(inventory));
+    });
+    const target=await installation(path.join(root,"revision2"));
+    try {
+      await restoreInventoryArchive(revision2,target);
+      expect((await target.client.execute("SELECT category FROM item_categories ORDER BY category")).rows.map(row => row.category)).toEqual(expect.arrayContaining(["electronics"]));
+      expect((await target.client.execute("SELECT COUNT(*) AS n FROM items")).rows[0]!.n).toBe(2);
+      const exported=readInventoryArchive(await createInventoryArchive(target));
+      expect(exported.manifest.version).toBe(3);
+      expect((exported.inventory.items as Array<{categories: string[]}>)[0]!.categories).toContain("electronics");
+    } finally { target.client.close(); }
   });
 
   it("rolls back failures while staging, preparing and promoting files", async () => {
@@ -119,9 +138,9 @@ describe("revision 2 archive restore", () => {
     const preview = await previewInventoryArchive(validArchive);
     expect(preview).toMatchObject({ items: 2, collections: 2, photos: 1 });
     await restoreInventoryArchive(validArchive, destination);
-    for (const table of ["workspaces", "items", "locations", "stock_entries", "media_assets", "collections", "collection_cover_assets", "item_collection_memberships"]) {
-      const original = await source.client.execute(`SELECT * FROM ${table} ORDER BY id`);
-      const restored = await destination.client.execute(`SELECT * FROM ${table} ORDER BY id`);
+    for (const table of ["workspaces", "items", "locations", "stock_entries", "media_assets", "collections", "collection_cover_assets", "item_collection_memberships", "item_categories"]) {
+      const original = await source.client.execute(`SELECT * FROM ${table} ORDER BY ${table === "item_categories" ? "item_id,category" : "id"}`);
+      const restored = await destination.client.execute(`SELECT * FROM ${table} ORDER BY ${table === "item_categories" ? "item_id,category" : "id"}`);
       expect(restored.rows).toEqual(original.rows);
     }
     const { inventory, files } = readInventoryArchive(validArchive);

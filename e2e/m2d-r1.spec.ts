@@ -61,10 +61,11 @@ async function createNoPhotoItem(page: Page, name: string, category: string) {
   await page.locator(".add-dialog-trigger").click();
   const dialog = page.getByRole("dialog", { name: "Добавить вещь" });
   await dialog.getByLabel("Название").fill(name);
+  await dialog.locator(".category-picker summary").click();
   if (category === "custom") {
-    await dialog.getByLabel("Категория").selectOption("__custom");
-    await dialog.getByLabel("Своя категория").fill("Electronics");
-  } else await dialog.getByLabel("Категория").selectOption(category);
+    await dialog.locator(".custom-category-row input").fill("Electronics");
+    await dialog.locator(".custom-category-row button").click();
+  } else await dialog.locator(".category-options input").nth(category === "electronics" ? 0 : 10).check();
   await dialog.getByRole("button", { name: "Добавить вещь" }).click();
   await expect(page).toHaveURL(/added=/);
 }
@@ -214,13 +215,9 @@ test("category and text filters update automatically and preserve browser histor
   await page.locator(".advanced-fields").locator("summary").click();
   await page.locator('select[name="trackingMode"]').selectOption("bulk");
   await page.locator('select[name="identificationStatus"]').selectOption("user_confirmed");
+  await page.locator('.inventory-stock-fields input[inputmode="numeric"]').fill("7");
   await page.getByRole("button", { name: "Сохранить изменения" }).click();
   await expect(page).toHaveURL("/");
-  await page.getByRole("link", { name: /Zulu Stable/ }).click();
-  await page.locator('.stock-editor input[name="quantity"]').fill("7");
-  await page.getByRole("button", { name: "Сохранить запас" }).click();
-  await expect(page.locator('.stock-editor input[name="quantity"]')).toHaveValue("7");
-  await page.goto("/");
   const filters = page.locator(".filter-bar");
   await expect.poll(async () => (await page.locator(".item-row h3").allTextContents()).filter((name) => /Alpha Legacy|Middle Custom|Zulu Stable/.test(name))).toEqual(["Middle Custom", "Alpha Legacy", "Zulu Stable"]);
   await filters.getByLabel("Категория").selectOption("electronics");

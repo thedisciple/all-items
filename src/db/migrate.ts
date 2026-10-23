@@ -3,6 +3,7 @@ import { mkdir, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { dataDirectory } from "./client";
+import { createMigrationBackup } from "./backup";
 
 export async function applyMigrations(client: Client, migrationsDirectory: string) {
   await client.execute(`CREATE TABLE IF NOT EXISTS _all_items_migrations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, applied_at TEXT NOT NULL)`);
@@ -30,6 +31,12 @@ async function migrate() {
   await mkdir(directory, { recursive: true });
   const client = createClient({ url: pathToFileURL(path.join(directory, "all-items.db")).href });
   try {
+    const existing = await client.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='_all_items_migrations'");
+    if (existing.rows.length) {
+      const applied = new Set((await client.execute("SELECT name FROM _all_items_migrations")).rows.map(row => String(row.name)));
+      const pending = (await readdir(path.join(process.cwd(), "src/db/migrations"))).some(name => /^\d{4}_[a-z0-9_]+\.sql$/.test(name) && !applied.has(name.slice(0, -4)));
+      if (pending) console.log(`Verified pre-migration backup: ${await createMigrationBackup(client, directory)}`);
+    }
     await applyMigrations(client, path.join(process.cwd(), "src/db/migrations"));
   } finally {
     await client.close();

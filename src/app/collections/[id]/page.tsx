@@ -13,7 +13,7 @@ import { categories, categoryEmoji, categoryKeyForStoredValue, categoryMessageKe
 import { LanguageSwitcher } from "@/app/components/language-switcher";
 import { ItemFilters } from "@/app/components/item-filters";
 import { CollectionCoverVisual } from "@/app/components/collection-cover-visual";
-import { CategoryTag } from "@/app/components/category-tag";
+import { CategoryTags } from "@/app/components/category-tag";
 
 export const dynamic = "force-dynamic";
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ q?: string; category?: string; status?: string; sort?: string; updated?: string }> };
@@ -36,7 +36,7 @@ export default async function CollectionPage({ params, searchParams }: Props) {
   const t = (key: Parameters<typeof translate>[1], values?: Record<string, string | number>) => translate(locale, key, values);
   const statuses: Record<string, string> = { unknown: t("itemStatusUnknown"), user_confirmed: t("itemStatusConfirmed"), source_verified: t("itemStatusVerified") };
   const hasActiveFilter = Boolean(query.q || query.category || query.status);
-  const selectableItems = inventory.map((item) => ({ id: String(item.id), name: String(item.name), model: item.model == null ? null : String(item.model), category: item.category == null ? null : String(item.category), mediaId: item.primary_media_id == null ? null : String(item.primary_media_id) }));
+  const selectableItems = inventory.map((item) => ({ id: String(item.id), name: String(item.name), model: item.model == null ? null : String(item.model), category: item.categories.join(" "), mediaId: item.primary_media_id == null ? null : String(item.primary_media_id) }));
   const categoryOptions: { value: string; label: string }[] = [...categories.map((category) => ({ value: category, label: categoryEmoji[category] + " " + t(categoryMessageKey(category)!) }))];
   for (const value of storedCategories) if (!categoryKeyForStoredValue(value)) categoryOptions.push({ value, label: value });
   return <main className="app-shell"><AppSidebar active="collections" collectionCount={collections.length} locale={locale}/>
@@ -49,7 +49,7 @@ export default async function CollectionPage({ params, searchParams }: Props) {
         {Number(collection.itemCount) > 0 ? <ItemFilters categories={categoryOptions} statuses={Object.entries(statuses).map(([value,label]) => ({ value, label }))} searchPlaceholder={t("collectionItemsSearch")}/> : null}
         {items.length ? <>
           <div className="list-heading"><h2>{t("collectionItems")}</h2>{hasActiveFilter ? <span className="list-total">{t("resultCount", { count: items.length })}</span> : null}</div>
-          <div className="item-list">{items.map((item) => { const categoryKey = item.category ? categoryMessageKey(String(item.category)) : null; return <div className="collection-item-row" key={String(item.id)}><Link href={`/items/${item.id}?from=${id}`} className="item-row">{item.primary_media_id ? <PrivateImage variant="thumbnail" className="item-photo" src={`/media/${item.id}/${item.primary_media_id}?variant=thumbnail`} alt="" width={80} height={80}/> : <div className="item-thumb"><span>{t("photoMissing")}</span></div>}<div className="item-info"><h3>{String(item.name)}</h3><div className="item-meta"><span className="inventory-number">{String(item.inventory_number)}</span>{item.model ? <span>{String(item.model)}</span> : null}{item.category ? categoryKey ? <CategoryTag value={String(item.category)} locale={locale}/> : <span className="category-chip">{String(item.category)}</span> : null}<span>{t("quantity")}: {new Intl.NumberFormat(locale).format(Number(item.quantity))}</span></div></div><span className="item-index">{statuses[String(item.identification_status)]}</span></Link><RemoveCollectionItem collectionId={id} itemId={String(item.id)}/></div>; })}</div>
+          <div className="item-list">{items.map((item) => { return <div className="collection-item-row" key={String(item.id)}><Link href={`/items/${item.id}?from=${id}`} className="item-row">{item.primary_media_id ? <PrivateImage variant="thumbnail" className="item-photo" src={`/media/${item.id}/${item.primary_media_id}?variant=thumbnail`} alt="" width={80} height={80}/> : <div className="item-thumb"><span>{t("photoMissing")}</span></div>}<div className="item-info"><h3>{String(item.name)}</h3><div className="item-meta"><span className="inventory-number">{String(item.inventory_number)}</span>{item.model ? <span>{String(item.model)}</span> : null}<CategoryTags values={item.categories} locale={locale}/><span>{t("quantity")}: {new Intl.NumberFormat(locale).format(Number(item.quantity))}</span></div></div><span className="item-index">{statuses[String(item.identification_status)]}</span></Link><RemoveCollectionItem collectionId={id} itemId={String(item.id)}/></div>; })}</div>
         </> : Number(collection.itemCount) === 0 ? <div className="empty-state collection-detail-empty"><div className="empty-orbit" aria-hidden="true">{collection.icon ?? "📦"}</div><h3>{t("collectionNoItems")}</h3><CollectionAddItems collectionId={id} items={selectableItems} existingIds={[]}/></div> : <div className="empty-state"><div className="empty-orbit" aria-hidden="true">⌕</div><h3>{t("noMatches")}</h3><p>{t("adjustFilters")}</p></div>}
       </div>
     </section>
