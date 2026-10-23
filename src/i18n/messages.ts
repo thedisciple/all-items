@@ -7,7 +7,7 @@ const ru = {
   exportArchiveFailed: "Не удалось подготовить архив. Проверьте свободное место и попробуйте ещё раз.",
   exportCsvFailed: "Не удалось подготовить CSV. Попробуйте ещё раз.",
   exportReady: "Файл подготовлен к скачиванию.",
-  exportCsvNote: "CSV предназначен для таблиц. Фотографии и связи коллекций не включены.",
+  exportCsvNote: ".csv · без фото",
   language: "Язык",
   primaryNavigation: "Основная навигация",
   languageRussian: "Русский",
@@ -249,7 +249,7 @@ const en: Record<MessageKey, string> = {
   exportArchiveFailed: "Could not prepare the archive. Check available disk space and try again.",
   exportCsvFailed: "Could not prepare the CSV. Please try again.",
   exportReady: "File is ready to download.",
-  exportCsvNote: "CSV is for spreadsheets. Photos and collection relationships are not included.",
+  exportCsvNote: ".csv · without photos",
   language: "Language", primaryNavigation: "Primary navigation", languageRussian: "Русский", languageEnglish: "English", languageUkrainian: "Українська", languageSerbian: "Srpski", languageChinese: "简体中文", allItems: "All Items", collections: "Collections",
   searchItems: "Search items", search: "Search", sortLabel: "Sort", inventoryFilters: "Inventory filters", clearFilters: "Clear filters", category: "Category", categoriesAll: "All categories", statusAny: "Any status",
   sortNewest: "Newest first", sortName: "By name", sortQuantity: "By quantity", inventory: "Inventory", noItems: "Your inventory is empty",
@@ -316,7 +316,7 @@ const en: Record<MessageKey, string> = {
 };
 
 const uk: Record<MessageKey, string> = {
-  data: "Дані", dataBackup: "Резервна копія", downloadArchive: "Завантажити архів", exportCsv: "Експорт CSV", exportPreparing: "Готуємо файл…", exportArchiveFailed: "Не вдалося підготувати архів. Перевірте вільне місце й спробуйте ще раз.", exportCsvFailed: "Не вдалося підготувати CSV. Спробуйте ще раз.", exportReady: "Файл готовий до завантаження.", exportCsvNote: "CSV призначений для таблиць. Фотографії та зв’язки колекцій не включені.",
+  data: "Дані", dataBackup: "Резервна копія", downloadArchive: "Завантажити архів", exportCsv: "Експорт CSV", exportPreparing: "Готуємо файл…", exportArchiveFailed: "Не вдалося підготувати архів. Перевірте вільне місце й спробуйте ще раз.", exportCsvFailed: "Не вдалося підготувати CSV. Спробуйте ще раз.", exportReady: "Файл готовий до завантаження.", exportCsvNote: ".csv · без фото",
   language:"Мова", primaryNavigation:"Основна навігація", languageRussian:"Русский", languageEnglish:"English", languageUkrainian:"Українська", languageSerbian:"Srpski", languageChinese:"简体中文",
   allItems:"Усі речі", collections:"Колекції", searchItems:"Пошук речей", search:"Знайти", sortLabel:"Сортування", inventoryFilters:"Фільтри інвентарю", clearFilters:"Очистити фільтри", category:"Категорія", categoriesAll:"Усі категорії", statusAny:"Будь-який статус", sortNewest:"Спочатку нові", sortName:"За назвою", sortQuantity:"За кількістю", inventory:"Інвентар",
   noItems:"Інвентар поки порожній", noMatches:"Нічого не знайдено", adjustFilters:"Змініть пошук або фільтри.", addFirstItem:"Додайте першу річ.", addItem:"Додати річ", addingItem:"Додаємо…", itemCount:"{count} предметів", foundCount:"Знайдено: {count}", collectionCount:"{count} колекцій",
@@ -330,7 +330,7 @@ const uk: Record<MessageKey, string> = {
 };
 
 const srLatn: Record<MessageKey, string> = {
-  data: "Podaci", dataBackup: "Rezervna kopija", downloadArchive: "Preuzmi arhivu", exportCsv: "Izvezi CSV", exportPreparing: "Priprema datoteke…", exportArchiveFailed: "Arhiva nije pripremljena. Proverite slobodan prostor i pokušajte ponovo.", exportCsvFailed: "CSV nije pripremljen. Pokušajte ponovo.", exportReady: "Datoteka je spremna za preuzimanje.", exportCsvNote: "CSV je za tabele. Fotografije i veze sa kolekcijama nisu uključene.",
+  data: "Podaci", dataBackup: "Rezervna kopija", downloadArchive: "Preuzmi arhivu", exportCsv: "Izvezi CSV", exportPreparing: "Priprema datoteke…", exportArchiveFailed: "Arhiva nije pripremljena. Proverite slobodan prostor i pokušajte ponovo.", exportCsvFailed: "CSV nije pripremljen. Pokušajte ponovo.", exportReady: "Datoteka je spremna za preuzimanje.", exportCsvNote: ".csv · bez fotografija",
   language:"Jezik", primaryNavigation:"Glavna navigacija", languageRussian:"Русский", languageEnglish:"English", languageUkrainian:"Українська", languageSerbian:"Srpski", languageChinese:"简体中文",
   allItems:"Sve stvari", collections:"Kolekcije", searchItems:"Pretraži stvari", search:"Pretraži", sortLabel:"Sortiranje", inventoryFilters:"Filteri inventara", clearFilters:"Obriši filtere", category:"Kategorija", categoriesAll:"Sve kategorije", statusAny:"Bilo koji status", sortNewest:"Najnovije prvo", sortName:"Po nazivu", sortQuantity:"Po količini", inventory:"Inventar",
   noItems:"Inventar je prazan", noMatches:"Nema rezultata", adjustFilters:"Promenite pretragu ili filtere.", addFirstItem:"Dodajte prvu stvar.", addItem:"Dodaj stvar", addingItem:"Dodavanje…", itemCount:"{count} predmeta", foundCount:"Pronađeno: {count}", collectionCount:"{count} kolekcija",
@@ -344,7 +344,7 @@ const srLatn: Record<MessageKey, string> = {
 };
 
 const zhHans: Record<MessageKey, string> = {
-  data: "数据", dataBackup: "备份", downloadArchive: "下载归档", exportCsv: "导出 CSV", exportPreparing: "正在准备文件…", exportArchiveFailed: "无法准备归档。请检查可用空间后重试。", exportCsvFailed: "无法准备 CSV，请重试。", exportReady: "文件已准备好下载。", exportCsvNote: "CSV 适用于电子表格，不包含照片或收藏集关系。",
+  data: "数据", dataBackup: "备份", downloadArchive: "下载归档", exportCsv: "导出 CSV", exportPreparing: "正在准备文件…", exportArchiveFailed: "无法准备归档。请检查可用空间后重试。", exportCsvFailed: "无法准备 CSV，请重试。", exportReady: "文件已准备好下载。", exportCsvNote: ".csv · 不含照片",
   language:"语言", primaryNavigation:"主导航", languageRussian:"Русский", languageEnglish:"English", languageUkrainian:"Українська", languageSerbian:"Srpski", languageChinese:"简体中文",
   allItems:"全部物品", collections:"收藏集", searchItems:"搜索物品", search:"搜索", sortLabel:"排序", inventoryFilters:"库存筛选", clearFilters:"清除筛选", category:"类别", categoriesAll:"所有类别", statusAny:"所有状态", sortNewest:"最新优先", sortName:"按名称", sortQuantity:"按数量", inventory:"库存",
   noItems:"库存为空", noMatches:"没有匹配项", adjustFilters:"请调整搜索或筛选条件。", addFirstItem:"添加第一件物品。", addItem:"添加物品", addingItem:"正在添加…", itemCount:"{count} 件物品", foundCount:"找到：{count}", collectionCount:"{count} 个收藏集",

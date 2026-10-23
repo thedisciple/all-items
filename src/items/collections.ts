@@ -2,14 +2,14 @@ import { z } from "zod";
 import { initializeWorkspace } from "@/db/client";
 
 const collectionIdSchema = z.string().uuid();
-export const collectionIcons = ["🤖", "🪴", "🔧", "📷", "🔌", "💻", "🏺", "📚", "⚽", "📦"] as const;
-const iconSchema = z.enum(collectionIcons).nullable().optional();
+export const collectionIcons = ["🙂", "⭐", "🎁", "🛠️", "🏠", "🌿", "📷", "📚", "🎨", "📦"] as const;
+const iconSchema = z.string().trim().min(1).max(32).refine((value) => /\p{Extended_Pictographic}/u.test(value) || /^[\p{Regional_Indicator}]{2}$/u.test(value)).nullable().optional();
 const collectionCreateSchema = z.object({ name: z.string().trim().min(1, "Введите название коллекции").max(120, "Название — не более 120 символов"), icon: z.preprocess((value) => value === "" ? null : value, iconSchema) });
 const collectionInputSchema = collectionCreateSchema;
 const batchItemIdsSchema = z.array(z.string().uuid()).min(1).max(500).refine((ids) => new Set(ids).size === ids.length);
 const coverSelectionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("item_photo"), itemId: z.string().uuid(), mediaId: z.string().uuid() }),
-  z.object({ type: z.literal("emoji"), icon: z.enum(collectionIcons) }),
+  z.object({ type: z.literal("emoji"), icon: iconSchema.unwrap().unwrap() }),
   z.object({ type: z.literal("default") }),
 ]);
 
@@ -87,7 +87,7 @@ export async function renameCollection(idValue: unknown, input: unknown) {
   const { db, workspaceId } = await initializeWorkspace();
   try {
     const result = iconProvided
-      ? await db.$client.execute({ sql: "UPDATE collections SET name = ?, normalized_name = ?, icon = ?, updated_at = ? WHERE id = ? AND workspace_id = ?", args: [name, normalizedName(name), icon ?? null, new Date().toISOString(), id, workspaceId] })
+      ? await db.$client.execute({ sql: "UPDATE collections SET name = ?, normalized_name = ?, icon = ?, cover_icon = CASE WHEN cover_type = 'emoji' THEN ? ELSE cover_icon END, updated_at = ? WHERE id = ? AND workspace_id = ?", args: [name, normalizedName(name), icon ?? null, icon ?? null, new Date().toISOString(), id, workspaceId] })
       : await db.$client.execute({ sql: "UPDATE collections SET name = ?, normalized_name = ?, updated_at = ? WHERE id = ? AND workspace_id = ?", args: [name, normalizedName(name), new Date().toISOString(), id, workspaceId] });
     if (!result.rowsAffected) throw new Error("Коллекция не найдена.");
   } catch (error) {
@@ -192,7 +192,7 @@ export async function setCollectionCover(collectionIdValue: unknown, input: unkn
       const valid = await tx.execute({ sql: `SELECT m.id FROM item_collection_memberships cm JOIN items i ON i.id = cm.item_id JOIN media_assets m ON m.item_id = i.id AND m.id = ? AND m.is_primary = 1 WHERE cm.collection_id = ? AND cm.item_id = ? AND i.workspace_id = ?`, args: [selection.mediaId, collectionId, selection.itemId, workspaceId] });
       if (!valid.rows.length) throw new Error("Фото для обложки не найдено.");
     }
-    await tx.execute({ sql: `UPDATE collections SET cover_type = ?, cover_icon = ?, cover_item_id = ?, cover_media_id = ?, cover_upload_id = NULL, updated_at = ? WHERE id = ? AND workspace_id = ?`, args: [selection.type, selection.type === "emoji" ? selection.icon : null, selection.type === "item_photo" ? selection.itemId : null, selection.type === "item_photo" ? selection.mediaId : null, new Date().toISOString(), collectionId, workspaceId] });
+    await tx.execute({ sql: `UPDATE collections SET cover_type = ?, cover_icon = ?, icon = CASE WHEN ? = 'emoji' THEN ? ELSE icon END, cover_item_id = ?, cover_media_id = ?, cover_upload_id = NULL, updated_at = ? WHERE id = ? AND workspace_id = ?`, args: [selection.type, selection.type === "emoji" ? selection.icon : null, selection.type, selection.type === "emoji" ? selection.icon : null, selection.type === "item_photo" ? selection.itemId : null, selection.type === "item_photo" ? selection.mediaId : null, new Date().toISOString(), collectionId, workspaceId] });
     await tx.commit();
   } catch (error) { await tx.rollback(); throw error; }
   if (oldUpload) {

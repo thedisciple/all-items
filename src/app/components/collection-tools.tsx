@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { addItemsToCollectionAction, removeCollectionMembershipAction, setCollectionCoverAction, type ActionFeedback } from "@/app/actions";
 import { FormSubmitButton } from "./form-submit-button";
 import { useI18n } from "@/i18n/provider";
+import { CollectionEmojiField } from "./collection-emoji-field";
 
 const idle: ActionFeedback = { status: "idle", message: "" };
 type SelectableItem = { id: string; name: string; model: string | null; category: string | null; mediaId: string | null };
@@ -67,6 +68,7 @@ export function CollectionCoverManager({ collectionId, options }: { collectionId
   const [selectedPhoto, setSelectedPhoto] = useState("");
   const [icon, setIcon] = useState("🤖");
   const [coverPreview, setCoverPreview] = useState("");
+  const coverFile = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
@@ -82,8 +84,8 @@ export function CollectionCoverManager({ collectionId, options }: { collectionId
       <form action={action} className="collection-cover-form"><input type="hidden" name="collectionId" value={collectionId}/>
         <label className="field"><span>{t("collectionCover")}</span><select name="coverType" value={coverType} onChange={(event) => setCoverType(event.target.value)}><option value="default">{t("collectionCoverDefault")}</option><option value="item_photo" disabled={!options.length}>{t("collectionCoverItem")}</option><option value="upload">{t("collectionCoverUpload")}</option><option value="emoji">{t("collectionCoverEmoji")}</option></select></label>
         {coverType === "item_photo" ? <label className="field"><span>{t("collectionCoverPickItem")}</span><select name="selectedPhoto" value={selectedPhoto} required onChange={(event) => setSelectedPhoto(event.target.value)}><option value="">{t("selectCategory")}</option>{options.map((option) => <option key={option.itemId} value={`${option.itemId}:${option.mediaId}`}>{option.name}{option.model ? ` ${option.model}` : ""}</option>)}</select></label> : null}
-        {coverType === "upload" ? <><label className="field"><span>{t("collectionCoverUpload")}</span><input type="file" name="coverFile" accept="image/jpeg,image/png,image/webp" required onChange={(event: ChangeEvent<HTMLInputElement>) => { if (coverPreview) URL.revokeObjectURL(coverPreview); const file = event.target.files?.[0]; setCoverPreview(file ? URL.createObjectURL(file) : ""); }}/></label>{coverPreview ? <div className="collection-cover-preview"><Image src={coverPreview} alt={t("collectionCoverPreview")} width={480} height={240} unoptimized/></div> : null}</> : null}
-        {coverType === "emoji" ? <label className="field"><span>{t("collectionIcon")}</span><select name="icon" value={icon} onChange={(event) => setIcon(event.target.value)}><option value="🤖">🤖 {t("collectionIconRobotics")}</option><option value="🪴">🪴 {t("collectionIconPlants")}</option><option value="🔧">🔧 {t("collectionIconWorkshop")}</option><option value="📷">📷 {t("collectionIconCameras")}</option><option value="🔌">🔌 {t("categoryElectronics")}</option><option value="💻">💻 {t("categoryComputers")}</option><option value="🏺">🏺 {t("categoryAntiques")}</option><option value="📚">📚 {t("categoryBooksHobbies")}</option><option value="⚽">⚽ {t("categorySports")}</option><option value="📦">📦 {t("categoryOther")}</option></select></label> : null}
+        {coverType === "upload" ? <><input ref={coverFile} className="visually-hidden" type="file" name="coverFile" aria-label={t("collectionCoverUpload")} accept="image/jpeg,image/png,image/webp" required onChange={(event: ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; setCoverPreview(file ? URL.createObjectURL(file) : ""); }}/><button type="button" className="photo-source-button collection-cover-pick" onClick={() => coverFile.current?.click()}>{t("collectionCoverUpload")}</button>{coverPreview ? <div className="collection-cover-preview"><Image src={coverPreview} alt={t("collectionCoverPreview")} width={480} height={240} unoptimized/></div> : null}</> : null}
+        {coverType === "emoji" ? <CollectionEmojiField label={t("collectionIcon")} value={icon} onChange={setIcon} required/> : null}
         {feedback.status === "error" && feedback.message ? <p className="inline-status error-status" role="alert">{feedback.message}</p> : null}
         <div className="dialog-actions"><FormSubmitButton className="add-button" pendingLabel={t("savingChanges")}>{t("collectionCoverSave")}</FormSubmitButton><button type="button" className="text-button" onClick={() => setOpen(false)}>{t("cancel")}</button></div>
       </form>

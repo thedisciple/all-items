@@ -245,7 +245,7 @@ export default function PhotoCropperEditor(props: Props) {
     <CropperErrorBoundary onCancel={props.onCancel} onUseOriginal={props.onUseOriginal} unavailableLabel={props.unavailableLabel} cancelLabel={props.cancelLabel} originalLabel={props.originalLabel}>
       <section ref={dialogRef} className="photo-source-dialog crop-dialog" role="dialog" aria-modal="true" aria-labelledby="crop-dialog-title" onKeyDown={onDialogKeyDown}>
         <div className="dialog-heading"><h3 id="crop-dialog-title">{props.title}</h3><button type="button" className="icon-button crop-close-button" aria-label={props.cancelLabel} title={props.cancelLabel} onClick={props.onCancel}><X size={18} aria-hidden="true"/></button></div>
-        <Cropper
+        <div className="crop-editor-body"><Cropper
           src={props.sourceUrl}
           style={{ height: "min(54vh, 470px)", width: "100%" }}
           className="photo-cropper-widget"
@@ -303,6 +303,7 @@ export default function PhotoCropperEditor(props: Props) {
             <button type="button" className="icon-button crop-tool-button" aria-label={props.rotateCounterclockwiseLabel} data-tooltip={props.rotateCounterclockwiseLabel} disabled={!instanceReady || busy} onClick={() => rotate(-1)}><RotateCcw size={17} aria-hidden="true"/></button>
           </div>
           <button type="button" className="icon-button crop-tool-button crop-reset-button" aria-label={props.resetLabel} data-tooltip={props.resetLabel} disabled={!instanceReady || busy} onClick={reset}><Undo2 size={17} aria-hidden="true"/></button>
+        </div>
         </div>
         <div className="dialog-actions crop-actions">
           <button type="button" className="text-button" onClick={props.onCancel}>{props.cancelLabel}</button>

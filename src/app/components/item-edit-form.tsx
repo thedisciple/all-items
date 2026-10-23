@@ -31,7 +31,7 @@ export function ItemEditForm({ itemId, initial, returnTo = "/" }: { itemId: stri
       <label className="field"><span>{t("itemBrand")}</span><input maxLength={120} name="brand" value={draft.brand} onChange={field("brand")}/></label>
       <CategoryField value={draft.category} onValueChange={(category) => setDraft((value) => ({ ...value, category }))}/>
     </div>
-    <details className="advanced-fields"><summary>{t("additionalDetails")}</summary><div className="detail-grid advanced-item-fields">
+    <details id="item-details" className="advanced-fields"><summary>{t("additionalDetails")}</summary><div className="detail-grid advanced-item-fields">
       <label className="field"><span>{t("itemOriginalMarking")}</span><input maxLength={160} name="originalMarking" value={draft.originalMarking} onChange={field("originalMarking")}/></label>
       <label className="field"><span>{t("identificationStatus")}</span><select name="identificationStatus" value={draft.identificationStatus} onChange={field("identificationStatus")}><option value="unknown">{t("itemStatusUnknown")}</option><option value="user_confirmed">{t("itemStatusConfirmed")}</option><option value="source_verified">{t("itemStatusVerified")}</option></select></label>
       <label className="field"><span>{t("trackingMode")}</span><select name="trackingMode" value={draft.trackingMode} onChange={field("trackingMode")}><option value="unique">{t("trackingUnique")}</option><option value="bulk">{t("trackingBulk")}</option><option value="consumable">{t("trackingConsumable")}</option></select></label>
