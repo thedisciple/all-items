@@ -179,6 +179,7 @@ export function buildInventoryArchive(inventory: Record<string, unknown>, assets
   const archiveManifest = { format: ARCHIVE_FORMAT, version: ARCHIVE_VERSION, exportedAt, applicationVersion: "0.1.0", entries: Object.entries(entries).map(([entryPath, data]) => ({ path: entryPath, size: data.length, sha256: digest(data) })) };
   entries["manifest.json"] = Buffer.from(JSON.stringify(archiveManifest, null, 2), "utf8");
   entries["checksums.sha256"] = Buffer.from(archiveManifest.entries.map((entry) => `${entry.sha256}  ${entry.path}`).join("\n") + "\n", "utf8");
+  if (Object.values(entries).reduce((size, entry) => size + entry.byteLength, 0) > MAX_ARCHIVE_BYTES) throw new ArchiveError("The expanded inventory archive exceeds the 128 MiB limit.");
   const archive = zipSync(entries, { level: 0 });
   if (archive.byteLength > MAX_ARCHIVE_BYTES) throw new ArchiveError("The inventory archive exceeds the 128 MiB download limit.");
   return archive;
