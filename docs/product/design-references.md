@@ -1,6 +1,20 @@
 # Product design references
 
-Research reviewed 22 October 2026. These references inform interaction principles; All Items does not copy protected interfaces, branding, illustrations, or code. Reference-product functionality is separated from design interpretation and proposed All Items behavior.
+Research reviewed 25 October 2026. These references inform interaction principles; All Items does not copy protected interfaces, branding, illustrations, or code. Reference-product functionality is separated from design interpretation and proposed All Items behavior.
+
+## Mobbin MCP and AI-assisted design workflow
+
+### Verified source findings
+
+- Sweat AI's 25 October 2026 case study shows one design cycle from an underspecified dashboard request through Mobbin references, generated mockups, human revisions, and a native implementation. It shares prompts and an attachment map and says the concepts use illustrative/synthetic data. At publication, the native changes were under review and unreleased; the image-generation model/version was not recorded, and no comparative usability measurements are reported. This is a transparent worked example, not evidence of measured product improvement. [Case study and prompts](https://getsweat.ai/blog/from-mobbin-to-a-working-dashboard/)
+- Mobbin's official MCP exposes search for screens, multi-step flows, and website sections; returned results include low-resolution previews and expiring high-resolution image URLs. [MCP features](https://docs.mobbin.com/mcp/features)
+- Mobbin documents that MCP is available on paid Pro, Team, and Enterprise plans and uses OAuth. Its privacy page says request tool names, parameters (including query text), timestamps, and connected account/workspace identifiers are retained in product analytics; Standard/Deep Search queries are processed through listed AI providers. [MCP overview](https://docs.mobbin.com/mcp/introduction), [privacy and data](https://docs.mobbin.com/mcp/privacy-and-data), [AI credits](https://docs.mobbin.com/ai-credits)
+- Apple's WWDC 2018 session explains direct manipulation, continuous feedback, interruptible gestures, and handing gesture velocity into following motion. [Designing Fluid Interfaces](https://developer.apple.com/videos/play/wwdc2018/803/)
+- Emil Kowalski's repository publishes `apple-design` under MIT. The skill translates selected Apple interaction principles into web guidance, while also making specific choices about spring parameters, materials, typography, and interaction code. Those choices are the author's guidance, not universal Apple requirements. [Source skill](https://github.com/emilkowalski/skills/tree/main/skills/apple-design), [repository license](https://github.com/emilkowalski/skills/blob/main/LICENSE)
+
+### All Items interpretation
+
+Use the workflow in [evidence-led design workflow](design-workflow.md) for substantial UI changes. Its high-value contribution is the traceable sequence: define an actual user task, collect a few task-relevant references, state what to borrow and what remains unknown, review synthetic visual alternatives with a person, specify behavior and edge states, then inspect the implemented flow. Mobbin is optional and useful for visual decisions; search results are not proof that an interaction works or that it suits a private inventory. The `apple-design` skill is most relevant to the crop editor, draggable surfaces, and transitions; it does not supply the product's overall visual direction. Keep the established All Items design manifesto, five-language requirement, local-only data boundary, and accessibility checks authoritative.
 
 ## Artemy Lebedev's Kovodstvo
 
@@ -93,3 +107,7 @@ The reported simultaneous broken thumbnails and RSC `Failed to fetch` incident h
 ## M3.2-R1 editing and filtering findings
 
 Code inspection confirmed that the old item and stock forms used separate actions and that stock received only the persisted type. A controlled Edge failure scenario also exposed a native form-action reset changing the type select while other draft fields remained; explicit action dispatch preserves the complete controlled draft. The old collection image height depended on intrinsic ratio and available width; shortening a document can also clamp browser scroll. These are identified mechanisms, not a captured trace of the original reported jump. Synthetic Edge checks now measure unchanged uploaded-cover width/height while filtering three mixed-category items to one and back at desktop and 360px widths, including history navigation. Multiple-inventory switching is a future design inference from Telegram's account-switching interaction; account authorization and inventory organization remain different concepts in the ADR.
+
+## M3.3A interaction findings
+
+The M3.3A brief describes user-observed regressions in collection creation, control alignment, category selection, filters, and crop sizing. No original screenshot files accompanied the execution attachment; the supplied descriptions are treated as acceptance requirements. Code inspection found a retained two-column grid on the collection creation form, broad field-input rules applying to category checkboxes, forced vertical dialog actions at mobile widths, conditional removal of the clear-filter grid cell, and a viewport-sized crop dialog. These explain the reported mechanisms without claiming independent observation of the original screenshots. Synthetic Edge scenarios cover geometry, required-name access after the last emoji selection, category dismissal/draft retention, full cover viewing, and crop controls at desktop and 360px. Browser results are recorded with the checkpoint validation.

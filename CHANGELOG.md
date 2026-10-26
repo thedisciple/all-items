@@ -1,5 +1,12 @@
 # Changelog
 
+## M3.3A — checkpoint A
+
+- Unified control geometry, stable filter slots, compact dismissible category selection, and consistent dialog action rows.
+- Fixed collection creation grid inheritance and emoji palette containment; centered close icons.
+- Removed repeated item-edit summaries, refined crop dialog sizing/handles, and added full collection cover viewing with contextual editing.
+
+
 ## Unreleased - M3.2-R1 editing, categories and media reliability
 
 - Added reusable private-image loading/error placeholders, stable geometry, appropriate decorative/informative alt semantics and one reconnect retry. Fast pre-hydration failures are handled; the original reported RSC incident remains unconfirmed.

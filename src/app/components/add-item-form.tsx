@@ -2,7 +2,7 @@
 
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { addItemAction, type ActionFeedback } from "@/app/actions";
 import { PhotoAcquisition } from "./photo-acquisition";
 import { FormSubmitButton } from "./form-submit-button";
@@ -59,7 +59,7 @@ export function AddItemForm() {
         if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
         else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
       }}>
-        <div className="dialog-heading"><h2 id="add-item-title">{t("addItem")}</h2><button type="button" className="icon-button" aria-label={t("close")} onClick={() => { setOpen(false); triggerRef.current?.focus(); }}>×</button></div>
+        <div className="dialog-heading"><h2 id="add-item-title">{t("addItem")}</h2><button type="button" className="icon-button" aria-label={t("close")} onClick={() => { setOpen(false); triggerRef.current?.focus(); }}><X size={18} aria-hidden="true"/></button></div>
         <form aria-busy={pending} className="photo-add-form" onSubmit={(event) => { event.preventDefault(); if (!submitLocked.current) { submitLocked.current = true; const data = new FormData(event.currentTarget); startTransition(() => action(data)); } }}>
           <PhotoAcquisition name="photo" resetToken={resetToken} onDraftChange={(value) => { setPhotoDirty(value); }}/>
           <div className="photo-add-fields">

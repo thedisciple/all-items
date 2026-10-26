@@ -31,11 +31,11 @@ export default async function Home({ searchParams }: Props) {
   return <main className="app-shell">
     <AppSidebar active="items" itemCount={totalCount} collectionCount={collections.length} locale={locale}/>
     <section className="main-content">
-      <header className="topbar"><span>{t("inventory")}</span><LanguageSwitcher/></header>
-      <div className="content-wrap"><div className="heading-row"><h1>{t("allItems")}</h1><span className="total-count">{formatItemCount(locale, totalCount)}</span></div>
+      <header className="topbar"><span/><LanguageSwitcher/></header>
+      <div className="content-wrap"><div className="heading-row"><h1>{t("inventory")}</h1><span className="total-count">{formatItemCount(locale, totalCount)}</span></div>
         <AddItemForm/>
         <ItemFilters categories={categoryOptions} statuses={Object.entries(statusLabels).map(([value,label]) => ({ value, label }))} searchPlaceholder={t("searchItems")}/>
-        <div className="list-heading"><h2>{t("inventory")}</h2><span className="list-total">{hasFilters ? t("resultCount", { count: items.length }) : formatItemCount(locale, totalCount)}</span></div>
+        {hasFilters ? <div className="list-heading"><span className="list-total">{t("resultCount", { count: items.length })}</span></div> : <div className="inventory-list-spacing"/>}
         {items.length ? <div className="item-list">{items.map((item) => { return <Link href={`/items/${item.id}`} className={`item-row ${params.added === String(item.id) ? "item-row-highlight" : ""}`} key={String(item.id)}>{item.primary_media_id ? <PrivateImage variant="thumbnail" className="item-photo" src={`/media/${item.id}/${item.primary_media_id}?variant=thumbnail`} alt="" width={80} height={80}/> : <div className="item-thumb" aria-hidden="true"><span>{t("photo")}</span></div>}<div className="item-info"><h3>{String(item.name)}</h3><div className="item-meta"><span className="inventory-number">{String(item.inventory_number)}</span>{item.model ? <span>{String(item.model)}</span> : null}{item.brand ? <span>{String(item.brand)}</span> : null}<CategoryTags values={item.categories} locale={locale}/><span>{t("quantity")}: {new Intl.NumberFormat(locale).format(Number(item.quantity))}</span><span>{t("locations")}: {String(item.locations || t("locationUnknown"))}</span></div></div><span className="item-index">{statusLabels[String(item.identification_status)]}</span></Link>; })}</div> : <div className="empty-state"><div className="empty-orbit">✳</div><h3>{hasFilters ? t("noMatches") : t("noItems")}</h3><p>{hasFilters ? t("adjustFilters") : t("addFirstItem")}</p></div>}
       </div>
     </section>

@@ -13,7 +13,6 @@ import { getPrimaryPhoto } from "@/media/service";
 import { getLocale } from "@/i18n/server";
 import { translate } from "@/i18n/messages";
 import { LanguageSwitcher } from "@/app/components/language-switcher";
-import { CategoryTags } from "@/app/components/category-tag";
 
 export const dynamic = "force-dynamic";
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ from?: string }> };
@@ -29,7 +28,6 @@ export default async function ItemPage({ params, searchParams }: Props) {
     getPrimaryPhoto(id), listCollections(), listItemCollections(id), listItems(),
   ]);
   const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
-  const locations = item.stock.map((entry) => entry.location).filter((name): name is string => Boolean(name));
   const draft = {
     name: item.name, model: item.model ?? "", brand: item.brand ?? "", categories: item.categories,
     originalMarking: item.original_marking ?? "", identificationStatus: item.identification_status,
@@ -41,14 +39,9 @@ export default async function ItemPage({ params, searchParams }: Props) {
   const returnTo = fromCollection.success ? `/collections/${fromCollection.data}` : "/";
   return <main className="app-shell">
     <AppSidebar active="items" itemCount={allItems.length} collectionCount={collections.length} locale={locale}/>
-    <section className="main-content"><header className="topbar"><div className="breadcrumb"><Link href={returnTo}>{returnTo === "/" ? t("allItems") : t("collections")}</Link><span>/</span>{item.inventory_number}</div><LanguageSwitcher/></header>
+    <section className="main-content"><header className="topbar"><div className="breadcrumb"><Link href={returnTo}>{returnTo === "/" ? t("inventory") : t("collections")}</Link><span>/</span>{item.inventory_number}</div><LanguageSwitcher/></header>
       <div className="content-wrap detail-wrap">
-        <div className="item-hero"><div><h1>{item.name}</h1><p className="subtitle">{[item.brand, item.model].filter(Boolean).join(" · ") || t("noName")}</p></div><span className="item-number-badge">{item.inventory_number}</span></div>
-        <section className="item-summary" aria-label={t("itemSummary")}>
-          <div><span>{t("total")}</span><strong>{new Intl.NumberFormat(locale).format(item.quantity)}</strong></div>
-          <div><span>{t("locations")}</span><strong>{locations.length ? locations.join(", ") : t("locationUnknown")}</strong></div>
-          <div><span>{t("category")}</span><strong>{item.categories.length ? <CategoryTags values={item.categories} locale={locale}/> : t("categoryUnknown")}</strong></div>
-        </section>
+        <div className="item-hero"><h1>{item.name}</h1><span className="item-number-badge">{item.inventory_number}</span></div>
         <section className="photo-detail-panel" aria-label={t("photo")}>
           <PhotoReplacement itemId={id} photoUrl={photo ? `/media/${id}/${photo.id}?v=${photo.id}` : null} itemName={item.name}/>
           {photo ? <DestructiveConfirmation action={removePhoto} label={t("photoDelete")} description={t("photoDeleteWarning")} fields={{ id }}/> : null}

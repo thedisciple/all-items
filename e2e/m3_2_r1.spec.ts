@@ -75,7 +75,7 @@ test("one item save retains a failed draft and commits type, stock and multiple 
   await add.getByLabel("Название").fill("R1 combined");
   await add.getByLabel("Тип учёта").selectOption("bulk");
   await add.getByLabel("Количество", { exact: true }).fill("2");
-  await add.locator(".category-picker summary").click();
+  await add.locator(".category-trigger").click();
   await add.locator(".category-options input").nth(0).check();
   await add.locator(".category-options input").nth(2).check();
   await add.getByRole("button", { name: "Закрыть", exact: true }).last().click();
@@ -127,7 +127,7 @@ test("collection filters keep uploaded cover geometry and a predictable scroll a
     await page.goto("/"); await page.locator(".add-dialog-trigger").click();
     const add = page.getByRole("dialog", { name: "Добавить вещь" });
     await add.getByLabel("Название").fill(`R1 geometry ${index}`);
-    await add.locator(".category-picker summary").click();
+    await add.locator(".category-trigger").click();
     await add.locator(".category-options input").nth(index === 0 ? 0 : 2).check();
     if (index === 0) await add.locator(".category-options input").nth(2).check();
     await add.getByRole("button", { name: "Добавить вещь", exact: true }).click();
@@ -143,7 +143,7 @@ test("collection filters keep uploaded cover geometry and a predictable scroll a
   for (let index=0;index<3;index++) await members.locator(".collection-item-option").filter({hasText:`R1 geometry ${index}`}).getByRole("checkbox").check();
   await members.getByRole("button", { name: /Добавить вещи/ }).click();
   await expect(page.locator(".item-row")).toHaveCount(3);
-  await page.getByRole("button", { name: "Изменить обложку" }).click();
+  await page.getByRole("button", { name: /(?:Изменить|Добавить) обложку/ }).click();
   const cover = page.getByRole("dialog", { name: "Обложка коллекции" });
   await cover.getByLabel("Обложка коллекции").selectOption("upload");
   await cover.locator('input[type="file"]').setInputFiles({name:"synthetic-cover.png",mimeType:"image/png",buffer:await sharp({create:{width:400,height:200,channels:3,background:"#675786"}}).png().toBuffer()});

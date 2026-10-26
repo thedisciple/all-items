@@ -4,6 +4,13 @@ This manifesto governs every user-facing change in All Items. The interface shou
 
 ## Product rules
 
+- Equivalent fields and actions share control height, radius, padding, typography, centered icons, and one focus treatment. Color can communicate priority or danger; it does not justify unrelated geometry.
+- Keep ordinary confirmation and cancellation in one horizontal row whenever they fit. Do not make secondary actions look like unstyled text.
+- Reserve filter geometry before a clear action appears. Conditional state must not unexpectedly resize search or move keyboard focus.
+- Keep required fields visible and unobscured. Compact selectors dismiss with Escape/outside activation while retaining the draft; palettes remain inside their form layout.
+- Editing screens show each stored value once in its useful editable context. Keep human inventory numbers near the item name and secondary metadata progressively disclosed.
+- Collection cover previews may crop for scanning; explicit full-image viewing uses contain and exposes a discoverable edit action for keyboard and touch users.
+
 - Reduce cognitive load, clicks, repeated work, duplicate actions, and persistent noise.
 - Prefer direct manipulation and immediate, truthful state changes.
 - Make primary and secondary actions easy to distinguish; equivalent actions share a visual treatment.

@@ -1,5 +1,7 @@
 # All Items contributor instructions
 
+- For substantial user-visible design work, follow `docs/product/design-workflow.md`; use external references and generated concepts as evidence aids, not as product specifications.
+
 - Keep all system UI copy in complete local dictionaries for Russian, English, Ukrainian, Serbian Latin, and Simplified Chinese; keep code, comments, and public documentation in English. Preserve user-entered text without automatic translation.
 - Bind the app to loopback by default. Do not add public or LAN inventory access without server-side authentication and origin protections.
 - Keep SQLite data, backups, generated storage, and private user data outside the repository. Never commit real inventory records, personal media, secrets, or local backups.

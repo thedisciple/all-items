@@ -29,7 +29,7 @@ class CropperErrorBoundary extends Component<BoundaryProps, BoundaryState> {
   render() {
     if (!this.state.failed) return this.props.children;
     return <section className="photo-source-dialog crop-dialog" role="dialog" aria-modal="true" aria-label={this.props.unavailableLabel}>
-      <div className="dialog-heading"><h3>{this.props.unavailableLabel}</h3><button type="button" className="icon-button" aria-label={this.props.cancelLabel} onClick={this.props.onCancel}>×</button></div>
+      <div className="dialog-heading"><h3>{this.props.unavailableLabel}</h3><button type="button" className="icon-button" aria-label={this.props.cancelLabel} onClick={this.props.onCancel}><X size={18} aria-hidden="true"/></button></div>
       <div className="dialog-actions"><button type="button" className="quiet-button" onClick={this.props.onUseOriginal}>{this.props.originalLabel}</button><button type="button" className="text-button" onClick={this.props.onCancel}>{this.props.cancelLabel}</button></div>
     </section>;
   }

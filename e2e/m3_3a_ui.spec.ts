@@ -1,0 +1,94 @@
+import { expect, test } from "@playwright/test";
+import os from "node:os";
+import path from "node:path";
+import sharp from "sharp";
+
+test("consistent controls, dismissible categories and unobscured collection creation at desktop and 360px", async ({ page }) => {
+  test.setTimeout(120_000);
+  for (const width of [1365, 360]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto("/");
+    await expect(page.locator(".brand")).toContainText("All Items");
+    await expect(page.locator(".nav-link.active")).toContainText("Инвентарь");
+    const search = page.locator(".search-field");
+    const before = await search.boundingBox();
+    await page.getByLabel("Категория", { exact: true }).selectOption("tools");
+    await expect(page).toHaveURL(/category=tools/);
+    expect((await search.boundingBox())!.width).toBe(before!.width);
+    await page.locator(".clear-filters-button").click();
+    await page.locator(".add-dialog-trigger").click();
+    const add = page.getByRole("dialog", { name: "Добавить вещь" });
+    await add.getByLabel("Название").fill(`M33 controls ${width}`);
+    const inputHeight = (await add.getByLabel("Название").boundingBox())!.height;
+    expect((await add.getByLabel("Тип учёта").boundingBox())!.height).toBe(inputHeight);
+    expect((await add.locator(".category-trigger").boundingBox())!.height).toBe(inputHeight);
+    await add.locator(".category-trigger").click();
+    await add.locator(".category-options input").first().check();
+    expect((await add.locator(".category-options input").first().boundingBox())!.width).toBeLessThan(22);
+    await add.locator(".category-options input").first().press("Escape");
+    await expect(add.locator(".category-popover")).toHaveCount(0);
+    await expect(add.locator(".category-trigger")).toBeFocused();
+    await add.locator(".category-trigger").click();
+    await add.getByLabel("Название").click();
+    await expect(add.locator(".category-popover")).toHaveCount(0);
+    await expect(add.locator(".category-selection .category-chip")).toHaveCount(1);
+    await add.getByRole("button", { name: "Добавить вещь", exact: true }).click();
+    await expect(page).toHaveURL(/added=/);
+    await page.goto("/collections");
+    await page.getByRole("button", { name: "Создать коллекцию", exact: true }).click();
+    const create = page.getByRole("dialog", { name: "Создать коллекцию" });
+    const name = create.getByLabel("Название коллекции");
+    await expect(name).toBeFocused();
+    await create.locator(".collection-emoji-choice").last().click();
+    await name.fill(`M33 collection ${width}`);
+    const palette = (await create.locator(".collection-emoji-palette").boundingBox())!;
+    const field = (await name.boundingBox())!;
+    expect(palette.y).toBeGreaterThan(field.y + field.height);
+    const save = (await create.getByRole("button", { name: "Создать коллекцию", exact: true }).boundingBox())!;
+    const cancel = (await create.getByRole("button", { name: "Отмена", exact: true }).boundingBox())!;
+    expect(save.y).toBe(cancel.y); expect(save.height).toBe(cancel.height);
+    await page.screenshot({ path: path.join(os.tmpdir(), `allitems-m33a-create-${width}.png`) });
+    await create.getByRole("button", { name: "Создать коллекцию", exact: true }).click();
+    await expect(page).toHaveURL(/\/collections\//);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+});
+
+test("collection cover opens the whole image and offers contextual change; crop dialog grows with controls", async ({ page }) => {
+  await page.goto("/collections");
+  await page.getByRole("button", { name: "Создать коллекцию", exact: true }).click();
+  const create = page.getByRole("dialog", { name: "Создать коллекцию" });
+  await create.getByLabel("Название коллекции").fill("M33 cover portrait");
+  await create.getByRole("button", { name: "Создать коллекцию", exact: true }).click();
+  await expect(page).toHaveURL(/\/collections\//);
+  await page.getByRole("button", { name: /(?:Изменить|Добавить) обложку/ }).click();
+  const manager = page.getByRole("dialog", { name: "Обложка коллекции" });
+  await manager.getByLabel("Обложка коллекции").selectOption("upload");
+  await manager.locator('input[type="file"]').setInputFiles({ name: "portrait.png", mimeType: "image/png", buffer: await sharp({ create: { width: 160, height: 480, channels: 3, background: "#68735a" } }).png().toBuffer() });
+  await manager.getByRole("button", { name: "Сохранить обложку" }).click();
+  await expect(manager).toHaveCount(0);
+  await page.getByRole("button", { name: "Увеличить фото" }).click();
+  const viewer = page.getByRole("dialog", { name: "Просмотр фото" });
+  await expect(viewer).toBeVisible();
+  expect(await viewer.locator("img").evaluate(el => getComputedStyle(el).objectFit)).toBe("contain");
+  await viewer.getByRole("button", { name: /(?:Изменить|Добавить) обложку/ }).click();
+  await expect(manager).toBeVisible();
+  await manager.getByRole("button", { name: "Отмена" }).click();
+  await viewer.getByRole("button", { name: "Закрыть" }).press("Escape");
+  await expect(viewer).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Увеличить фото" })).toBeFocused();
+  await page.goto("/"); await page.locator(".add-dialog-trigger").click();
+  await page.getByRole("button", { name: "Добавить фото", exact: true }).click();
+  await page.locator('input[name="photo"]').setInputFiles({ name: "crop.png", mimeType: "image/png", buffer: await sharp({ create: { width: 480, height: 320, channels: 3, background: "#7385a2" } }).png().toBuffer() });
+  const crop = page.getByRole("dialog", { name: "Редактировать фото" });
+  await expect(crop.getByRole("button", { name: "Готово" })).toBeEnabled();
+  const collapsed = (await crop.boundingBox())!.height;
+  await crop.locator(".crop-accessibility-controls summary").click();
+  expect((await crop.boundingBox())!.height).toBeGreaterThan(collapsed);
+  for (const viewport of [{ width: 1365, height: 600 }, { width: 360, height: 600 }]) {
+    await page.setViewportSize(viewport);
+    await expect(crop.getByRole("button", { name: "Готово" })).toBeInViewport();
+    await expect(crop.locator(".crop-actions").getByRole("button", { name: "Отмена" })).toBeInViewport();
+    expect((await crop.boundingBox())!.height).toBeLessThanOrEqual(viewport.height - 19);
+  }
+});

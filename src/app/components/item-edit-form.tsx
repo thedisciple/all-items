@@ -47,7 +47,7 @@ export function ItemEditForm({ itemId, initial, initialRows, returnTo = "/" }: {
       <label className="field full-field"><span>{t("itemNotes")}</span><textarea name="notes" maxLength={2000} value={draft.notes} onChange={field("notes")}/></label>
     </div></details>
     <div className="form-action-row"><FormSubmitButton className="add-button" disabled={pending || !dirty || !draft.name.trim() || !validStockDraft(rows, draft.trackingMode)} pendingLabel={t("savingChanges")}>{pending ? t("savingChanges") : t("saveChanges")}</FormSubmitButton>
-      <a className="text-button" href={returnTo}>{t("cancel")}</a>
+      <a className="quiet-button" href={returnTo}>{t("cancel")}</a>
       {feedback.status === "error" && feedback.message ? <p className="inline-status error-status" role="alert">{feedback.message}</p> : null}
     </div>
   </form>;

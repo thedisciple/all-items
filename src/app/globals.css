@@ -537,3 +537,76 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 html { scrollbar-gutter: stable; }
 .export-option { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
 .export-option .export-note { margin: 0; }
+
+/* Shared control geometry. Checkbox/radio controls retain their native size. */
+:root { --control-height: 44px; --control-radius: 7px; --control-font: 13px; --control-padding: 12px; --control-icon: 17px; --control-gap: 8px; --control-bg: #10120f; --control-border: #4b5145; }
+.field input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),.field select,.detail-panel .field input:not([type="checkbox"]),.detail-panel .field select,.photo-add-fields .field input,.search-field,.filter-bar select,.category-trigger {
+  height: var(--control-height); min-height: var(--control-height); border: 1px solid var(--control-border); border-radius: var(--control-radius); background: var(--control-bg); color: var(--text); padding: 0 var(--control-padding); font: inherit; font-size: var(--control-font); width: 100%;
+}
+.add-button,.quiet-button,.delete-button,.text-button,.photo-source-button,.photo-acquisition-primary,.photo-acquisition-secondary {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--control-gap); height: var(--control-height); min-height: var(--control-height); border-radius: var(--control-radius); padding: 0 var(--control-padding); font: inherit; font-size: var(--control-font); font-weight: 600; line-height: 1.2; white-space: nowrap;
+}
+.text-button { border: 1px solid var(--control-border); background: #22261e; color: #dce5cf; }
+button svg,a.quiet-button svg { flex-shrink: 0; }
+.icon-button { display: inline-grid; place-items: center; width: var(--control-height); height: var(--control-height); min-height: var(--control-height); padding: 0; line-height: 1; flex-shrink: 0; }
+.dialog-actions,.form-action-row { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 10px; }
+.dialog-actions button,.dialog-actions a { flex: 0 1 auto; width: auto; }
+.form-action-row .inline-status { flex-basis: 100%; }
+.collection-create-form { grid-template-columns: minmax(0,1fr); align-items: start; }
+.collection-emoji-field { width: 100%; }
+.collection-emoji-palette { display: grid; grid-template-columns: repeat(auto-fit,36px); gap: 6px; }
+.collection-emoji-choice { width: 36px; height: 36px; padding: 0; line-height: 1; }
+.collection-rename-panel { min-width: 0; }
+.collection-detail-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.collection-detail-actions > button { height: var(--control-height); }
+.filter-bar { grid-template-columns: minmax(140px,2fr) repeat(3,minmax(0,1fr)) minmax(150px,auto); align-items: center; }
+.clear-filters-button { width: 100%; font-size: 12px; }
+.clear-filters-button:disabled { visibility: hidden; }
+.search-field input { height: auto; }
+.category-field { position: relative; align-content: start; }
+.category-trigger { display: flex; align-items: center; justify-content: space-between; text-align: left; cursor: pointer; }
+.category-selection:empty { display: none; }
+.category-popover { max-height: 270px; overflow: auto; padding: 12px; background: #1c2019; box-shadow: 0 6px 20px #0004; }
+.category-options { grid-template-columns: minmax(0,1fr); padding-top: 0; gap: 4px; }
+.category-options label { min-height: 30px; font-size: 13px; }
+.field .category-options input[type="checkbox"],.detail-panel .category-options input[type="checkbox"] { flex: 0 0 17px; width: 17px; height: 17px; min-height: 0; padding: 0; margin: 0; accent-color: var(--green); }
+.category-selection .icon-button { width: 26px; height: 26px; min-height: 26px; }
+.row-remove-button,.stock-remove-button { color: #ef9b9b; border-color: #673b40; background: #2b1c20; }
+.row-remove-button:hover,.stock-remove-button:hover { background: #46242d; }
+.item-hero { align-items: center; justify-content: flex-start; gap: 12px; flex-wrap: wrap; }
+.item-number-badge { font-size: 12px; color: var(--muted); }
+.crop-dialog { height: auto; max-height: calc(100dvh - 20px); }
+.crop-editor-body { flex: 0 1 auto; }
+.crop-dialog .crop-editor-body > .photo-cropper-widget { height: clamp(150px,38dvh,390px) !important; }
+.photo-cropper-widget .cropper-view-box { outline: 1px solid var(--crop-accent); }
+.photo-cropper-widget .cropper-line { background: transparent; }
+.photo-cropper-widget .cropper-point { width: 24px; height: 24px; background: transparent; border: 0; box-shadow: none; }
+.photo-cropper-widget .cropper-point::after { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: var(--crop-accent); box-shadow: 0 0 0 1px #fff8; }
+.photo-cropper-widget .cropper-point.point-e { right: -12px; margin-top: -12px; }
+.photo-cropper-widget .cropper-point.point-w { left: -12px; margin-top: -12px; }
+.photo-cropper-widget .cropper-point.point-n { top: -12px; margin-left: -12px; }
+.photo-cropper-widget .cropper-point.point-s { bottom: -12px; margin-left: -12px; }
+.photo-cropper-widget .cropper-point.point-ne { top: -12px; right: -12px; }
+.photo-cropper-widget .cropper-point.point-nw { top: -12px; left: -12px; }
+.photo-cropper-widget .cropper-point.point-sw { bottom: -12px; left: -12px; }
+.photo-cropper-widget .cropper-point.point-se { bottom: -12px; right: -12px; }
+.collection-cover-viewer { margin-bottom: 18px; }
+.collection-cover-viewer .photo-viewer-image { height: 180px; }
+.collection-cover-viewer .media-cover { height: 180px; margin: 0; }
+.collection-cover-viewer:not(.photo-viewer-open) .private-image-frame > img { object-fit: cover; }
+.collection-cover-viewer.photo-viewer-open .photo-viewer-image { height: 75dvh; }
+.cover-viewer-actions { position: absolute; bottom: 15px; }
+.collection-cover-overlay { z-index: 90; }
+.collection-cover-empty { margin-bottom: 18px; }
+.inventory-list-spacing { height: 24px; }
+@media (max-width: 1100px) { .filter-bar { grid-template-columns: repeat(3,minmax(0,1fr)); } .filter-bar .search-field { grid-column: 1/3; } }
+@media (max-width: 560px) {
+  .filter-bar { grid-template-columns: repeat(2,minmax(0,1fr)); } .filter-bar .search-field { grid-column: 1/-1; }
+  .sidebar { height: auto; min-height: 100px; flex-direction: column; align-items: stretch; gap: 10px; padding: 12px 18px; }
+  .sidebar .brand { padding: 0; flex-shrink: 0; }
+  .side-navigation { display: flex; flex-wrap: wrap; gap: 4px; width: 100%; }
+  .side-navigation .nav-link { display: inline-flex; padding: 8px; font-size: 12px; }
+  .clear-filters-button { font-size: 11px; padding-inline: 6px; }
+  .crop-dialog { height: auto; } .crop-dialog .crop-editor-body > .photo-cropper-widget { height: clamp(150px,30dvh,300px) !important; }
+  .crop-actions button { flex: 1 1 auto; }
+}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PhotoViewer } from "@/app/components/photo-viewer";
 import { PrivateImage } from "@/app/components/private-image";
 import { notFound } from "next/navigation";
 import { z } from "zod";
@@ -43,9 +44,9 @@ export default async function CollectionPage({ params, searchParams }: Props) {
     <section className="main-content"><header className="topbar"><div className="breadcrumb"><Link href="/collections">{t("collections")}</Link><span>/</span>{String(collection.name)}</div><LanguageSwitcher/></header>
       <div className="content-wrap">
         <div className="heading-row collection-detail-heading"><div><h1>{collection.icon && !(collection.coverType === "emoji" && collection.coverIcon === collection.icon) ? <span aria-hidden="true">{collection.icon} </span> : null}{String(collection.name)}</h1><p className="subtitle">{formatItemCount(locale, Number(collection.itemCount))}</p></div>
-          <div className="collection-detail-actions"><CollectionManageForms id={id} name={String(collection.name)} icon={collection.icon == null ? null : String(collection.icon)}/><CollectionCoverManager collectionId={id} options={coverOptions}/>{Number(collection.itemCount) > 0 ? <CollectionAddItems collectionId={id} items={selectableItems} existingIds={members.map((item) => String(item.id))}/> : null}</div>
+          <div className="collection-detail-actions"><CollectionManageForms id={id} name={String(collection.name)} icon={collection.icon == null ? null : String(collection.icon)}/>{Number(collection.itemCount) > 0 ? <CollectionAddItems collectionId={id} items={selectableItems} existingIds={members.map((item) => String(item.id))}/> : null}</div>
         </div>
-        <CollectionCoverVisual collection={collection} variant="detail"/>
+        {collection.coverType === "upload" && collection.coverUploadId || collection.coverType === "item_photo" && collection.coverMediaId ? <PhotoViewer cover src={collection.coverType === "upload" ? `/media/collections/${id}/${collection.coverUploadId}?variant=image` : `/media/${collection.coverItemId}/${collection.coverMediaId}?variant=image`} alt={collection.name} action={<CollectionCoverManager collectionId={id} options={coverOptions}/>}/> : <div className="collection-cover-empty"><CollectionCoverVisual collection={collection} variant="detail"/><CollectionCoverManager add={collection.coverType === "default"} collectionId={id} options={coverOptions}/></div>}
         {Number(collection.itemCount) > 0 ? <ItemFilters categories={categoryOptions} statuses={Object.entries(statuses).map(([value,label]) => ({ value, label }))} searchPlaceholder={t("collectionItemsSearch")}/> : null}
         {items.length ? <>
           <div className="list-heading"><h2>{t("collectionItems")}</h2>{hasActiveFilter ? <span className="list-total">{t("resultCount", { count: items.length })}</span> : null}</div>

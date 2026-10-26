@@ -41,3 +41,5 @@ These principles apply to product decisions and code review. They summarize the 
 - Is complexity supported by an actual user need?
 
 See [interaction patterns](interaction-patterns.md) for current and proposed state transitions.
+
+Equivalent native fields, selection triggers and actions share control geometry. Keep ordinary Save/Cancel rows horizontal when they fit, reserve filter reset space, avoid duplicate editable metadata, and keep required inputs clear of palettes. Use full-image collection cover viewing with contextual editing and an explicit Add Cover state.

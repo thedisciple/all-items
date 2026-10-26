@@ -61,7 +61,7 @@ async function createNoPhotoItem(page: Page, name: string, category: string) {
   await page.locator(".add-dialog-trigger").click();
   const dialog = page.getByRole("dialog", { name: "Добавить вещь" });
   await dialog.getByLabel("Название").fill(name);
-  await dialog.locator(".category-picker summary").click();
+  await dialog.locator(".category-trigger").click();
   if (category === "custom") {
     await dialog.locator(".custom-category-row input").fill("Electronics");
     await dialog.locator(".custom-category-row button").click();
@@ -285,7 +285,7 @@ test("collection name, icon, cover and deletion are contextual and immediately v
   await renameForm.getByRole("textbox", { name: "Collection icon" }).fill("📷");
   await renameForm.getByRole("button", { name: "Save name" }).click();
   await expect(page.locator(".collection-detail-heading h1")).toHaveText(/📷 Renamed collection/);
-  await page.getByRole("button", { name: "Change cover" }).click();
+  await page.getByRole("button", { name: /(?:Change|Add) cover/ }).click();
   const coverDialog = page.getByRole("dialog", { name: "Collection cover" });
   await coverDialog.getByLabel("Collection cover").selectOption("emoji");
   await coverDialog.getByRole("textbox", { name: "Collection icon" }).fill("🔧");
@@ -298,7 +298,7 @@ test("collection name, icon, cover and deletion are contextual and immediately v
   await emojiCard.click();
   await expect(page.locator(".collection-detail-cover-placeholder")).toContainText("🔧");
   await expect(page.locator(".collection-detail-heading h1")).toHaveText("Renamed collection");
-  await page.getByRole("button", { name: "Change cover" }).click();
+  await page.getByRole("button", { name: /(?:Change|Add) cover/ }).click();
   const photoCoverDialog = page.getByRole("dialog", { name: "Collection cover" });
   await photoCoverDialog.getByLabel("Collection cover").selectOption("upload");
   await photoCoverDialog.locator('input[type="file"]').setInputFiles({ name: "collection-cover.png", mimeType: "image/png", buffer: await syntheticPhoto(640, 320) });

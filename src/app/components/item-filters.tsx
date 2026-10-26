@@ -69,6 +69,7 @@ export function ItemFilters({ categories, statuses, searchPlaceholder }: Props) 
     const queryString = next.toString();
     rememberScroll();
     router.push(queryString ? pathname + "?" + queryString : pathname, { scroll: false });
+    filterRef.current?.querySelector("input")?.focus();
   };
 
   return <div ref={filterRef} className="filter-bar" aria-label={t("inventoryFilters")}>
@@ -82,6 +83,6 @@ export function ItemFilters({ categories, statuses, searchPlaceholder }: Props) 
     <select aria-label={t("sortLabel")} value={params.get("sort") ?? "date"} onChange={(event) => navigate("sort", event.target.value)}>
       <option value="date">{t("sortNewest")}</option><option value="name">{t("sortName")}</option><option value="quantity">{t("sortQuantity")}</option>
     </select>
-    {activeFilters ? <button type="button" className="text-button clear-filters-button" onClick={clear}><X size={15} aria-hidden="true"/>{t("clearFilters")}</button> : null}
+    {<button type="button" className="quiet-button clear-filters-button" disabled={!activeFilters} onClick={clear}><X size={15} aria-hidden="true"/>{t("clearFilters")}</button>}
   </div>;
 }
