@@ -68,7 +68,7 @@ export async function addItemAction(_previous: ActionFeedback, formData: FormDat
     if (error instanceof MediaValidationError) return { status: "error", message: "invalidPhoto" };
     return { status: "error", message: file ? "itemSaveFailed" : errorMessage(error, "itemSaveGeneric") };
   }
-  revalidatePath(inventoryPath(context));
+  revalidatePath(inventoryPath(context), "layout");
   return { status: "success", message: "itemAdded", itemId: item.id };
 }
 
@@ -84,7 +84,7 @@ export async function replacePhotoAction(_previous: PhotoActionFeedback, formDat
   const cropValue = String(formData.get("crop") ?? "");
   try {
     const saved = await replacePrimaryPhoto(context, id.data, file, sourceFile, cropValue);
-    revalidatePath(inventoryPath(context)); revalidatePath(inventoryPath(context,`/items/${id.data}`));
+    revalidatePath(inventoryPath(context), "layout"); revalidatePath(inventoryPath(context,`/items/${id.data}`));
     return { status: "success", message: "photoSaved", mediaId: saved.id };
   } catch (error) {
     const message = error instanceof MediaValidationError ? "invalidPhoto" : errorMessage(error, "photoSaveGeneric");
@@ -101,7 +101,7 @@ export async function removePhoto(formData: FormData): Promise<void | ActionFeed
   z.literal("on", { error: "photoDeleteConfirm" }).parse(formData.get("confirm"));
   await removePrimaryPhoto(context, id.data);
   } catch { return {status:"error",message:"operationFailed"}; }
-  revalidatePath(inventoryPath(context)); revalidatePath(inventoryPath(context,`/items/${id.data}`));
+  revalidatePath(inventoryPath(context), "layout"); revalidatePath(inventoryPath(context,`/items/${id.data}`));
   redirect(inventoryPath(context,`/items/${id.data}`));
 }
 
@@ -115,7 +115,7 @@ export async function updateItemAction(_previous: ActionFeedback, formData: Form
   catch { return { status: "error", message: "itemUpdateGeneric" }; }
   try {
     await updateItem(context, id.data, formValues(formData) as ItemFields, JSON.parse(String(formData.get("stock") ?? "[]")));
-    revalidatePath(inventoryPath(context)); revalidatePath(inventoryPath(context,`/items/${id.data}`)); revalidatePath(inventoryPath(context,"/collections"));
+    revalidatePath(inventoryPath(context), "layout"); revalidatePath(inventoryPath(context,`/items/${id.data}`)); revalidatePath(inventoryPath(context,"/collections"));
     return { status: "success", message: "changesSaved", collectionId: returnTo.startsWith(inventoryPath(context,"/collections/")) ? returnTo.split("/").at(-1) : undefined };
   } catch (error) { return { status: "error", message: errorMessage(error, "itemUpdateGeneric") }; }
 }
@@ -125,7 +125,7 @@ export async function createCollectionAction(_previous: ActionFeedback, formData
   if (!context) return { status: "error", message: "inventoryNotFound" };
   try {
     const collection = await createCollection(context, { name: formData.get("name"), icon: formData.get("icon") });
-    revalidatePath(inventoryPath(context,"/collections"));
+    revalidatePath(inventoryPath(context), "layout"); revalidatePath(inventoryPath(context,"/collections"));
     return { status: "success", message: "collectionCreated", collectionId: collection.id };
   } catch (error) { return { status: "error", message: errorMessage(error, "collectionCreateGeneric") }; }
 }
@@ -138,7 +138,7 @@ export async function addItemsToCollectionAction(_previous: ActionFeedback, form
   if (!collectionId.success || !itemIds.success) return { status: "error", message: "chooseItems" };
   try {
     const result = await addItemsToCollection(context, collectionId.data, itemIds.data);
-    revalidatePath(inventoryPath(context)); revalidatePath(inventoryPath(context,"/collections")); revalidatePath(inventoryPath(context,`/collections/${collectionId.data}`));
+    revalidatePath(inventoryPath(context), "layout"); revalidatePath(inventoryPath(context,"/collections")); revalidatePath(inventoryPath(context,`/collections/${collectionId.data}`));
     return { status: "success", message: "collectionItemsAdded", values: { count: result.added }, count: result.added };
   } catch (error) { return { status: "error", message: errorMessage(error, "membershipAddGeneric") }; }
 }
@@ -194,7 +194,7 @@ export async function deleteCollectionAction(formData: FormData): Promise<void |
   z.literal("on", { error: "collectionDeleteConfirmError" }).parse(formData.get("confirm"));
   await deleteCollection(context, id.data);
   } catch { return {status:"error",message:"operationFailed"}; }
-  revalidatePath(inventoryPath(context,"/collections")); revalidatePath(inventoryPath(context,`/collections/${id.data}`)); revalidatePath(inventoryPath(context));
+  revalidatePath(inventoryPath(context,"/collections")); revalidatePath(inventoryPath(context,`/collections/${id.data}`)); revalidatePath(inventoryPath(context), "layout");
   redirect(inventoryPath(context,"/collections"));
 }
 
@@ -232,6 +232,6 @@ export async function removeItem(formData: FormData): Promise<void | ActionFeedb
   z.literal("on", { error: "itemDeleteConfirmError" }).parse(formData.get("confirm"));
   await deleteItemWithMedia(context, id.data);
   } catch { return {status:"error",message:"operationFailed"}; }
-  revalidatePath(inventoryPath(context));
+  revalidatePath(inventoryPath(context), "layout");
   redirect(inventoryPath(context));
 }

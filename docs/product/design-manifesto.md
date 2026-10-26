@@ -49,3 +49,8 @@ AI, MCP integrations, achievements, marketplace flows, E2EE synchronization, opt
 ## M3.3A inventory boundaries
 
 Keep the All Items brand separate from the Inventory section and current inventory name. Switching changes routes explicitly; stale tabs keep their original target. Creation, renaming and deletion use ordinary consistent controls. Consequential deletion names the target, states actual counts and asks for its name when populated. Never offer an ambiguous global Clear All. An empty installation offers Create Inventory without secretly recreating a default space. Errors are semantic states translated in the current language, and recoverable errors retain meaningful drafts and selected files. A quiet lock beside private metadata means unpublished local planning, not authenticated-user secrecy.
+
+
+## M3.3B navigation and lists
+
+Keep the current inventory selector and its settings together at the start of the header, with language selection at the end. The inventory name is sufficient orientation; avoid another large duplicate heading. Counts remain scoped and visible throughout the inventory shell. Settings has its own location and a clear way back. An item row separates identity, categories, stock, and status; a category link filters the current inventory or collection while the item link opens the item. Use distinct focusable controls rather than nesting links. Long selected filter names remain legible as controls adapt to available width.

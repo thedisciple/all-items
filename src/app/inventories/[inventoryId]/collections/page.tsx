@@ -7,7 +7,7 @@ import { CreateCollectionForm } from "@/app/components/collection-forms";
 import { getLocale } from "@/i18n/server";
 import { formatCollectionCount, formatItemCount, translate } from "@/i18n/messages";
 import { listCollections } from "@/items/collections";
-import { LanguageSwitcher } from "@/app/components/language-switcher";
+import { AppHeader } from "@/app/components/app-header";
 import { CollectionCoverVisual } from "@/app/components/collection-cover-visual";
 import { LibraryBig } from "lucide-react";
 
@@ -21,7 +21,7 @@ export default async function CollectionsPage({params}: {params:Promise<{invento
   return <main className="app-shell">
     <AppSidebar active="collections" collectionCount={collections.length} locale={locale}/>
     <section className="main-content">
-      <header className="topbar"><span>{t("collections")}</span><LanguageSwitcher/></header>
+      <AppHeader/>
       <div className="content-wrap"><div className="heading-row"><h1>{t("collections")}</h1><span className="total-count">{formatCollectionCount(locale, collections.length)}</span></div>
         <div className="collection-create-toolbar"><CreateCollectionForm/></div>
         {collections.length ? <div className="list-heading"><h2>{t("collectionsYour")}</h2></div> : null}

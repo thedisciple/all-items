@@ -123,8 +123,9 @@ Validated with 38 unit tests, typecheck, lint, production build, the 13-scenario
 
 Follow [the architecture decision](docs/architecture/adr-multiple-inventories.md). Future accounts remain a separate authorization boundary. The primary import workflow creates an independent inventory; existing inventories are never merged or replaced. See [validation](docs/architecture/m3-3a-validation.md).
 
-### M3.3B Recovery and preferences - NOT STARTED
+### M3.3B Recovery and preferences - IN PROGRESS
 
+- [x] Header inventory switching, scoped navigation counts, independent category filters and responsive row layout
 - [ ] Crash/reload recovery for drafts and photo Blobs
 - [ ] Portable local preferences that are explicitly implemented by the application
 

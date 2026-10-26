@@ -1,6 +1,5 @@
 import { routeInventory } from "@/app/inventory-routing";
 import { inventoryPath } from "@/items/inventory-context";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { AppSidebar } from "@/app/components/app-sidebar";
@@ -14,7 +13,7 @@ import { getItem, listItems } from "@/items/service";
 import { getPrimaryPhoto } from "@/media/service";
 import { getLocale } from "@/i18n/server";
 import { translate } from "@/i18n/messages";
-import { LanguageSwitcher } from "@/app/components/language-switcher";
+import { AppHeader } from "@/app/components/app-header";
 
 export const dynamic = "force-dynamic";
 type Props = { params: Promise<{ id: string; inventoryId: string }>; searchParams: Promise<{ from?: string }> };
@@ -43,7 +42,7 @@ export default async function ItemPage({ params, searchParams }: Props) {
   const returnTo = fromCollection.success ? `${base}/collections/${fromCollection.data}` : base;
   return <main className="app-shell">
     <AppSidebar active="items" itemCount={allItems.length} collectionCount={collections.length} locale={locale}/>
-    <section className="main-content"><header className="topbar"><div className="breadcrumb"><Link href={returnTo}>{returnTo === base ? t("inventory") : t("collections")}</Link><span>/</span>{item.inventory_number}</div><LanguageSwitcher/></header>
+    <section className="main-content"><AppHeader/>
       <div className="content-wrap detail-wrap">
         <div className="item-hero"><h1>{item.name}</h1><span className="item-number-badge">{item.inventory_number}</span></div>
         <section className="photo-detail-panel" aria-label={t("photo")}>

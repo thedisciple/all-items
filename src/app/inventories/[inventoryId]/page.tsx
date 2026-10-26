@@ -1,18 +1,16 @@
 import { routeInventory } from "@/app/inventory-routing";
 import { inventoryPath } from "@/items/inventory-context";
-import Link from "next/link";
-import { PrivateImage } from "@/app/components/private-image";
 import { listCollections } from "@/items/collections";
 import { AppSidebar } from "@/app/components/app-sidebar";
 import { AddItemForm } from "@/app/components/add-item-form";
 import { categories, categoryMessageKey } from "@/items/categories";
 import { countItems, listCategoryValues, listItems } from "@/items/service";
 import { getLocale } from "@/i18n/server";
-import { formatItemCount, translate } from "@/i18n/messages";
-import { LanguageSwitcher } from "@/app/components/language-switcher";
+import { translate } from "@/i18n/messages";
+import { AppHeader } from "@/app/components/app-header";
 import { categoryEmoji, categoryKeyForStoredValue } from "@/items/categories";
 import { ItemFilters } from "@/app/components/item-filters";
-import { CategoryTags } from "@/app/components/category-tag";
+import { InventoryItemRow } from "@/app/components/inventory-item-row";
 
 export const dynamic = "force-dynamic";
 type Props = { params: Promise<{inventoryId:string}>; searchParams: Promise<{ q?: string; category?: string; status?: string; sort?: string; added?: string; updated?: string }> };
@@ -35,12 +33,12 @@ export default async function Home({ searchParams, params: routeParams }: Props)
   return <main className="app-shell">
     <AppSidebar active="items" itemCount={totalCount} collectionCount={collections.length} locale={locale}/>
     <section className="main-content">
-      <header className="topbar"><span/><LanguageSwitcher/></header>
-      <div className="content-wrap"><div className="heading-row"><h1>{t("inventory")}</h1><span className="total-count">{formatItemCount(locale, totalCount)}</span></div>
+      <AppHeader/>
+      <div className="content-wrap"><h1 className="visually-hidden">{t("inventory")}</h1>
         <AddItemForm/>
         <ItemFilters categories={categoryOptions} statuses={Object.entries(statusLabels).map(([value,label]) => ({ value, label }))} searchPlaceholder={t("searchItems")}/>
         {hasFilters ? <div className="list-heading"><span className="list-total">{t("resultCount", { count: items.length })}</span></div> : <div className="inventory-list-spacing"/>}
-        {items.length ? <div className="item-list">{items.map((item) => { return <Link href={`${base}/items/${item.id}`} className={`item-row ${params.added === String(item.id) ? "item-row-highlight" : ""}`} key={String(item.id)}>{item.primary_media_id ? <PrivateImage variant="thumbnail" className="item-photo" src={`${base}/media/${item.id}/${item.primary_media_id}?variant=thumbnail`} alt="" width={80} height={80}/> : <div className="item-thumb" aria-hidden="true"><span>{t("photo")}</span></div>}<div className="item-info"><h3>{String(item.name)}</h3><div className="item-meta"><span className="inventory-number">{String(item.inventory_number)}</span>{item.model ? <span>{String(item.model)}</span> : null}{item.brand ? <span>{String(item.brand)}</span> : null}<CategoryTags values={item.categories} locale={locale}/><span>{t("quantity")}: {new Intl.NumberFormat(locale).format(Number(item.quantity))}</span><span>{t("locations")}: {String(item.locations || t("locationUnknown"))}</span></div></div><span className="item-index">{statusLabels[String(item.identification_status)]}</span></Link>; })}</div> : <div className="empty-state"><div className="empty-orbit">✳</div><h3>{hasFilters ? t("noMatches") : t("noItems")}</h3><p>{hasFilters ? t("adjustFilters") : t("addFirstItem")}</p></div>}
+        {items.length ? <div className="item-list">{items.map(item => <InventoryItemRow key={String(item.id)} item={item} base={base} locale={locale} query={params} highlighted={params.added === String(item.id)}/>)}</div> : <div className="empty-state"><div className="empty-orbit">✳</div><h3>{hasFilters ? t("noMatches") : t("noItems")}</h3><p>{hasFilters ? t("adjustFilters") : t("addFirstItem")}</p></div>}
       </div>
     </section>
   </main>;

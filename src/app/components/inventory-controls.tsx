@@ -3,14 +3,14 @@
 import { useActionState, useEffect, useRef, useState, startTransition, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus, Settings, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, Plus, Settings, Trash2, X } from "lucide-react";
 import { createInventoryAction, deleteInventoryAction, renameInventoryAction, type InventoryFeedback } from "@/app/inventory-actions";
 import { useInventory, InventoryField } from "./inventory-provider";
 import { useI18n } from "@/i18n/provider";
 
 const idle: InventoryFeedback = { status: "idle" };
 
-export function CreateInventoryControl() {
+export function CreateInventoryControl({ menuItem = false }: { menuItem?: boolean }) {
   const { t } = useI18n();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -29,7 +29,7 @@ export function CreateInventoryControl() {
     if (event.shiftKey && document.activeElement===first) { event.preventDefault(); last?.focus(); }
     if (!event.shiftKey && document.activeElement===last) { event.preventDefault(); first?.focus(); }
   }
-  return <><button ref={trigger} className="quiet-button inventory-create-button" type="button" onClick={() => setOpen(true)}><Plus size={16}/>{t("inventoryCreate")}</button>{open ? <div className="photo-source-overlay add-dialog-overlay"><section role="dialog" aria-modal="true" aria-labelledby="inventory-create-title" className="photo-source-dialog" onKeyDown={keys}>
+  return <><button ref={trigger} role={menuItem ? "menuitem" : undefined} className={menuItem ? "inventory-menu-create inventory-create-button" : "quiet-button inventory-create-button"} type="button" onClick={() => setOpen(true)}><Plus size={16}/>{t("inventoryCreate")}</button>{open ? <div className="photo-source-overlay add-dialog-overlay"><section role="dialog" aria-modal="true" aria-labelledby="inventory-create-title" className="photo-source-dialog" onKeyDown={keys}>
     <div className="dialog-heading"><h2 id="inventory-create-title">{t("inventoryCreate")}</h2><button type="button" className="icon-button" aria-label={t("close")} disabled={pending} onClick={close}><X size={18}/></button></div>
     <form aria-busy={pending} onSubmit={event => { event.preventDefault(); const data = new FormData(event.currentTarget); startTransition(() => action(data)); }}>
       <label className="field"><span>{t("inventoryName")}</span><input ref={input} name="name" required maxLength={120} value={name} onChange={event => setName(event.target.value)}/></label>
@@ -41,7 +41,32 @@ export function CreateInventoryControl() {
 
 export function InventorySwitcher() {
   const { t }=useI18n(); const { inventory,inventories,base }=useInventory(); const router=useRouter();
-  return <div className="inventory-switcher"><label className="field"><span className="visually-hidden">{t("inventoryCurrent")}</span><select aria-label={t("inventoryCurrent")} value={inventory.workspaceId} onChange={event => router.push(`/inventories/${event.target.value}`)}>{inventories.map(entry => <option key={entry.workspaceId} value={entry.workspaceId}>{entry.name}</option>)}</select></label><div className="inventory-switcher-actions"><CreateInventoryControl/><Link className="icon-button" href={`${base}/settings`} aria-label={t("inventoryManage")} title={t("inventoryManage")}><Settings size={17}/></Link></div></div>;
+  const [open,setOpen]=useState(false);
+  const root=useRef<HTMLDivElement>(null),trigger=useRef<HTMLButtonElement>(null),menu=useRef<HTMLDivElement>(null);
+  const keyboardOpen=useRef(false);
+  useEffect(()=>{
+    if(!open)return;
+    if(keyboardOpen.current){keyboardOpen.current=false;menu.current?.querySelector<HTMLButtonElement>('[role="menuitemradio"][aria-checked="true"]')?.focus();}
+    const dismiss=(event:PointerEvent)=>{if(!root.current?.contains(event.target as Node))setOpen(false);};
+    document.addEventListener("pointerdown",dismiss);
+    return()=>document.removeEventListener("pointerdown",dismiss);
+  },[open]);
+  const duplicates=(name:string)=>inventories.filter(entry=>entry.name.trim().toLocaleLowerCase()===name.trim().toLocaleLowerCase()).length>1;
+  return <div className="inventory-switcher" ref={root}>
+    <button ref={trigger} className="inventory-menu-trigger" type="button" aria-label={`${t("inventoryCurrent")}: ${inventory.name}`} aria-haspopup="menu" aria-expanded={open} onClick={()=>setOpen(value=>!value)} onKeyDown={event=>{if(event.key==="ArrowDown"&&!open){event.preventDefault();keyboardOpen.current=true;setOpen(true);}}}><span>{inventory.name}</span><ChevronDown size={16} aria-hidden="true"/></button>
+    <Link className="icon-button inventory-settings-link" href={`${base}/settings`} aria-label={t("inventoryManage")} title={t("inventoryManage")}><Settings size={17} aria-hidden="true"/></Link>
+    {open?<div ref={menu} className="inventory-menu" role="menu" aria-label={t("inventoryCurrent")} onKeyDown={event=>{
+      if(event.key==="Escape"){event.preventDefault();event.stopPropagation();setOpen(false);trigger.current?.focus();return;}
+      if(event.key!=="ArrowDown"&&event.key!=="ArrowUp"&&event.key!=="Home"&&event.key!=="End")return;
+      event.preventDefault();const entries=Array.from(menu.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"],[role="menuitemradio"]')??[]);
+      const index=entries.indexOf(document.activeElement as HTMLButtonElement);
+      const next=event.key==="Home"?0:event.key==="End"?entries.length-1:(index+(event.key==="ArrowDown"?1:entries.length-1))%entries.length;
+      entries[next]?.focus();
+    }}>
+      {inventories.map(entry=><button type="button" role="menuitemradio" aria-checked={entry.workspaceId===inventory.workspaceId} key={entry.workspaceId} onClick={()=>{setOpen(false);router.push(`/inventories/${entry.workspaceId}`);}}><span>{entry.name}{duplicates(entry.name)?` · ${entry.workspaceId.slice(0,8)}`:""}</span>{entry.workspaceId===inventory.workspaceId?<Check size={15} aria-hidden="true"/>:null}</button>)}
+      <CreateInventoryControl menuItem/>
+    </div>:null}
+  </div>;
 }
 
 export function RenameInventoryControl() {

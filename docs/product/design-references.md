@@ -111,3 +111,10 @@ Code inspection confirmed that the old item and stock forms used separate action
 ## M3.3A interaction findings
 
 The M3.3A brief describes user-observed regressions in collection creation, control alignment, category selection, filters, and crop sizing. No original screenshot files accompanied the execution attachment; the supplied descriptions are treated as acceptance requirements. Code inspection found a retained two-column grid on the collection creation form, broad field-input rules applying to category checkboxes, forced vertical dialog actions at mobile widths, conditional removal of the clear-filter grid cell, and a viewport-sized crop dialog. These explain the reported mechanisms without claiming independent observation of the original screenshots. Synthetic Edge scenarios cover geometry, required-name access after the last emoji selection, category dismissal/draft retention, full cover viewing, and crop controls at desktop and 360px. Browser results are recorded with the checkpoint validation.
+
+
+## GitHub labels and filtering — M3.3B
+
+Verified: [GitHub's label documentation](https://docs.github.com/en/issues/using-labels-and-milestones-to-track-work/managing-labels) describes selecting existing labels in a menu, and its [filtering documentation](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/filtering-and-searching-issues-and-pull-requests) describes selecting a label to filter a list. These sources do not establish usability or accessibility of every GitHub selector.
+
+Design inference for All Items: keep chosen categories compact and make a category in a list an explicit filter action, while preserving a separate link to the item. The reference does not justify copying GitHub branding, visual assets, or unrelated workflows. Use synthetic content in implementation checks.

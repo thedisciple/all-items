@@ -74,10 +74,10 @@ export function ItemFilters({ categories, statuses, searchPlaceholder }: Props) 
 
   return <div ref={filterRef} className="filter-bar" aria-label={t("inventoryFilters")}>
     <label className="search-field"><Search size={17} aria-hidden="true"/><input type="search" value={query} onChange={(event) => { editedSinceNavigation.current = true; setQuery(event.target.value); }} placeholder={searchPlaceholder} maxLength={160}/></label>
-    <select aria-label={t("category")} value={params.get("category") ?? ""} onChange={(event) => navigate("category", event.target.value)}>
+    <select aria-label={t("category")} title={categories.find(option=>option.value===params.get("category"))?.label ?? t("categoriesAll")} value={params.get("category") ?? ""} onChange={(event) => navigate("category", event.target.value)}>
       <option value="">{t("categoriesAll")}</option>{categories.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
     </select>
-    <select aria-label={t("statusAny")} value={params.get("status") ?? ""} onChange={(event) => navigate("status", event.target.value)}>
+    <select aria-label={t("statusAny")} title={statuses.find(option=>option.value===params.get("status"))?.label ?? t("statusAny")} value={params.get("status") ?? ""} onChange={(event) => navigate("status", event.target.value)}>
       <option value="">{t("statusAny")}</option>{statuses.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
     </select>
     <select aria-label={t("sortLabel")} value={params.get("sort") ?? "date"} onChange={(event) => navigate("sort", event.target.value)}>

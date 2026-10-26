@@ -12,6 +12,9 @@ playwright-report/
 data/
 !src/app/data/
 !src/app/data/page.tsx
+!src/app/inventories/**/data/
+src/app/inventories/**/data/*
+!src/app/inventories/**/data/page.tsx
 *.db
 *.sqlite
 *.sqlite3

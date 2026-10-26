@@ -620,3 +620,46 @@ button svg,a.quiet-button svg { flex-shrink: 0; }
 }
 
 .private-field-label { display: inline-flex; align-items: center; gap: 6px; }
+
+/* M3.3B: keep inventory context and its actions together in the header. */
+.topbar { min-height: 68px; height: auto; gap: 12px; padding-block: 10px; }
+.header-location { min-width: 0; display: flex; align-items: center; gap: 8px; }
+.inventory-switcher { display: flex; align-items: center; position: relative; margin: 0; gap: 6px; min-width: 0; }
+.inventory-menu-trigger { display: inline-flex; align-items: center; justify-content: space-between; gap: 10px; height: var(--control-height); max-width: min(320px, 45vw); padding: 0 12px; border: 1px solid var(--control-border); border-radius: var(--control-radius); background: var(--control-bg); color: var(--text); cursor: pointer; font: inherit; font-size: var(--control-font); }
+.inventory-menu-trigger span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inventory-settings-link { border: 1px solid var(--control-border); border-radius: var(--control-radius); background: #22261e; }
+.inventory-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 65; width: min(320px, calc(100vw - 28px)); max-height: min(55dvh, 360px); overflow-y: auto; padding: 6px; border: 1px solid var(--control-border); border-radius: 8px; background: #1c2019; box-shadow: 0 8px 24px #0009; }
+.inventory-menu > button { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 42px; padding: 8px 10px; color: var(--text); text-align: left; border: 0; border-radius: 5px; background: transparent; cursor: pointer; font: inherit; }
+.inventory-menu > button:hover,.inventory-menu > button:focus-visible { background: #30372a; outline: 2px solid var(--green); outline-offset: -2px; }
+.inventory-menu > .inventory-menu-create { justify-content: flex-start; border-top: 1px solid var(--control-border); border-radius: 0; color: var(--green); }
+.inventory-menu:has(.photo-source-overlay) { overflow: visible; }
+.settings-back { display: inline-flex; margin-bottom: 18px; color: #c5d4b4; }
+.settings-back:focus-visible,.item-row-link:focus-visible,.item-category-filter:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.settings-back + h1 { margin-bottom: 22px; }
+.detail-panel .form-action-row { margin-top: 16px; }
+.item-grid-row { position: relative; display: grid; grid-template-columns: 56px minmax(140px,1.4fr) minmax(110px,1fr) minmax(90px,.7fr) auto; gap: 12px; align-items: center; }
+.item-grid-row .item-row-link { position: absolute; inset: 0; z-index: 1; border-radius: inherit; }
+.item-identity,.item-categories,.item-stock { min-width: 0; }
+.item-identity h3 { margin: 0; overflow-wrap: anywhere; }
+.item-identity-meta { display: flex; flex-wrap: wrap; gap: 5px 8px; margin-top: 5px; color: #aeb3a7; font-size: 12px; }
+.item-categories { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.item-category-filter { position: relative; z-index: 2; }
+.item-stock { display: flex; flex-direction: column; gap: 4px; color: #aeb3a7; font-size: 12px; overflow-wrap: anywhere; }
+.item-grid-row .item-index { max-width: 110px; margin: 0; }
+.collection-item-row .item-grid-row { width: 100%; }
+.filter-bar { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.filter-bar > select { min-width: 0; }
+@media (max-width: 1100px) { .filter-bar { grid-template-columns: minmax(0,1fr); } .filter-bar .search-field { grid-column: auto; } }
+@media (max-width: 760px) { .item-grid-row { grid-template-columns: 48px minmax(0,1fr) minmax(100px,.7fr); } .item-categories { grid-column: 2 / 4; } .item-stock { grid-column: 2; } .item-grid-row .item-index { grid-column: 3; } }
+@media (max-width: 560px) {
+  .sidebar { min-height: 0; gap: 6px; padding: 10px 14px; }
+  .topbar { min-height: 58px; padding: 7px 14px; }
+  .inventory-menu-trigger { max-width: min(190px, 46vw); }
+  .inventory-settings-link { width: 40px; min-width: 40px; height: 40px; min-height: 40px; }
+  .filter-bar { grid-template-columns: minmax(0,1fr); }
+  .filter-bar .search-field { grid-column: auto; }
+  .filter-bar > select { width: 100%; }
+  .item-grid-row { grid-template-columns: 48px minmax(0,1fr); }
+  .item-categories,.item-stock,.item-grid-row .item-index { grid-column: 2; }
+  .item-grid-row .item-index { max-width: none; text-align: left; }
+}

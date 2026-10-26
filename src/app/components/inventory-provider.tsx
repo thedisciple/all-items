@@ -5,12 +5,13 @@ import { rememberInventoryAction } from "@/app/inventory-actions";
 import type { Inventory } from "@/items/inventories";
 import { inventoryPath } from "@/items/inventory-context";
 
-type Value = { inventory: Inventory; inventories: Inventory[]; base: string };
+type Counts = { items: number; collections: number };
+type Value = { inventory: Inventory; inventories: Inventory[]; counts: Counts; base: string };
 const Context = createContext<Value | null>(null);
 
-export function InventoryProvider({ inventory, inventories, children }: { inventory: Inventory; inventories: Inventory[]; children: React.ReactNode }) {
+export function InventoryProvider({ inventory, inventories, counts, children }: { inventory: Inventory; inventories: Inventory[]; counts: Counts; children: React.ReactNode }) {
   useEffect(() => { void rememberInventoryAction(inventory.workspaceId).catch(() => {}); }, [inventory.workspaceId]);
-  return <Context.Provider value={{ inventory, inventories, base: inventoryPath(inventory) }}>{children}</Context.Provider>;
+  return <Context.Provider value={{ inventory, inventories, counts, base: inventoryPath(inventory) }}>{children}</Context.Provider>;
 }
 
 export function useInventory() {
