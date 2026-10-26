@@ -40,6 +40,8 @@ async function migrate() {
     await applyMigrations(client, path.join(process.cwd(), "src/db/migrations"));
     const { recoverInventoryImports } = await import("@/export/import");
     await recoverInventoryImports(client, directory);
+    const { recoverInventoryDeletions } = await import("@/items/inventory-deletion");
+    await recoverInventoryDeletions(client, directory);
   } finally {
     await client.close();
   }

@@ -7,7 +7,7 @@ const dataDirectory = path.join(os.tmpdir(), `all-items-m2d-r1-${process.pid}-${
 
 export default defineConfig({
   testDir: "./e2e",
-  testIgnore: "m3_2_import.spec.ts",
+  testIgnore: ["m3_2_import.spec.ts","m3_3a_restart.spec.ts"],
   fullyParallel: false,
   workers: 1,
   reporter: "list",

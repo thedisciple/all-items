@@ -1,5 +1,7 @@
 "use client";
 
+import { LockKeyhole } from "lucide-react";
+
 import { startTransition, useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateItemAction, type ActionFeedback } from "@/app/actions";
@@ -40,11 +42,11 @@ export function ItemEditForm({ itemId, initial, initialRows, returnTo }: { itemI
       <label className="field"><span>{t("itemOriginalMarking")}</span><input maxLength={160} name="originalMarking" value={draft.originalMarking} onChange={field("originalMarking")}/></label>
       <label className="field"><span>{t("identificationStatus")}</span><select name="identificationStatus" value={draft.identificationStatus} onChange={field("identificationStatus")}><option value="unknown">{t("itemStatusUnknown")}</option><option value="user_confirmed">{t("itemStatusConfirmed")}</option><option value="source_verified">{t("itemStatusVerified")}</option></select></label>
 
-      <label className="field"><span>{t("saleIntent")}</span><select name="saleIntent" value={draft.saleIntent} onChange={field("saleIntent")}><option value="not_for_sale">{t("saleNo")}</option><option value="considering">{t("saleConsidering")}</option><option value="willing_to_sell">{t("saleYes")}</option></select></label>
-      <label className="field"><span>{t("askingPrice")}</span><input type="number" min="0" step="0.01" name="askingPrice" value={draft.askingPrice} onChange={field("askingPrice")}/></label>
+      <label className="field"><span className="private-field-label"><LockKeyhole size={12} aria-hidden="true"/>{t("saleIntent")}</span><select name="saleIntent" value={draft.saleIntent} onChange={field("saleIntent")}><option value="not_for_sale">{t("saleNo")}</option><option value="considering">{t("saleConsidering")}</option><option value="willing_to_sell">{t("saleYes")}</option></select></label>
+      <label className="field"><span className="private-field-label"><LockKeyhole size={12} aria-hidden="true"/>{t("askingPrice")}</span><input type="number" min="0" step="0.01" name="askingPrice" value={draft.askingPrice} onChange={field("askingPrice")}/></label>
       <label className="field"><span>{t("currency")}</span><select name="askingCurrency" value={draft.askingCurrency} onChange={field("askingCurrency")}><option value="RUB">RUB</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="HUF">HUF</option></select></label>
       <label className="field full-field"><span>{t("itemDescription")}</span><textarea name="description" maxLength={4000} value={draft.description} onChange={field("description")}/></label>
-      <label className="field full-field"><span>{t("itemNotes")}</span><textarea name="notes" maxLength={2000} value={draft.notes} onChange={field("notes")}/></label>
+      <label className="field full-field"><span className="private-field-label"><LockKeyhole size={12} aria-hidden="true"/>{t("itemNotes")}</span><textarea name="notes" maxLength={2000} value={draft.notes} onChange={field("notes")}/></label>
     </div></details>
     <div className="form-action-row"><FormSubmitButton className="add-button" disabled={pending || !dirty || !draft.name.trim() || !validStockDraft(rows, draft.trackingMode)} pendingLabel={t("savingChanges")}>{pending ? t("savingChanges") : t("saveChanges")}</FormSubmitButton>
       <a className="quiet-button" href={returnTo}>{t("cancel")}</a>

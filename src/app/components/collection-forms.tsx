@@ -1,5 +1,7 @@
 "use client";
 
+import { ActionForm } from "./action-form";
+
 import { useActionState, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createCollectionAction, deleteCollectionAction, renameCollectionAction, type ActionFeedback } from "@/app/actions";
@@ -24,7 +26,7 @@ function handleDialogKeys(event: KeyboardEvent<HTMLElement>, close: () => void) 
 export function CreateCollectionForm() {
   const { t } = useI18n();
   const { base } = useInventory();
-  const [feedback, action] = useActionState(createCollectionAction, idle);
+  const [feedback, action, actionPending] = useActionState(createCollectionAction, idle);
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("");
   const [open, setOpen] = useState(false);
@@ -42,19 +44,19 @@ export function CreateCollectionForm() {
     <button ref={triggerRef} type="button" className="add-button collection-create-trigger" onClick={() => setOpen(true)}>{t("collectionCreateOpen")}</button>
     {open ? <div className="photo-source-overlay add-dialog-overlay" role="presentation"><section ref={dialogRef} className="photo-source-dialog collection-create-dialog" role="dialog" aria-modal="true" aria-labelledby="collection-create-title" onKeyDown={(event) => handleDialogKeys(event, () => setOpen(false))}>
       <div className="dialog-heading"><h3 id="collection-create-title">{t("collectionCreateOpen")}</h3><button type="button" className="icon-button" aria-label={t("close")} onClick={() => setOpen(false)}><X size={18} aria-hidden="true"/></button></div>
-      <form action={action} className="collection-create-form">
+      <ActionForm action={action} pending={actionPending} className="collection-create-form">
         <label className="field"><span>{t("collectionName")}</span><input name="name" value={name} maxLength={120} required placeholder={t("collectionNamePlaceholder")} onChange={(event) => setName(event.target.value)}/></label>
         <CollectionEmojiField label={t("collectionIcon")} value={icon} onChange={setIcon}/>
         {feedback.status === "error" && feedback.message ? <p className="inline-status error-status" role="alert">{feedback.message ? t(feedback.message, feedback.values) : ""}</p> : null}
         <div className="dialog-actions"><FormSubmitButton className="add-button" pendingLabel={t("collectionCreating")}>{t("collectionCreate")}</FormSubmitButton><button type="button" className="quiet-button" onClick={() => setOpen(false)}>{t("cancel")}</button></div>
-      </form>
+      </ActionForm>
     </section></div> : null}
   </>;
 }
 
 export function CollectionManageForms({ id, name, icon }: { id: string; name: string; icon: string | null }) {
   const { t } = useI18n();
-  const [renameFeedback, renameAction] = useActionState(renameCollectionAction, idle);
+  const [renameFeedback, renameAction, renameActionPending] = useActionState(renameCollectionAction, idle);
   const [draftName, setDraftName] = useState(name);
   const [draftIcon, setDraftIcon] = useState(icon ?? "");
   const [editing, setEditing] = useState(false);
@@ -64,13 +66,13 @@ export function CollectionManageForms({ id, name, icon }: { id: string; name: st
   useEffect(() => { if (editing) { nameInput.current?.focus(); nameInput.current?.select(); } }, [editing]);
   return <div className="collection-manage-forms">
     <div className="collection-rename-panel">
-      {!editing ? <button type="button" className="quiet-button collection-edit-trigger" onClick={() => { setDraftName(name); setDraftIcon(icon ?? ""); setEditing(true); }}><Pencil size={15} aria-hidden="true"/>{t("collectionEdit")}</button> : <form action={renameAction} className="collection-rename-form" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); setEditing(false); } }}>
+      {!editing ? <button type="button" className="quiet-button collection-edit-trigger" onClick={() => { setDraftName(name); setDraftIcon(icon ?? ""); setEditing(true); }}><Pencil size={15} aria-hidden="true"/>{t("collectionEdit")}</button> : <ActionForm action={renameAction} pending={renameActionPending} className="collection-rename-form" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); setEditing(false); } }}>
         <input type="hidden" name="id" value={id}/>
         <label className="field"><span>{t("collectionRenameTitle")}</span><input ref={nameInput} name="name" value={draftName} maxLength={120} required onChange={(event) => setDraftName(event.target.value)}/></label>
         <CollectionEmojiField label={t("collectionIcon")} value={draftIcon} onChange={setDraftIcon}/>
         {renameFeedback.status === "error" && renameFeedback.message ? <p className="inline-status error-status" role="alert">{renameFeedback.message ? t(renameFeedback.message, renameFeedback.values) : ""}</p> : null}
         <div className="dialog-actions"><FormSubmitButton disabled={draftName.trim() === name && draftIcon === (icon ?? "")} pendingLabel={t("savingChanges")}>{t("collectionRename")}</FormSubmitButton><button type="button" className="quiet-button" onClick={() => setEditing(false)}>{t("cancel")}</button></div>
-      </form>}
+      </ActionForm>}
     </div>
     <DestructiveConfirmation action={deleteCollectionAction} label={t("collectionDelete")} description={`${t("collectionDeleteWarning")} «${name}»`} fields={{ id }}/>
     {renameFeedback.status === "success" && renameFeedback.message ? <p className="visually-hidden" role="status">{renameFeedback.message ? t(renameFeedback.message, renameFeedback.values) : ""}</p> : null}

@@ -1,18 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useActionState, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Trash2, X } from "lucide-react";
-import { useFormStatus } from "react-dom";
+import { ActionForm } from "./action-form";
+import type { ActionFeedback } from "@/app/actions";
 import { InventoryField } from "./inventory-provider";
 import { useI18n } from "@/i18n/provider";
 
-type FormAction = (formData: FormData) => void | Promise<void>;
-
-function ConfirmButton({ label, pendingLabel, onPendingChange }: { label: string; pendingLabel: string; onPendingChange: (pending: boolean) => void }) {
-  const { pending } = useFormStatus();
-  useEffect(() => onPendingChange(pending), [onPendingChange, pending]);
-  return <button type="submit" className="delete-button" disabled={pending}><Trash2 size={16} aria-hidden="true"/><span>{pending ? pendingLabel : label}</span></button>;
-}
+type FormAction = (formData: FormData) => void | ActionFeedback | Promise<void | ActionFeedback>;
 
 export function DestructiveConfirmation({ action, label, description, fields, children }: {
   action: FormAction;
@@ -23,7 +18,7 @@ export function DestructiveConfirmation({ action, label, description, fields, ch
 }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
-  const [pending, setPending] = useState(false);
+  const [feedback, submit, pending] = useActionState(async (_previous:ActionFeedback,data:FormData):Promise<ActionFeedback> => await action(data) ?? {status:"idle",message:""}, {status:"idle",message:""});
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
   const didOpen = useRef(false);
@@ -54,11 +49,12 @@ export function DestructiveConfirmation({ action, label, description, fields, ch
         <div className="dialog-heading"><h2 id="destructive-title">{label}</h2><button type="button" className="icon-button" aria-label={t("close")} disabled={pending} onClick={() => setOpen(false)}><X size={18} aria-hidden="true"/></button></div>
         <p id="destructive-description">{description}</p>
         {children}
-        <form action={action} className="destructive-form">
+        <ActionForm action={submit} pending={pending} className="destructive-form">
           {Object.entries(fields).map(([name, value]) => <input key={name} type="hidden" name={name} value={value}/>)}
           <InventoryField/><input type="hidden" name="confirm" value="on"/>
-          <div className="dialog-actions"><button type="button" className="text-button" disabled={pending} onClick={() => setOpen(false)}>{t("cancel")}</button><ConfirmButton label={label} pendingLabel={t("deleting")} onPendingChange={setPending}/></div>
-        </form>
+          {feedback.status === "error" && feedback.message ? <p role="alert" className="form-error">{t(feedback.message, feedback.values)}</p> : null}
+          <div className="dialog-actions"><button type="button" className="text-button" disabled={pending} onClick={() => setOpen(false)}>{t("cancel")}</button><button type="submit" className="delete-button" disabled={pending}><Trash2 size={16} aria-hidden="true"/><span>{pending ? t("deleting") : label}</span></button></div>
+        </ActionForm>
       </section>
     </div> : null}
   </>;

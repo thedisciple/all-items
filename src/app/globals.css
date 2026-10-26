@@ -618,3 +618,5 @@ button svg,a.quiet-button svg { flex-shrink: 0; }
   .crop-dialog { height: auto; } .crop-dialog .crop-editor-body > .photo-cropper-widget { height: clamp(150px,30dvh,300px) !important; }
   .crop-actions button { flex: 1 1 auto; }
 }
+
+.private-field-label { display: inline-flex; align-items: center; gap: 6px; }

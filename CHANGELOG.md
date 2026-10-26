@@ -1,5 +1,16 @@
 # Changelog
 
+## M3.3A - Multiple inventories and non-destructive import
+
+- Unified controls, stable filters, compact dismissible categories, visible collection-name entry and aligned emoji/actions; focused item editor and quieter private labels.
+- Content-sized crop dialog and coherent handles/zoom; complete collection-cover viewer with contextual editing and explicit Add Cover.
+- Explicit validated inventory context across routes, services, stock, collections, media, cleanup and exports; independent immutable number sequences and additive SQLite ownership guards.
+- Create, rename, switch and confirmed scoped deletion with a verified private SQLite/media backup, transactional checks and cleanup recovery. Final deletion remains empty after restart.
+- Revision 4 ZIP export and new-inventory import with complete UUID/reference remapping; tested revision 2/3 recovery adapters, bounded validation, exclusive promotion, retained journals/source archives and transaction commit markers.
+- Semantic five-language feedback translated at render time; recoverable form failures retain fields and files. Accounts, public access, AI and M3.3B remain out of scope.
+- Migrations: `0008_inventory_boundaries.sql`, `0009_inventory_import_operations.sql`. See [validation report](docs/architecture/m3-3a-validation.md) for checks and limitations.
+
+
 ## M3.3A — checkpoints A, B and C
 
 - Added non-destructive archive import with fresh identity mapping, private staged media, transaction markers, interruption recovery and retained source archives.

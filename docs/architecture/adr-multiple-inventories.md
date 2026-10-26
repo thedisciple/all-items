@@ -1,6 +1,6 @@
 # ADR: multiple inventories and non-destructive archive import
 
-Status: accepted; inventory context, integrity constraints, scoped services/routes and create/rename/switching implemented in M3.3A checkpoint B. Checkpoint C implements import-as-new with complete ID mapping, private staging, a transaction commit marker, serialized operations and startup recovery. Scoped deletion is the subsequent checkpoint.
+Status: accepted; inventory context, integrity constraints, scoped services/routes and create/rename/switching implemented in M3.3A checkpoint B. Checkpoint C implements import-as-new with complete ID mapping, private staging, a transaction commit marker, serialized operations and startup recovery. Checkpoint D completes scoped deletion, verified backups, cleanup recovery and semantic localization.
 
 ## Decision and concepts
 
@@ -32,9 +32,9 @@ Use canonical `/inventories/<UUID>/...` routes for inventory, collections, detai
 
 If no inventories remain after an explicit deletion, show the Create Inventory landing state; do not silently recreate deleted data or interpret the situation as permission to import into another inventory.
 
-## Required boundary audit before enabling switching
+## Historical boundary audit before M3.3A switching
 
-| Boundary | Current implementation | Required M3.3A work |
+| Boundary | Before M3.3A | Required M3.3A work |
 | --- | --- | --- |
 | Workspace initialization | initializeWorkspace() uses one constant UUID | Separate installation initialization from context resolution; never create a workspace as a side effect of reading an arbitrary ID |
 | Items/counts/search/categories | service.ts scopes parent reads and writes to the constant; child rows are reached through item IDs | Require context in every operation, including count/category suggestions and search subqueries; preserve EXISTS filtering without duplicate items |
@@ -64,3 +64,9 @@ Define a new archive revision for arbitrary inventory identity. Retain a tested 
 Rename changes only a display name. Export is scoped to the chosen inventory. Delete requires an explicit confirmation naming the inventory and its item count; it affects only owned metadata/media and chooses a safe remaining inventory afterward. Do not add a global Clear All control. Replacement remains a separate future workflow requiring a verified pre-replacement database/media backup, an explicit target, staged activation and a tested recovery path.
 
 M3.3A checkpoints: context and additive integrity migrations; scoped services/routes with isolation tests; switcher/create/rename; import-as-new with remapping and interruption tests; scoped deletion and full preservation/browser checks. Keep authentication and cloud work out of this local milestone. M3.3B retains the previously planned crash/reload draft recovery and local preferences work. Neither stage is implemented by M3.2-R1.
+
+## M3.3A deletion and localization completion
+
+Deletion validates the explicit context, checks real counts and requires the exact name for a populated inventory. A verified SQLite/media backup precedes mutation. A write transaction compares scoped rows and media hashes with the backup snapshot, aborts on changes, deletes only target-owned rows and checks foreign keys. A private durable deletion journal records generated media paths before commit. Post-commit cleanup checks live references across inventories; interrupted cleanup resumes at startup. Backups remain private and are not automatically expired. A transaction failure leaves the target intact. The final inventory may be deleted; the one-time migration seed never silently recreates it.
+
+Application feedback carries dictionary keys and separate parameters. Existing errors re-render with the current locale without translating user-entered names. Selection preference survives process restart and is never authorization. Legacy detail/media routes deliberately resolve the original inventory rather than a mutable cookie. See [validation](m3-3a-validation.md).

@@ -1,4 +1,8 @@
 const ru = {
+  inventoryChanged: "Инвентарь изменился. Проверьте данные и повторите.",
+  operationFailed: "Не удалось выполнить действие. Попробуйте ещё раз.",
+  unidentifiedItemName: "Неизвестный предмет",
+  appDescription: "Личный инвентарь на вашем устройстве.",
   inventoryBusy: "Другая операция ещё выполняется. Попробуйте немного позже.",
   retry: "Повторить",
 
@@ -267,6 +271,10 @@ const ru = {
 } as const;
 
 const en: Record<MessageKey, string> = {
+  inventoryChanged: "Inventory changed. Review the data and try again.",
+  operationFailed: "Could not complete the action. Please try again.",
+  unidentifiedItemName: "Unidentified item",
+  appDescription: "Private inventory on your device.",
   inventoryBusy: "Another operation is still running. Try again shortly.",
   retry: "Retry",
 
@@ -368,6 +376,10 @@ const en: Record<MessageKey, string> = {
 };
 
 const uk: Record<MessageKey, string> = {
+  inventoryChanged: "Інвентар змінився. Перевірте дані та повторіть.",
+  operationFailed: "Не вдалося виконати дію. Спробуйте ще раз.",
+  unidentifiedItemName: "Невідомий предмет",
+  appDescription: "Особистий інвентар на вашому пристрої.",
   inventoryBusy: "Інша операція ще виконується. Спробуйте трохи пізніше.",
   retry: "Повторити",
 
@@ -408,6 +420,10 @@ const uk: Record<MessageKey, string> = {
 };
 
 const srLatn: Record<MessageKey, string> = {
+  inventoryChanged: "Inventar je promenjen. Proverite podatke i pokušajte ponovo.",
+  operationFailed: "Radnja nije uspela. Pokušajte ponovo.",
+  unidentifiedItemName: "Nepoznat predmet",
+  appDescription: "Privatni inventar na vašem uređaju.",
   inventoryBusy: "Druga operacija je još u toku. Pokušajte uskoro ponovo.",
   retry: "Pokušaj ponovo",
 
@@ -448,6 +464,10 @@ const srLatn: Record<MessageKey, string> = {
 };
 
 const zhHans: Record<MessageKey, string> = {
+  inventoryChanged: "库存已更改。请检查数据后重试。",
+  operationFailed: "操作失败。请重试。",
+  unidentifiedItemName: "未识别物品",
+  appDescription: "设备上的私人物品清单。",
   inventoryBusy: "另一项操作仍在进行中，请稍后重试。",
   retry: "重试",
 

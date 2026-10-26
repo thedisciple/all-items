@@ -10,7 +10,9 @@ import { addItemToCollection, addItemsToCollection, createCollection, deleteColl
 import { replaceCollectionCoverUpload } from "@/media/collection-covers";
 import { resolveInventory } from "@/items/inventories";
 import { inventoryPath, inventoryReturnPath } from "@/items/inventory-context";
-import { locales, type MessageKey } from "@/i18n/messages";
+import { locales, translate, type MessageKey } from "@/i18n/messages";
+
+import { getLocale } from "@/i18n/server";
 
 export type ActionFeedback = { status: "idle" | "success" | "error"; message: MessageKey | ""; values?: Record<string,string|number>; itemId?: string; collectionId?: string; count?: number };
 export type PhotoActionFeedback = ActionFeedback & { mediaId?: string };
@@ -47,13 +49,14 @@ function formValues(formData: FormData) {
 }
 
 export async function addItemAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
-  const context = await resolveInventory(formData.get("inventoryId"));
+  const context = await resolveInventory(formData.get("inventoryId")).catch(() => null);
+  if (!context) return { status: "error", message: "inventoryNotFound" };
   const uploaded = formData.get("photo");
   const file = uploaded instanceof File && uploaded.size > 0 ? uploaded : null;
   const sourceInput = formData.get("photoSource");
   const sourceFile = sourceInput instanceof File && sourceInput.size > 0 ? sourceInput : file;
   const cropValue = String(formData.get("crop") ?? "");
-  const values = photoFirstItemValues(formValues(formData) as ItemFields, file !== null);
+  const values = photoFirstItemValues(formValues(formData) as ItemFields, file !== null, translate(await getLocale(), "unidentifiedItemName"));
   const name = values.name.trim();
   if (!name && !file) return { status: "error", message: "invalidItem" };
   let item: { id: string };
@@ -70,7 +73,8 @@ export async function addItemAction(_previous: ActionFeedback, formData: FormDat
 }
 
 export async function replacePhotoAction(_previous: PhotoActionFeedback, formData: FormData): Promise<PhotoActionFeedback> {
-  const context = await resolveInventory(formData.get("inventoryId"));
+  const context = await resolveInventory(formData.get("inventoryId")).catch(() => null);
+  if (!context) return { status: "error", message: "inventoryNotFound" };
   const id = z.string().uuid().safeParse(String(formData.get("id") ?? ""));
   if (!id.success) return { status: "error", message: "missingPhotoItem" };
   const file = formData.get("photo");
@@ -88,17 +92,22 @@ export async function replacePhotoAction(_previous: PhotoActionFeedback, formDat
   }
 }
 
-export async function removePhoto(formData: FormData) {
-  const context = await resolveInventory(formData.get("inventoryId"));
-  const id = z.string().uuid().parse(String(formData.get("id") ?? ""));
+export async function removePhoto(formData: FormData): Promise<void | ActionFeedback> {
+  const context = await resolveInventory(formData.get("inventoryId")).catch(() => null);
+  if (!context) return { status: "error", message: "inventoryNotFound" };
+  const id = z.string().uuid().safeParse(String(formData.get("id") ?? ""));
+  if (!id.success) return {status:"error",message:"operationFailed"};
+  try {
   z.literal("on", { error: "photoDeleteConfirm" }).parse(formData.get("confirm"));
-  await removePrimaryPhoto(context, id);
-  revalidatePath(inventoryPath(context)); revalidatePath(inventoryPath(context,`/items/${id}`));
-  redirect(inventoryPath(context,`/items/${id}`));
+  await removePrimaryPhoto(context, id.data);
+  } catch { return {status:"error",message:"operationFailed"}; }
+  revalidatePath(inventoryPath(context)); revalidatePath(inventoryPath(context,`/items/${id.data}`));
+  redirect(inventoryPath(context,`/items/${id.data}`));
 }
 
 export async function updateItemAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
-  const context = await resolveInventory(formData.get("inventoryId"));
+  const context = await resolveInventory(formData.get("inventoryId")).catch(() => null);
+  if (!context) return { status: "error", message: "inventoryNotFound" };
   const id = z.string().uuid().safeParse(String(formData.get("id") ?? ""));
   if (!id.success) return { status: "error", message: "missingItemId" };
   let returnTo: string;
@@ -112,7 +121,8 @@ export async function updateItemAction(_previous: ActionFeedback, formData: Form
 }
 
 export async function createCollectionAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
-  const context = await resolveInventory(formData.get("inventoryId"));
+  const context = await resolveInventory(formData.get("inventoryId")).catch(() => null);
+  if (!context) return { status: "error", message: "inventoryNotFound" };
   try {
     const collection = await createCollection(context, { name: formData.get("name"), icon: formData.get("icon") });
     revalidatePath(inventoryPath(context,"/collections"));
@@ -121,7 +131,8 @@ export async function createCollectionAction(_previous: ActionFeedback, formData
 }
 
 export async function addItemsToCollectionAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
-  const context = await resolveInventory(formData.get("inventoryId"));
+  const context = await resolveInventory(formData.get("inventoryId")).catch(() => null);
+  if (!context) return { status: "error", message: "inventoryNotFound" };
   const collectionId = z.string().uuid().safeParse(formData.get("collectionId"));
   const itemIds = z.array(z.string().uuid()).min(1).max(500).safeParse(formData.getAll("itemId").map(String));
   if (!collectionId.success || !itemIds.success) return { status: "error", message: "chooseItems" };
@@ -133,7 +144,8 @@ export async function addItemsToCollectionAction(_previous: ActionFeedback, form
 }
 
 export async function setCollectionCoverAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
-  const context = await resolveInventory(formData.get("inventoryId"));
+  const context = await resolveInventory(formData.get("inventoryId")).catch(() => null);
+  if (!context) return { status: "error", message: "inventoryNotFound" };
   const collectionId = z.string().uuid().safeParse(formData.get("collectionId"));
   if (!collectionId.success) return { status: "error", message: "missingCollectionId" };
   const type = z.enum(["item_photo", "upload", "emoji", "default"]).safeParse(formData.get("coverType"));
@@ -162,7 +174,8 @@ export async function setCollectionCoverAction(_previous: ActionFeedback, formDa
 }
 
 export async function renameCollectionAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
-  const context = await resolveInventory(formData.get("inventoryId"));
+  const context = await resolveInventory(formData.get("inventoryId")).catch(() => null);
+  if (!context) return { status: "error", message: "inventoryNotFound" };
   const id = z.string().uuid().safeParse(formData.get("id"));
   if (!id.success) return { status: "error", message: "missingCollectionId" };
   try {
@@ -172,17 +185,22 @@ export async function renameCollectionAction(_previous: ActionFeedback, formData
   } catch (error) { return { status: "error", message: errorMessage(error, "collectionRenameGeneric") }; }
 }
 
-export async function deleteCollectionAction(formData: FormData): Promise<void> {
-  const context = await resolveInventory(formData.get("inventoryId"));
-  const id = z.string().uuid().parse(formData.get("id"));
+export async function deleteCollectionAction(formData: FormData): Promise<void | ActionFeedback> {
+  const context = await resolveInventory(formData.get("inventoryId")).catch(() => null);
+  if (!context) return { status: "error", message: "inventoryNotFound" };
+  const id = z.string().uuid().safeParse(formData.get("id"));
+  if (!id.success) return {status:"error",message:"operationFailed"};
+  try {
   z.literal("on", { error: "collectionDeleteConfirmError" }).parse(formData.get("confirm"));
-  await deleteCollection(context, id);
-  revalidatePath(inventoryPath(context,"/collections")); revalidatePath(inventoryPath(context,`/collections/${id}`)); revalidatePath(inventoryPath(context));
+  await deleteCollection(context, id.data);
+  } catch { return {status:"error",message:"operationFailed"}; }
+  revalidatePath(inventoryPath(context,"/collections")); revalidatePath(inventoryPath(context,`/collections/${id.data}`)); revalidatePath(inventoryPath(context));
   redirect(inventoryPath(context,"/collections"));
 }
 
 export async function addCollectionMembershipAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
-  const context = await resolveInventory(formData.get("inventoryId"));
+  const context = await resolveInventory(formData.get("inventoryId")).catch(() => null);
+  if (!context) return { status: "error", message: "inventoryNotFound" };
   const itemId = z.string().uuid().safeParse(formData.get("itemId"));
   const collectionId = z.string().uuid().safeParse(formData.get("collectionId"));
   if (!itemId.success || !collectionId.success) return { status: "error", message: "chooseCollection" };
@@ -194,20 +212,26 @@ export async function addCollectionMembershipAction(_previous: ActionFeedback, f
 }
 
 export async function removeCollectionMembershipAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
-  const context = await resolveInventory(formData.get("inventoryId"));
+  const context = await resolveInventory(formData.get("inventoryId")).catch(() => null);
+  if (!context) return { status: "error", message: "inventoryNotFound" };
   const itemId = z.string().uuid().safeParse(formData.get("itemId"));
   const collectionId = z.string().uuid().safeParse(formData.get("collectionId"));
   if (!itemId.success || !collectionId.success) return { status: "error", message: "membershipUnknown" };
-  await removeItemFromCollection(context, collectionId.data, itemId.data);
+  try { await removeItemFromCollection(context, collectionId.data, itemId.data); }
+  catch (error) { return {status:"error",message:errorMessage(error,"operationFailed")}; }
   revalidatePath(inventoryPath(context,`/items/${itemId.data}`)); revalidatePath(inventoryPath(context,`/collections/${collectionId.data}`));
   return { status: "success", message: "collectionRemoved" };
 }
 
-export async function removeItem(formData: FormData) {
-  const context = await resolveInventory(formData.get("inventoryId"));
-  const id = z.string().uuid().parse(String(formData.get("id") ?? ""));
+export async function removeItem(formData: FormData): Promise<void | ActionFeedback> {
+  const context = await resolveInventory(formData.get("inventoryId")).catch(() => null);
+  if (!context) return { status: "error", message: "inventoryNotFound" };
+  const id = z.string().uuid().safeParse(String(formData.get("id") ?? ""));
+  if (!id.success) return {status:"error",message:"operationFailed"};
+  try {
   z.literal("on", { error: "itemDeleteConfirmError" }).parse(formData.get("confirm"));
-  await deleteItemWithMedia(context, id);
+  await deleteItemWithMedia(context, id.data);
+  } catch { return {status:"error",message:"operationFailed"}; }
   revalidatePath(inventoryPath(context));
   redirect(inventoryPath(context));
 }

@@ -22,11 +22,11 @@ export const itemFields = z.object({
 });
 export type ItemFields = z.input<typeof itemFields>;
 
-export function photoFirstItemValues(input: ItemFields, hasPhoto: boolean): ItemFields {
+export function photoFirstItemValues(input: ItemFields, hasPhoto: boolean, fallbackName = "Unidentified item"): ItemFields {
   const suppliedName = input.name.trim();
   return {
     ...input,
-    name: suppliedName || (hasPhoto ? "Неизвестный предмет" : ""),
+    name: suppliedName || (hasPhoto ? fallbackName : ""),
     identificationStatus: suppliedName ? input.identificationStatus : "unknown",
   };
 }

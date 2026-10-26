@@ -28,3 +28,6 @@
 - Evaluate user-visible changes for keyboard access, visible focus, Russian labels and feedback, 360px layouts, reduced motion, and accessible pending/error states.
 - Before a coherent commit, run `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build`; report any unavailable check accurately.
 - Inspect staged file names and diffs for local data, generated files, and secrets before committing. Use concise conventional commit messages and preserve existing history.
+
+- Return semantic dictionary keys and separate parameters from server actions; translate errors at render time. Preserve fields and File state on recoverable failures.
+- Inventory deletion requires a verified private database/media backup, explicit target/counts/confirmation, scoped transactional deletion, reference-checked cleanup and an interruption journal. Never recreate a deleted final inventory.

@@ -39,3 +39,7 @@ Limits are 128 MiB compressed and expanded, 32 MiB per entry, 20,000 entries, 24
 ## CSV
 
 CSV remains a separate UTF-8 spreadsheet view with BOM, quoted fields, comma delimiters, CRLF row endings and formula-injection protection. Its Categories cell contains a JSON string array, with normal CSV quoting, so semicolons, commas and quotes in custom labels remain unambiguous. It excludes photographs and complete restoration relationships. CSV cannot contain visual cell styling; a styled XLSX export is a future opportunity.
+
+## Inventory deletion boundary
+
+Deleting an inventory is separate from import and export. It keeps a verified private full-installation database/media snapshot, confirms the explicit target, deletes only scoped rows transactionally and journals generated media cleanup. The portable archive is never a replacement shortcut. Existing ZIP files are not removed. Backup restoration and explicit replace-inventory orchestration remain future recovery work.

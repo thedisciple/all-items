@@ -33,7 +33,7 @@ beforeAll(async () => {
 describe("M1 inventory", () => {
   it("validates item fields and trims user input", () => {
     expect(itemFields.parse({ name: "  Вольтметр  " }).name).toBe("Вольтметр");
-    expect(photoFirstItemValues({ name: "", model: " HC-12 " }, true)).toMatchObject({ name: "Неизвестный предмет", model: " HC-12 ", identificationStatus: "unknown" });
+    expect(photoFirstItemValues({ name: "", model: " HC-12 " }, true, "Неизвестный предмет")).toMatchObject({ name: "Неизвестный предмет", model: " HC-12 ", identificationStatus: "unknown" });
     expect(() => itemFields.parse({ name: "  " })).toThrow();
     expect(itemFields.parse({ name: "Тестер", saleIntent: "willing_to_sell" }).saleIntent).toBe("willing_to_sell");
   });

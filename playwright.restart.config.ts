@@ -1,0 +1,7 @@
+import { defineConfig } from "@playwright/test";
+
+export default defineConfig({
+  testDir:"./e2e",testMatch:"m3_3a_restart.spec.ts",workers:1,timeout:180_000,
+  expect:{timeout:10_000},reporter:"list",
+  use:{baseURL:"http://127.0.0.1:3104",browserName:"chromium",channel:"msedge",headless:true,locale:"ru-RU",trace:"retain-on-failure"},
+});

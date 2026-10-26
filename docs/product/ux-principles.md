@@ -43,3 +43,7 @@ These principles apply to product decisions and code review. They summarize the 
 See [interaction patterns](interaction-patterns.md) for current and proposed state transitions.
 
 Equivalent native fields, selection triggers and actions share control geometry. Keep ordinary Save/Cancel rows horizontal when they fit, reserve filter reset space, avoid duplicate editable metadata, and keep required inputs clear of palettes. Use full-image collection cover viewing with contextual editing and an explicit Add Cover state.
+
+## Independent inventories and truthful recovery
+
+An explicit route identifies the current organizational space. Switching clears unrelated collection filters. Each inventory has its own immutable display-number sequence; deletion leaves gaps. Import creates a separately named space after preview and verified completion, preserving existing inventories. A populated-inventory deletion names its target, shows actual counts and requires the exact name. Keep a verified private backup and journal cleanup. The last deletion leads to Create Inventory, including after restart. Never imply account isolation or crash/reload draft recovery. Translate semantic errors at render time and preserve selected File/input state on recoverable failures.

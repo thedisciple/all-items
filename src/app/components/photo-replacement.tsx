@@ -1,5 +1,7 @@
 "use client";
 
+import { ActionForm } from "./action-form";
+
 import { useActionState, useCallback, useEffect, useState } from "react";
 import { replacePhotoAction, type PhotoActionFeedback } from "@/app/actions";
 import { PhotoAcquisition } from "./photo-acquisition";
@@ -12,7 +14,7 @@ const idle: PhotoActionFeedback = { status: "idle", message: "" };
 export function PhotoReplacement({ itemId, photoUrl, itemName }: { itemId: string; photoUrl: string | null; itemName: string }) {
   const { t } = useI18n();
   const { base } = useInventory();
-  const [feedback, action] = useActionState(replacePhotoAction, idle);
+  const [feedback, action, actionPending] = useActionState(replacePhotoAction, idle);
   const [savedUrl, setSavedUrl] = useState(photoUrl);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const updatePreview = useCallback((url: string | null) => setPreviewUrl(url), []);
@@ -29,7 +31,7 @@ export function PhotoReplacement({ itemId, photoUrl, itemName }: { itemId: strin
     setPreviewUrl(null);
   }, [photoUrl]);
 
-  return <form action={action} className="photo-replacement-form">
+  return <ActionForm action={action} pending={actionPending} className="photo-replacement-form">
     <InventoryField/><input type="hidden" name="id" value={itemId}/>
     <div className="item-photo-viewer">
       {previewUrl || savedUrl ? <PhotoViewer src={previewUrl ?? savedUrl ?? ""} alt={`${t("photo")}: ${itemName}`}/> : <div className="compact-photo-placeholder"><span aria-hidden="true">{t("photo")}</span><p>{t("photoMissing")}</p></div>}
@@ -37,5 +39,5 @@ export function PhotoReplacement({ itemId, photoUrl, itemName }: { itemId: strin
     </div>
     <PhotoAcquisition name="photo" currentPhotoUrl={savedUrl} autoSubmit savedToken={feedback.status === "success" ? feedback.mediaId : undefined} resultToken={feedback.message ? t(feedback.message, feedback.values) : ""} retryReady={feedback.status === "error"} externalPreview onPreviewChange={updatePreview}/>
     {feedback.status === "error" && feedback.message ? <p className="inline-status error-status" role="alert">{feedback.message ? t(feedback.message, feedback.values) : ""}</p> : feedback.status === "success" && feedback.message ? <p className="visually-hidden" role="status">{feedback.message ? t(feedback.message, feedback.values) : ""}</p> : null}
-  </form>;
+  </ActionForm>;
 }

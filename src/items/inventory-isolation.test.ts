@@ -13,6 +13,7 @@ import { addItemsToCollection, addItemToCollection, createCollection, deleteColl
 import { createItemWithPhoto, deleteItemWithMedia, getNormalizedPhotoForAnalysis, getPrimaryPhoto, readPrimaryPhoto, removeAssetFiles, removePrimaryPhoto, replacePrimaryPhoto } from "@/media/service";
 import { readCollectionCover, removeCollectionCoverAssetFiles, replaceCollectionCoverUpload } from "@/media/collection-covers";
 import { createInventoryArchive, createInventoryCsv, readInventoryArchive } from "@/export/archive";
+import { deleteInventory, recoverInventoryDeletions } from "./inventory-deletion";
 
 let home: Inventory, workshop: Inventory;
 let homeItems: string[], workshopItems: string[], homeCollection: string, workshopCollection: string, workshopMedia: string, workshopCover: string;
@@ -103,6 +104,48 @@ it("rejects foreign identifiers across reads, mutations, media, covers and clean
   expect(await rows()).toBe(before);
   expect(await readPrimaryPhoto(workshop,workshopItems[0]!,workshopMedia,"image")).toEqual(photo);
   expect(await readCollectionCover(workshop,workshopCollection,workshopCover,false)).toEqual(cover);
+},20_000);
+
+it("deletes only the confirmed inventory after a verified backup and recovers interrupted cleanup",async()=>{
+  const client=(await getDatabase()).$client;
+  const before=await rows();
+  const target=await createInventory("Delete synthetic");
+  const item=await createItemWithPhoto(target,{name:"Disposable",categories:["tools"],trackingMode:"bulk"},image,image,"",[{location:"Shelf",quantity:3}]);
+  const collection=await createCollection(target,{name:"Disposable collection"});
+  await addItemsToCollection(target,collection.id,[item.id]);
+  const coverId=await replaceCollectionCoverUpload(target,collection.id,image);
+  const photo=(await getPrimaryPhoto(target,item.id))!;
+  const photoPath=path.join(directory,"media/items",`${item.id}/${photo.id}.webp`);
+  const coverPath=path.join(directory,"media/collections",collection.id,`${coverId}.webp`);
+  const populated=await rows();
+  await expect(deleteInventory(target,"wrong",{client,directory})).rejects.toThrow("confirmation");
+  expect(await rows()).toBe(populated);
+  await expect(deleteInventory(target,target.name,{client,directory},"transaction")).rejects.toThrow("Simulated");
+  expect(await rows()).toBe(populated);
+  expect((await readFile(photoPath)).length).toBeGreaterThan(0);
+  const result=await deleteInventory(target,target.name,{client,directory},"cleanup");
+  expect(result.cleanupPending).toBe(true);
+  const hashes=JSON.parse(await readFile(path.join(result.backup,"verified-sha256.json"),"utf8"));
+  expect(hashes["all-items.db"]).toMatch(/^[a-f0-9]{64}$/);
+  expect(createHash("sha256").update(await readFile(photoPath)).digest("hex")).toBe(hashes[`media/items/${item.id}/${photo.id}.webp`]);
+  expect(await rows()).toBe(before);
+  await recoverInventoryDeletions(client,directory);
+  await expect(readFile(photoPath)).rejects.toThrow();
+  await expect(readFile(coverPath)).rejects.toThrow();
+  expect(await rows()).toBe(before);
+  expect((await readPrimaryPhoto(workshop,workshopItems[0]!,workshopMedia,"source"))!.length).toBeGreaterThan(0);
+  expect((await readCollectionCover(workshop,workshopCollection,workshopCover))!.length).toBeGreaterThan(0);
+  expect((await client.execute("PRAGMA foreign_key_check")).rows).toEqual([]);
+  expect((await client.execute("PRAGMA integrity_check")).rows[0]!.integrity_check).toBe("ok");
+},30_000);
+
+it("allows explicit empty inventory deletion without recreating it",async()=>{
+  const target=await createInventory("Empty to delete");
+  const result=await deleteInventory(target,"");
+  expect(result.cleanupPending).toBe(false);
+  await expect(resolveInventory(target.workspaceId)).rejects.toThrow();
+  await recoverInventoryDeletions((await getDatabase()).$client,directory);
+  await expect(resolveInventory(target.workspaceId)).rejects.toThrow();
 },20_000);
 
 it("enforces ownership and immutable numbering in SQLite, including intentional direct-SQL cross references",async()=>{

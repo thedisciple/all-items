@@ -3,9 +3,10 @@
 import { PrivateImage } from "./private-image";
 
 import { useEffect, useRef, useState } from "react";
-import { useFormStatus } from "react-dom";
+import { useSubmissionPending } from "./action-form";
+import type { MessageKey } from "@/i18n/messages";
 import type CropperJS from "cropperjs";
-import { ImagePlus, Pencil, RefreshCw } from "lucide-react";
+import { ImagePlus, Pencil, RefreshCw, X } from "lucide-react";
 import { PhotoCropper } from "./photo-cropper";
 import { useI18n } from "@/i18n/provider";
 
@@ -52,10 +53,10 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
   const [cropFile, setCropFile] = useState<File | null>(null);
   const [sourceOpen, setSourceOpen] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const [cameraMessage, setCameraMessage] = useState("");
+  const [cameraMessage, setCameraMessage] = useState<MessageKey|"">("");
   const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
-  const [selectionError, setSelectionError] = useState("");
-  const { pending } = useFormStatus();
+  const [selectionError, setSelectionError] = useState<MessageKey|"">("");
+  const pending = useSubmissionPending();
 
   useEffect(() => {
     if (!previewUrl) return;
@@ -80,7 +81,7 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
   useEffect(() => {
     if (!stream || !videoRef.current) return;
     videoRef.current.srcObject = stream;
-    void videoRef.current.play().catch(() => setCameraMessage(t("photoPreviewFailed")));
+    void videoRef.current.play().catch(() => setCameraMessage("photoPreviewFailed"));
   }, [stream]);
 
   useEffect(() => {
@@ -118,13 +119,13 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
 
   function selectFile(file: File) {
     if (file.size > maxBytes) {
-      setSelectionError(t("photoFileTooLarge"));
+      setSelectionError("photoFileTooLarge");
       if (selectedFile) setInputFile(inputRef, selectedFile);
       else if (inputRef.current) inputRef.current.value = "";
       return;
     }
     if (file.type && !acceptedTypes.has(file.type)) {
-      setSelectionError(t("photoTypeInvalid"));
+      setSelectionError("photoTypeInvalid");
       if (selectedFile) setInputFile(inputRef, selectedFile);
       else if (inputRef.current) inputRef.current.value = "";
       return;
@@ -182,18 +183,18 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
       onPreviewChange?.(null);
       setCropFile(file);
     } catch {
-      setSelectionError(t("photoSelectionFailed"));
+      setSelectionError("photoSelectionFailed");
     }
   }
 
   async function startCamera(mode = facingMode) {
     setCameraMessage("");
     if (typeof window === "undefined" || !window.isSecureContext) {
-      setCameraMessage(t("secureCamera"));
+      setCameraMessage("secureCamera");
       return;
     }
     if (!navigator.mediaDevices?.getUserMedia) {
-      setCameraMessage(t("cameraUnsupported"));
+      setCameraMessage("cameraUnsupported");
       return;
     }
     stopCamera();
@@ -207,14 +208,14 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
       streamRef.current = nextStream;
       setStream(nextStream);
     } catch (error) {
-      if (requestId === cameraRequestRef.current) setCameraMessage(t(cameraErrorKey(error) as Parameters<typeof t>[0]));
+      if (requestId === cameraRequestRef.current) setCameraMessage(cameraErrorKey(error) as MessageKey);
     }
   }
 
   async function capturePhoto() {
     const video = videoRef.current;
     if (!video?.videoWidth || !video.videoHeight) {
-      setCameraMessage(t("cameraWait"));
+      setCameraMessage("cameraWait");
       return;
     }
     const canvas = document.createElement("canvas");
@@ -222,7 +223,7 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
     canvas.height = video.videoHeight;
     canvas.getContext("2d")?.drawImage(video, 0, 0);
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
-    if (!blob) { setCameraMessage(t("cameraCaptureFailed")); return; }
+    if (!blob) { setCameraMessage("cameraCaptureFailed"); return; }
     const file = new File([blob], `camera-${Date.now()}.jpg`, { type: "image/jpeg", lastModified: Date.now() });
     selectFile(file);
   }
@@ -268,7 +269,7 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
       {selectedFile && retryReady && !pending ? <button type="button" className="quiet-button" onClick={() => { submittingRef.current = true; inputRef.current?.form?.requestSubmit(); }}>{t("retryUpload")}</button> : null}
     </div>
     {selectedFile ? <p className="photo-file-caption">{t("photoChosen", { name: selectedFile.name, size: new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(selectedFile.size / (1024 * 1024)) })}</p> : null}
-    {selectionError ? <p className="form-error" role="alert">{selectionError}</p> : null}
+    {selectionError ? <p className="form-error" role="alert">{t(selectionError)}</p> : null}
     {pending ? <p className="inline-status" role="status" aria-live="polite">{t("photoPending")}</p> : null}
     {sourceOpen ? <div className="photo-source-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeSources(); }}>
       <section ref={dialogRef} className="photo-source-dialog" role="dialog" aria-modal="true" aria-labelledby="photo-source-title" onKeyDown={(event) => {
@@ -278,14 +279,14 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
         if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
         else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
       }}>
-        <div className="dialog-heading"><h3 id="photo-source-title">{stream ? t("cameraCapture") : t("photo")}</h3><button type="button" className="icon-button" aria-label={t("close")} onClick={closeSources}>×</button></div>
+        <div className="dialog-heading"><h3 id="photo-source-title">{stream ? t("cameraCapture") : t("photo")}</h3><button type="button" className="icon-button" aria-label={t("close")} onClick={closeSources}><X size={18} aria-hidden="true"/></button></div>
         {stream ? <>
           <video ref={videoRef} className="camera-preview" autoPlay playsInline muted aria-label={t("photo")}/>
-          {cameraMessage ? <p className="form-error" role="alert">{cameraMessage}</p> : null}
+          {cameraMessage ? <p className="form-error" role="alert">{t(cameraMessage)}</p> : null}
           <div className="dialog-actions"><button type="button" className="quiet-button" onClick={() => void capturePhoto()}>{t("cameraCapture")}</button><button type="button" className="text-button" onClick={() => { const next = facingMode === "environment" ? "user" : "environment"; setFacingMode(next); void startCamera(next); }}>{t("switchCamera")}</button><button type="button" className="text-button" onClick={closeSources}>{t("cancel")}</button></div>
         </> : <>
           <p className="dialog-copy">{t("photoOnlyDevice")}</p>
-          {cameraMessage ? <p className="form-error" role="alert">{cameraMessage}</p> : null}
+          {cameraMessage ? <p className="form-error" role="alert">{t(cameraMessage)}</p> : null}
           <div className="dialog-actions"><button type="button" className="quiet-button" onClick={() => void startCamera()}>{t("cameraOpen")}</button><button type="button" className="quiet-button" onClick={() => inputRef.current?.click()}>{t("chooseFile")}</button><button type="button" className="text-button" onClick={closeSources}>{t("cancel")}</button></div>
         </>}
       </section>

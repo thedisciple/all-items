@@ -47,12 +47,12 @@ export default function PhotoCropperEditor(props: Props) {
   const [zoom, setZoom] = useState(1);
   const [ratio, setRatio] = useState("free");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<""|"unavailable"|"failed"|"small">("");
   const dialogRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     alive.current = true;
-    const timeout = window.setTimeout(() => { if (!readyRef.current) setError(props.unavailableLabel); }, readyTimeoutMs);
+    const timeout = window.setTimeout(() => { if (!readyRef.current) setError("unavailable"); }, readyTimeoutMs);
     dialogRef.current?.querySelector<HTMLElement>("button:not([disabled])")?.focus();
     return () => {
       alive.current = false;
@@ -93,7 +93,7 @@ export default function PhotoCropperEditor(props: Props) {
     try {
       const instance = event.currentTarget?.cropper ?? cropper.current;
       const metrics = instance ? getImageMetrics(instance) : null;
-      if (!instance || !metrics) { readyRef.current = false; setError(props.unavailableLabel); return; }
+      if (!instance || !metrics) { readyRef.current = false; setError("unavailable"); return; }
       cropper.current = instance;
       fitRatio.current = metrics.baseRatio;
       readyRef.current = true;
@@ -102,12 +102,12 @@ export default function PhotoCropperEditor(props: Props) {
       if (instance.getImageData().width <= 0 || instance.getImageData().height <= 0) {
         readyRef.current = false;
         setIsReady(false);
-        setError(props.unavailableLabel);
+        setError("unavailable");
       }
     } catch {
       readyRef.current = false;
       setIsReady(false);
-      setError(props.unavailableLabel);
+      setError("unavailable");
     }
   }
 
@@ -115,7 +115,7 @@ export default function PhotoCropperEditor(props: Props) {
     if (!alive.current) return;
     readyRef.current = false;
     setIsReady(false);
-    setError(props.unavailableLabel);
+    setError("unavailable");
   }
 
   function onZoom(event: CropperJS.ZoomEvent) {
@@ -129,7 +129,7 @@ export default function PhotoCropperEditor(props: Props) {
     const target = safeZoomTarget(value, fitRatio.current);
     if (!instance || !target) return;
     try { instance.zoomTo(target.target); }
-    catch { setError(props.errorLabel); }
+    catch { setError("failed"); }
   }
 
   function updateAspect(next: string) {
@@ -145,7 +145,7 @@ export default function PhotoCropperEditor(props: Props) {
       const metrics = getImageMetrics(instance);
       const canvas = next === "original" ? fitSource(instance) : null;
       const aspect = next === "original" && canvas ? canvas.width / canvas.height : metrics && aspectRatioForPreset(next, metrics);
-      if (aspect === null || aspect === undefined) { setError(props.errorLabel); return; }
+      if (aspect === null || aspect === undefined) { setError("failed"); return; }
       instance.setAspectRatio(aspect);
       if (next === "original" && canvas && [canvas.left, canvas.top, canvas.width, canvas.height, aspect].every(Number.isFinite) && canvas.width > 0 && canvas.height > 0) {
         instance.crop();
@@ -153,7 +153,7 @@ export default function PhotoCropperEditor(props: Props) {
       }
       setRatio(next);
       setError("");
-    } catch { setError(props.errorLabel); }
+    } catch { setError("failed"); }
   }
 
   function rotate(direction: 1 | -1) {
@@ -165,7 +165,7 @@ export default function PhotoCropperEditor(props: Props) {
         instance.clear();
         instance.rotateTo(rotation);
         const canvas = fitSource(instance);
-        if (!canvas) { setError(props.errorLabel); return; }
+        if (!canvas) { setError("failed"); return; }
         const aspect = canvas.width / canvas.height;
         if (Number.isFinite(aspect) && aspect > 0) {
           instance.setAspectRatio(aspect);
@@ -174,7 +174,7 @@ export default function PhotoCropperEditor(props: Props) {
         }
       } else instance.rotate(90 * direction);
       setError("");
-    } catch { setError(props.errorLabel); }
+    } catch { setError("failed"); }
   }
 
   function reset() {
@@ -186,7 +186,7 @@ export default function PhotoCropperEditor(props: Props) {
       setZoom(1);
       setRatio("free");
       setError("");
-    } catch { setError(props.errorLabel); }
+    } catch { setError("failed"); }
   }
 
   function adjustCrop(kind: "move" | "resize", dx: number, dy: number) {
@@ -194,14 +194,14 @@ export default function PhotoCropperEditor(props: Props) {
     if (!instance) return;
     try {
       const data = instance.getData();
-      if (!isValidCropCoordinates(data)) { setError(props.errorLabel); return; }
+      if (!isValidCropCoordinates(data)) { setError("failed"); return; }
       const stepX = Math.max(1, data.width * 0.04);
       const stepY = Math.max(1, data.height * 0.04);
       instance.setData(kind === "move"
         ? { ...data, x: data.x + dx * stepX, y: data.y + dy * stepY }
         : { ...data, x: data.x - dx * stepX / 2, y: data.y - dy * stepY / 2, width: data.width + dx * stepX, height: data.height + dy * stepY });
       setError("");
-    } catch { setError(props.errorLabel); }
+    } catch { setError("failed"); }
   }
 
   async function confirm() {
@@ -226,7 +226,7 @@ export default function PhotoCropperEditor(props: Props) {
       if (!file.size || file.size > 10 * 1024 * 1024 || !["image/webp", "image/png"].includes(file.type)) throw new Error("invalid-file");
       if (alive.current) props.onConfirm(file, data);
     } catch (cause) {
-      setError(cause instanceof Error && cause.message === "invalid-crop" ? props.smallLabel : props.errorLabel);
+      setError(cause instanceof Error && cause.message === "invalid-crop" ? "small" : "failed");
       if (alive.current) setBusy(false);
     }
   }
@@ -296,7 +296,7 @@ export default function PhotoCropperEditor(props: Props) {
             </div>
           </div>
         </details>
-        {error ? <div className="crop-recovery" role="alert"><p>{error}</p><button type="button" className="text-button" disabled={busy} onClick={props.onUseOriginal}>{props.originalLabel}</button></div> : null}
+        {error ? <div className="crop-recovery" role="alert"><p>{error === "unavailable" ? props.unavailableLabel : error === "small" ? props.smallLabel : props.errorLabel}</p><button type="button" className="text-button" disabled={busy} onClick={props.onUseOriginal}>{props.originalLabel}</button></div> : null}
         <div className="crop-toolbar" aria-label={props.title}>
           <div className="crop-tool-group" aria-label={props.rotateLabel}>
             <button type="button" className="icon-button crop-tool-button" aria-label={props.rotateLabel} data-tooltip={props.rotateLabel} disabled={!instanceReady || busy} onClick={() => rotate(1)}><RotateCw size={17} aria-hidden="true"/></button>
