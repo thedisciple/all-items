@@ -1,6 +1,6 @@
 # ADR: multiple inventories and non-destructive archive import
 
-Status: accepted; inventory context, integrity constraints, scoped services/routes and create/rename/switching implemented in M3.3A checkpoint B. Import-as-new and scoped deletion are subsequent checkpoints.
+Status: accepted; inventory context, integrity constraints, scoped services/routes and create/rename/switching implemented in M3.3A checkpoint B. Checkpoint C implements import-as-new with complete ID mapping, private staging, a transaction commit marker, serialized operations and startup recovery. Scoped deletion is the subsequent checkpoint.
 
 ## Decision and concepts
 

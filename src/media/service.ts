@@ -1,3 +1,4 @@
+import { assertPrivatePath } from "@/media/private-paths";
 import sharp, { type Metadata } from "sharp";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -64,6 +65,7 @@ export async function removeAssetFiles(context: InventoryContext, row: StoredAss
   const live = await (await db()).$client.execute({ sql: "SELECT i.workspace_id FROM media_assets m JOIN items i ON i.id=m.item_id WHERE m.id=?", args: [row.id] });
   if (live.rows.some(owner => owner.workspace_id !== context.workspaceId)) throw new Error("Invalid media cleanup inventory");
   const paths = assertStoredPaths(row);
+  for(const file of [paths.full,paths.thumbnail,paths.source]) await assertPrivatePath(dataDirectory(),file);
   await Promise.all([rm(paths.full, { force: true }), rm(paths.thumbnail, { force: true }), rm(paths.source, { force: true })]);
 }
 
@@ -125,6 +127,7 @@ export async function preparePrivateImage(file: File) {
 
 async function writeAssetFiles(itemId: string, mediaId: string, image: Awaited<ReturnType<typeof processImage>>) {
   const paths = assetPaths(itemId, mediaId);
+  for(const file of [paths.full,paths.thumbnail,paths.source]) await assertPrivatePath(dataDirectory(),file);
   await mkdir(path.dirname(paths.full), { recursive: true });
   try {
     await writeFile(paths.full, image.full, { flag: "wx" });

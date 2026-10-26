@@ -1,3 +1,4 @@
+import { assertPrivatePath } from "@/media/private-paths";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
@@ -34,6 +35,7 @@ export async function removeCollectionCoverAssetFiles(context: InventoryContext,
   const live = await (await getDatabase()).$client.execute({ sql: "SELECT c.workspace_id FROM collection_cover_assets ca JOIN collections c ON c.id=ca.collection_id WHERE ca.id=?", args: [asset.id] });
   if (live.rows.some(owner => owner.workspace_id !== context.workspaceId)) throw new Error("Invalid cover cleanup inventory");
   const paths = assertPaths(asset);
+  for(const file of [paths.full,paths.thumbnail]) await assertPrivatePath(dataDirectory(),file);
   await Promise.all([rm(paths.full, { force: true }), rm(paths.thumbnail, { force: true })]);
 }
 
@@ -45,6 +47,7 @@ export async function replaceCollectionCoverUpload(context: InventoryContext, co
   const image = await preparePrivateImage(file);
   const id = crypto.randomUUID();
   const paths = coverPaths(collectionId, id);
+  for(const file of [paths.full,paths.thumbnail]) await assertPrivatePath(dataDirectory(),file);
   await mkdir(path.dirname(paths.full), { recursive: true });
   try {
     await writeFile(paths.full, image.full, { flag: "wx" });

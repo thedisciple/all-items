@@ -1,4 +1,7 @@
 const ru = {
+  inventoryBusy: "Другая операция ещё выполняется. Попробуйте немного позже.",
+  retry: "Повторить",
+
   inventoryCreate: "Создать инвентарь",
   inventoryName: "Название инвентаря",
   inventoryCurrent: "Текущий инвентарь",
@@ -264,6 +267,9 @@ const ru = {
 } as const;
 
 const en: Record<MessageKey, string> = {
+  inventoryBusy: "Another operation is still running. Try again shortly.",
+  retry: "Retry",
+
   inventoryCreate: "Create inventory",
   inventoryName: "Inventory name",
   inventoryCurrent: "Current inventory",
@@ -362,6 +368,9 @@ const en: Record<MessageKey, string> = {
 };
 
 const uk: Record<MessageKey, string> = {
+  inventoryBusy: "Інша операція ще виконується. Спробуйте трохи пізніше.",
+  retry: "Повторити",
+
   inventoryCreate: "Створити інвентар",
   inventoryName: "Назва інвентарю",
   inventoryCurrent: "Поточний інвентар",
@@ -399,6 +408,9 @@ const uk: Record<MessageKey, string> = {
 };
 
 const srLatn: Record<MessageKey, string> = {
+  inventoryBusy: "Druga operacija je još u toku. Pokušajte uskoro ponovo.",
+  retry: "Pokušaj ponovo",
+
   inventoryCreate: "Kreiraj inventar",
   inventoryName: "Naziv inventara",
   inventoryCurrent: "Trenutni inventar",
@@ -436,6 +448,9 @@ const srLatn: Record<MessageKey, string> = {
 };
 
 const zhHans: Record<MessageKey, string> = {
+  inventoryBusy: "另一项操作仍在进行中，请稍后重试。",
+  retry: "重试",
+
   inventoryCreate: "创建库存",
   inventoryName: "库存名称",
   inventoryCurrent: "当前库存",

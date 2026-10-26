@@ -1,7 +1,8 @@
 # Changelog
 
-## M3.3A — checkpoints A and B
+## M3.3A — checkpoints A, B and C
 
+- Added non-destructive archive import with fresh identity mapping, private staged media, transaction markers, interruption recovery and retained source archives.
 - Added explicit inventory contexts and routes, create/rename/switching, independent numbering, scoped exports and database ownership constraints.
 - ZIP revision 4 supports arbitrary inventory UUIDs; revisions 2/3 retain their original import contracts.
 - Unified control geometry, stable filter slots, compact dismissible category selection, and consistent dialog action rows.

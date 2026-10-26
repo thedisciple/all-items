@@ -6,7 +6,7 @@ The current implementation uses explicit InventoryContext values throughout item
 
 Migration 0008_inventory_boundaries adds immutable ownership and human-number triggers, a monotonic sequence guard, stock-location and cover ownership checks, and default-cover cleanup when selected media or membership is removed. Human numbers are scoped per inventory, immutable, and never automatically reused after deletion. Existing UUIDs, rows and private paths are preserved. File cleanup receives the operation inventory and rejects live assets owned elsewhere. ZIP revision 4 permits arbitrary inventory UUIDs; revisions 2/3 retain their original single-inventory contract. Every export snapshot query joins its selected parent inventory, checks generated media identities, and runs the read-only archive verifier before returning bytes.
 
-The following sections retain historical milestone details. Import-as-new, its identity mapping and scoped deletion are completed in later M3.3A checkpoints.
+The following sections retain historical milestone details. Checkpoint C adds full ID-remapped import into a new inventory, a transaction commit marker, generated private destinations, process-aware operation serialization, retained source archives/journals and startup recovery. Scoped deletion is completed in the following checkpoint.
 
 
 ## M3.2-R1 category and editing transition

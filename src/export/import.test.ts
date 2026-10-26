@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient, type Client } from "@libsql/client";
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -9,7 +9,7 @@ import sharp from "sharp";
 import { unzipSync, zipSync } from "fflate";
 import { applyMigrations } from "@/db/migrate";
 import { createInventoryArchive, readInventoryArchive, verifyInventoryArchive } from "./archive";
-import { previewInventoryArchive, restoreInventoryArchive } from "./import";
+import { importArchiveAsNew, previewInventoryArchive, recoverInventoryImports, restoreInventoryArchive } from "./import";
 
 const workspaceId = "00000000-0000-4000-8000-000000000001";
 const itemA = "11111111-1111-4111-8111-111111111111";
@@ -164,5 +164,139 @@ describe("current and transitional archive restore", () => {
     expect(Number(next.rows[0]!.next_inventory_number)).toBe(9);
     await expect(restoreInventoryArchive(validArchive, destination)).rejects.toThrow(/empty inventory/);
     expect((await readFile(orphanFull)).byteLength).toBeGreaterThan(0);
+  });
+});
+
+async function mediaHashes(directory:string) {
+  const result:Record<string,string>={};
+  async function walk(folder:string) {
+    for(const entry of await readdir(folder,{withFileTypes:true})) {
+      const full=path.join(folder,entry.name);
+      if(entry.isDirectory())await walk(full);
+      else if(entry.isFile())result[path.relative(directory,full)]=createHash("sha256").update(await readFile(full)).digest("hex");
+    }
+  }
+  try{await walk(path.join(directory,"media"));}catch(error){if(!(error instanceof Error && "code" in error && error.code==="ENOENT"))throw error;}
+  return result;
+}
+
+describe("non-destructive imports",()=>{
+  it("imports the same archive twice into populated storage with fresh identities and unchanged original records and media",async()=>{
+    const before=readInventoryArchive(await createInventoryArchive(destination,destination));
+    const beforeMedia=await mediaHashes(destination.directory);
+    const results=[];
+    for(const name of ["Imported one","Imported two"])results.push(await importArchiveAsNew(destination,validArchive,name,destination));
+    expect(results[0]!.inventoryId).not.toBe(results[1]!.inventoryId);
+    const original=readInventoryArchive(validArchive);
+    const allIds=new Set<string>();
+    for(const result of results) {
+      const restored=readInventoryArchive(await createInventoryArchive({workspaceId:result.inventoryId},destination));
+      const inventory=restored.inventory;
+      const sourceInventory=original.inventory;
+      const oldIds=new Set<string>();
+      const collect=(value:unknown)=>{if(typeof value==="string" && /^[0-9a-f-]{36}$/i.test(value))oldIds.add(value);else if(Array.isArray(value))value.forEach(collect);else if(value && typeof value==="object")Object.values(value).forEach(collect);};
+      collect(sourceInventory);
+      for(const old of oldIds)expect(JSON.stringify(inventory)).not.toContain(old);
+      expect(inventory.workspace).toMatchObject({id:result.inventoryId,name:result.name,next_inventory_number:9,created_at:date});
+      for(const table of ["items","locations","collections","memberships"] as const) {
+        const imported=inventory[table] as Array<{id:string}>;
+        expect(imported).toHaveLength((sourceInventory[table] as unknown[]).length);
+        for(const row of imported){expect(allIds.has(row.id)).toBe(false);allIds.add(row.id);}
+      }
+      const importedItems=inventory.items as Array<Record<string,unknown>>;
+      const originalItems=sourceInventory.items as Array<Record<string,unknown>>;
+      const importedItemIds=new Set(importedItems.map(item=>item.id));
+      for(const item of importedItems) {
+        const prior=originalItems.find(prior=>prior.inventory_number===item.inventory_number)!;
+        for(const key of ["inventory_number","name","model","brand","categories","category","original_marking","notes","description","tracking_mode","identification_status","sale_intent","asking_price_minor","asking_currency","created_at","updated_at"])expect(item[key]).toEqual(prior[key]);
+        const stock=item.stock as Array<{id:string;item_id:string;quantity:number}>;
+        const located=(rows:unknown,locations:unknown)=>(rows as Array<{location_id:string|null;quantity:number}>).map(row=>({quantity:row.quantity,location:row.location_id?(locations as Array<{id:string;name:string}>).find(location=>location.id===row.location_id)!.name:null})).sort((a,b)=>String(a.location).localeCompare(String(b.location)));
+        expect(located(stock,inventory.locations)).toEqual(located(prior.stock,sourceInventory.locations));
+        for(const row of stock){expect(row.item_id).toBe(item.id);expect(allIds.has(row.id)).toBe(false);allIds.add(row.id);}
+        const photos=item.mediaAssets as Array<Record<string,unknown>>;
+        for(const [index,photo] of photos.entries()) {
+          const old=(prior.mediaAssets as Array<Record<string,unknown>>)[index]!;
+          for(const key of ["cropData","width","height","createdAt","isPrimary","originalFilename"])expect(photo[key]).toEqual(old[key]);
+          expect(allIds.has(String(photo.id))).toBe(false);allIds.add(String(photo.id));
+          for(const key of ["imagePath","thumbnailPath","sourcePath"])if(photo[key])expect(restored.files[String(photo[key])]).toEqual(original.files[String(old[key])]);
+        }
+      }
+      for(const collection of inventory.collections as Array<Record<string,unknown>>) {
+        for(const id of collection.itemIds as string[])expect(importedItemIds.has(id)).toBe(true);
+        const old=(sourceInventory.collections as Array<Record<string,unknown>>).find(row=>row.name===collection.name)!;
+        if(collection.uploadCover) {
+          const cover=collection.uploadCover as Record<string,string>,oldCover=old.uploadCover as Record<string,string>;
+          expect(cover.id).not.toBe(oldCover.id);
+          expect(restored.files[cover.path!]).toEqual(original.files[oldCover.path!]);
+          expect(restored.files[cover.thumbnailPath!]).toEqual(original.files[oldCover.thumbnailPath!]);
+        }
+      }
+    }
+    const after=readInventoryArchive(await createInventoryArchive(destination,destination));
+    expect(after.inventory).toEqual(before.inventory);
+    for(const [file,hash]of Object.entries(beforeMedia))expect((await mediaHashes(destination.directory))[file]).toBe(hash);
+    expect((await destination.client.execute("PRAGMA foreign_key_check")).rows).toHaveLength(0);
+  },30_000);
+
+  it("isolates staging, promotion and transaction failures and retains the source archive for recovery",async()=>{
+    const before=(await destination.client.execute("SELECT * FROM workspaces ORDER BY id")).rows;
+    const media=await mediaHashes(destination.directory);
+    for(const fault of ["stage","prepare","promote","transaction"] as const) {
+      await expect(importArchiveAsNew(destination,validArchive,`Failed ${fault}`,destination,fault)).rejects.toThrow();
+      expect((await destination.client.execute("SELECT * FROM workspaces ORDER BY id")).rows).toEqual(before);
+      expect(await mediaHashes(destination.directory)).toEqual(media);
+    }
+    const recovery=path.join(destination.directory,"recovery");
+    const retained=(await readdir(recovery)).filter(name=>name.startsWith(".import-"));
+    expect(retained.length).toBeGreaterThanOrEqual(4);
+    let sources=0;
+    for(const entry of retained) {
+      const state=JSON.parse(await readFile(path.join(recovery,entry,"recovery.json"),"utf8"));
+      if(state.status==="failed-import-cleaned"){expect(await readFile(path.join(recovery,entry,"source.zip"))).toEqual(Buffer.from(validArchive));sources++;}
+    }
+    expect(sources).toBeGreaterThanOrEqual(4);
+  },30_000);
+
+  it("recovers interrupted uncommitted promotion and preserves a fully committed import",async()=>{
+    const count=Number((await destination.client.execute("SELECT COUNT(*) AS n FROM workspaces")).rows[0]!.n);
+    const hashes=await mediaHashes(destination.directory);
+    await expect(importArchiveAsNew(destination,validArchive,"Interrupted",destination,"interrupt")).rejects.toThrow();
+    expect(Number((await destination.client.execute("SELECT COUNT(*) AS n FROM workspaces")).rows[0]!.n)).toBe(count);
+    expect((await readdir(destination.directory)).some(name=>name.startsWith(".import-"))).toBe(true);
+    await recoverInventoryImports(destination.client,destination.directory);
+    expect(await mediaHashes(destination.directory)).toEqual(hashes);
+    await expect(importArchiveAsNew(destination,validArchive,"Committed interruption",destination,"after-commit")).rejects.toThrow();
+    expect(Number((await destination.client.execute("SELECT COUNT(*) AS n FROM workspaces")).rows[0]!.n)).toBe(count+1);
+    const committed=await mediaHashes(destination.directory);
+    await recoverInventoryImports(destination.client,destination.directory);
+    expect(await mediaHashes(destination.directory)).toEqual(committed);
+    expect((await readdir(destination.directory)).some(name=>name.startsWith(".import-"))).toBe(false);
+  },30_000);
+
+  it("serializes concurrent imports and accepts original revision 2/3 contracts as new inventories",async()=>{
+    const results=await Promise.all([importArchiveAsNew(destination,validArchive,"Concurrent A",destination),importArchiveAsNew(destination,validArchive,"Concurrent B",destination)]);
+    expect(results[0].inventoryId).not.toBe(results[1].inventoryId);
+    for(const version of [2,3]) {
+      const legacy=modifiedArchive(files=>{
+        const manifest=JSON.parse(Buffer.from(files["manifest.json"]!).toString());manifest.version=version;files["manifest.json"]=Buffer.from(JSON.stringify(manifest));
+        if(version===2){const inventory=JSON.parse(Buffer.from(files["inventory.json"]!).toString());for(const item of inventory.items)delete item.categories;files["inventory.json"]=Buffer.from(JSON.stringify(inventory));}
+      });
+      const result=await importArchiveAsNew(destination,legacy,`Revision ${version}`,destination);
+      expect(result.items).toBe(2);
+    }
+    const before=await mediaHashes(destination.directory);
+    await expect(importArchiveAsNew(destination,new Uint8Array([1,2,3]),"Invalid",destination)).rejects.toThrow();
+    expect(await mediaHashes(destination.directory)).toEqual(before);
+  },30_000);
+
+  it("refuses linked private destinations before promoting any files",async()=>{
+    const target=await installation(path.join(root,"linked"));
+    const outside=path.join(root,"outside");await mkdir(outside);await mkdir(path.join(target.directory,"media"));
+    try {
+      await symlink(outside,path.join(target.directory,"media","items"),process.platform==="win32"?"junction":"dir");
+      await expect(importArchiveAsNew(target,validArchive,"Linked",target)).rejects.toThrow(/filesystem path/);
+      expect(await readdir(outside)).toEqual([]);
+      expect(Number((await target.client.execute("SELECT COUNT(*) AS n FROM workspaces")).rows[0]!.n)).toBe(1);
+    } finally {target.client.close();}
   });
 });

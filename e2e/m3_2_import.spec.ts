@@ -1,11 +1,11 @@
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import sharp from "sharp";
-import { verifyInventoryArchive } from "../src/export/archive";
+import { readInventoryArchive, verifyInventoryArchive } from "../src/export/archive";
 import { previewInventoryArchive } from "../src/export/import";
 
-test("downloads a complete archive and restores it through the browser into a fresh installation", async ({ page }) => {
-  test.setTimeout(120_000);
+test("downloads a complete archive and imports it twice as new inventories while preserving a populated target", async ({ page }) => {
+  test.setTimeout(180_000);
   const image = await sharp({ create: { width: 260, height: 180, channels: 3, background: "#678853" } }).png().toBuffer();
   const cover = await sharp({ create: { width: 400, height: 200, channels: 3, background: "#68639a" } }).png().toBuffer();
 
@@ -48,41 +48,60 @@ test("downloads a complete archive and restores it through the browser into a fr
   const archivePath = await download.path();
   if (!archivePath) throw new Error("The test archive was not downloaded.");
   const archive = new Uint8Array(await readFile(archivePath));
-  expect(verifyInventoryArchive(archive).version).toBe(3);
+  expect(verifyInventoryArchive(archive).version).toBe(4);
   expect((await previewInventoryArchive(archive)).items).toBe(1);
 
-  await page.goto("http://127.0.0.1:3103/data");
-  await expect(page.getByRole("button", { name: "Импортировать архив" })).toBeVisible();
-  const previewRequest = page.waitForRequest("**/api/import/preview");
-  await page.locator('.import-panel input[type="file"]').setInputFiles({ name: "portable.zip", mimeType: "application/zip", buffer: Buffer.from(archive) });
-  const sent = await previewRequest;
-  expect(sent.headers()["x-all-items-import"]).toBe("1");
-  expect(sent.headers()["content-type"]).toBe("application/zip");
-  await expect(page.getByRole("heading", { name: "Содержимое архива" })).toBeVisible();
-  await expect(page.locator(".import-summary")).toContainText("Вещей: 1");
-  await expect(page.locator(".import-summary")).toContainText("Коллекций: 1");
-  await expect(page.locator(".import-summary")).toContainText("Фото: 1");
-  await page.getByRole("button", { name: "Импортировать", exact: true }).click();
-  await expect(page).toHaveURL("http://127.0.0.1:3103/");
-  await page.getByRole("link", { name: /Restored gadget 中文/ }).click();
-  await expect(page.getByRole("heading", { name: "Restored gadget 中文", level: 1 })).toBeVisible();
-  await expect(page.locator(".category-selection .category-chip")).toHaveCount(2);
-  await expect.poll(() => page.locator(".detail-photo").first().evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
-  await page.goto("http://127.0.0.1:3103/collections");
-  await page.locator(".collection-card").filter({ hasText: "Portable DIY" }).click();
-  await expect(page.locator(".item-row").filter({ hasText: "Restored gadget 中文" })).toBeVisible();
-  await expect.poll(() => page.locator(".collection-detail-cover").evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
-
-  await page.goto("http://127.0.0.1:3103/");
+  const targetOriginal="http://127.0.0.1:3103/inventories/00000000-0000-4000-8000-000000000001";
+  await page.goto(targetOriginal);
   await page.locator(".add-dialog-trigger").click();
-  const nextItem = page.getByRole("dialog", { name: "Добавить вещь" });
-  await nextItem.getByLabel("Название").fill("After restore");
-  await nextItem.getByRole("button", { name: "Добавить вещь" }).click();
-  await expect(page.getByRole("link", { name: /After restore/ })).toContainText("INV-000002");
-
-  await page.goto("http://127.0.0.1:3103/data");
-  await page.locator('.import-panel input[type="file"]').setInputFiles({ name: "portable.zip", mimeType: "application/zip", buffer: Buffer.from(archive) });
-  await expect(page.getByRole("heading", { name: "Содержимое архива" })).toBeVisible();
-  await page.getByRole("button", { name: "Импортировать", exact: true }).click();
-  await expect(page.locator(".import-panel [role='alert']")).toContainText("Для импорта нужен пустой инвентарь");
+  const existing=page.getByRole("dialog",{name:"\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0432\u0435\u0449\u044c"});
+  await existing.getByLabel("\u041d\u0430\u0437\u0432\u0430\u043d\u0438\u0435").fill("Existing target item");
+  await existing.getByRole("button",{name:"\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0432\u0435\u0449\u044c",exact:true}).click();
+  await expect(page).toHaveURL(/added=/);
+  const beforeTarget=readInventoryArchive(new Uint8Array(await (await page.request.get(`${targetOriginal}/api/export/archive`)).body()));
+  async function importCopy(name:string) {
+    const request=page.waitForRequest("**/api/import/preview");
+    await page.locator('.import-panel input[type="file"]').setInputFiles({name:"portable.zip",mimeType:"application/zip",buffer:Buffer.from(archive)});
+    expect((await request).headers()["x-all-items-import"]).toBe("1");
+    await expect(page.locator(".import-summary")).toContainText("\u0412\u0435\u0449\u0435\u0439: 1");
+    await expect(page.locator(".import-summary")).toContainText("\u041a\u043e\u043b\u043b\u0435\u043a\u0446\u0438\u0439: 1");
+    await page.getByLabel("\u041d\u0430\u0437\u0432\u0430\u043d\u0438\u0435 \u043d\u043e\u0432\u043e\u0433\u043e \u0438\u043d\u0432\u0435\u043d\u0442\u0430\u0440\u044f").fill(name);
+    await page.getByRole("button",{name:"\u0418\u043c\u043f\u043e\u0440\u0442\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u043a\u0430\u043a \u043d\u043e\u0432\u044b\u0439 \u0438\u043d\u0432\u0435\u043d\u0442\u0430\u0440\u044c",exact:true}).click();
+    await expect(page).toHaveURL(/:3103\/inventories\/[0-9a-f-]{36}$/);
+    return page.url();
+  }
+  await page.goto(`${targetOriginal}/data`);
+  const first=await importCopy("Recovered \u4e2d\u6587");
+  expect(first).not.toBe(targetOriginal);
+  await page.getByRole("link",{name:/Restored gadget/}).click();
+  expect(new URL(page.url()).pathname.split("/").at(-1)).not.toBe((readInventoryArchive(archive).inventory.items as Array<{id:string}>)[0]!.id);
+  await expect(page.locator(".category-selection .category-chip")).toHaveCount(2);
+  await expect.poll(()=>page.locator(".detail-photo").first().evaluate(image=>(image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  const firstPhoto=(await page.locator(".detail-photo").first().getAttribute("src"))!;
+  await page.goto(`${first}/collections`);
+  await page.locator(".collection-card").filter({hasText:"Portable DIY"}).click();
+  await expect(page.locator(".item-row").filter({hasText:/Restored gadget/})).toBeVisible();
+  await expect.poll(()=>page.locator(".collection-detail-cover").evaluate(image=>(image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  const firstCover=(await page.locator(".collection-detail-cover").getAttribute("src"))!;
+  await page.goto(first);await page.locator(".add-dialog-trigger").click();
+  const next=page.getByRole("dialog",{name:"\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0432\u0435\u0449\u044c"});
+  await next.getByLabel("\u041d\u0430\u0437\u0432\u0430\u043d\u0438\u0435").fill("After restore");
+  await next.getByRole("button",{name:"\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0432\u0435\u0449\u044c",exact:true}).click();
+  await expect(page.getByRole("link",{name:/After restore/})).toContainText("INV-000002");
+  await page.goto(`${first}/data`);
+  const second=await importCopy("Recovered second");expect(second).not.toBe(first);
+  await expect(page.getByRole("link",{name:/After restore/})).toHaveCount(0);
+  await expect(page.getByRole("link",{name:/Restored gadget/})).toContainText("INV-000001");
+  const secondPath=new URL(second).pathname,firstPath=new URL(first).pathname;
+  expect((await page.request.get(new URL(firstPhoto.replace(firstPath,secondPath),second).href)).status()).toBe(404);
+  expect((await page.request.get(new URL(firstCover.replace(firstPath,secondPath),second).href)).status()).toBe(404);
+  const afterTarget=readInventoryArchive(new Uint8Array(await (await page.request.get(`${targetOriginal}/api/export/archive`)).body()));
+  expect(afterTarget.inventory).toEqual(beforeTarget.inventory);
+  const afterSource=readInventoryArchive(new Uint8Array(await (await page.request.get("http://127.0.0.1:3102/inventories/00000000-0000-4000-8000-000000000001/api/export/archive")).body()));
+  expect(afterSource.inventory).toEqual(readInventoryArchive(archive).inventory);
+  await page.goto(`${second}/data`);
+  await page.locator('.import-panel input[type="file"]').setInputFiles({name:"invalid.zip",mimeType:"application/zip",buffer:Buffer.from("invalid")});
+  await expect(page.locator(".import-panel [role=alert]")).toContainText("\u0410\u0440\u0445\u0438\u0432");
+  await page.locator(".language-switcher").click();await page.getByRole("menuitemradio",{name:"English"}).click();
+  await expect(page.locator(".import-panel [role=alert]")).toContainText("The archive");
 });

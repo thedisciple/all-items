@@ -8,6 +8,12 @@ export const workspaces = sqliteTable("workspaces", {
   nextInventoryNumber: integer("next_inventory_number").notNull().default(1),
 });
 
+export const inventoryImportOperations = sqliteTable("inventory_import_operations", {
+  id: text("id").primaryKey(),
+  workspaceId: text("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  createdAt: text("created_at").notNull(),
+});
+
 export const items = sqliteTable("items", {
   id: text("id").primaryKey(),
   workspaceId: text("workspace_id").notNull().references(() => workspaces.id),

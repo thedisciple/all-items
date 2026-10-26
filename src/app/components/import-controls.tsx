@@ -14,14 +14,15 @@ export function ImportControls({ locale }: { locale: Locale }) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [name,setName]=useState("");
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [pending, setPending] = useState<"checking" | "restoring" | null>(null);
   const [error, setError] = useState<MessageKey | null>(null);
   const t = (key: Parameters<typeof translate>[1], params?: Record<string, string | number>) => translate(locale, key, params);
 
   async function upload(selected: File, action: "preview" | "restore") {
-    const response = await fetch(`${base}/api/import/${action}`, { method: "POST", headers: { "Content-Type": "application/zip", "X-All-Items-Import": "1" }, body: selected });
-    const data = await response.json() as ImportPreview & { error?: string };
+    const response = await fetch(`${base}/api/import/${action}`, { method: "POST", headers: { "Content-Type": "application/zip", "X-All-Items-Import": "1", "X-All-Items-Inventory-Name": encodeURIComponent(name) }, body: selected });
+    const data = await response.json() as ImportPreview & { error?: string; inventoryId?: string };
     if (!response.ok) throw new Error(isMessageKey(data.error) ? data.error : "importFailed");
     return data;
   }
@@ -31,15 +32,15 @@ export function ImportControls({ locale }: { locale: Locale }) {
     if (!selected) return;
     if (selected.size < 1 || selected.size > maxArchiveBytes) { setError("importInvalid"); return; }
     setPending("checking");
-    try { setPreview(await upload(selected, "preview")); }
+    try { const result=await upload(selected,"preview");setPreview(result);setName(result.name.trim().slice(0,120) || t("inventory")); }
     catch (cause) { setError(cause instanceof Error && isMessageKey(cause.message) ? cause.message : "importInvalid"); }
     finally { setPending(null); }
   }
 
   async function restore() {
-    if (!file || !preview || pending) return;
+    if (!file || !preview || pending || !name.trim()) return;
     setPending("restoring"); setError(null);
-    try { await upload(file, "restore"); router.push(base); router.refresh(); }
+    try { const result=await upload(file,"restore"); if(!result.inventoryId || !/^[0-9a-f-]{36}$/i.test(result.inventoryId)) throw new Error("importFailed"); router.push(`/inventories/${result.inventoryId}`); router.refresh(); }
     catch (cause) { setError(cause instanceof Error && isMessageKey(cause.message) ? cause.message : "importFailed"); setPending(null); }
   }
 
@@ -52,9 +53,10 @@ export function ImportControls({ locale }: { locale: Locale }) {
       <h3 id="import-preview-heading">{t("importPreview")}</h3>
       <p className="import-file-name">{file?.name}</p>
       <div className="import-summary"><span>{t("importItems", { count: preview.items })}</span><span>{t("importCollections", { count: preview.collections })}</span><span>{t("importPhotos", { count: preview.photos })}</span><span>{t("importExported", { date: new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(preview.exportedAt)) })}</span></div>
-      <div className="import-actions"><button type="button" className="text-button" disabled={pending !== null} onClick={cancel}>{t("cancel")}</button><button type="button" className="add-button" disabled={pending !== null} onClick={() => void restore()}>{pending === "restoring" ? t("importRunning") : t("importConfirm")}</button></div>
+      <label className="field"><span>{t("importInventoryName")}</span><input value={name} maxLength={120} required disabled={pending!==null} onChange={event=>setName(event.target.value)}/></label>
+      <div className="import-actions"><button type="button" className="text-button" disabled={pending !== null} onClick={cancel}>{t("cancel")}</button><button type="button" className="add-button" disabled={pending !== null || !name.trim()} onClick={() => void restore()}>{pending === "restoring" ? t("importRunning") : t("importAsNew")}</button></div>
     </div>}
     {pending ? <p className="visually-hidden" role="status">{pending === "checking" ? t("importChecking") : t("importRunning")}</p> : null}
-    {error ? <p className="inline-status error-status" role="alert">{t(error)}</p> : null}
+    {error ? <><p className="inline-status error-status" role="alert">{t(error)}</p>{file && !preview ? <button className="quiet-button" type="button" disabled={pending!==null} onClick={()=>void choose(file)}>{t("retry")}</button>:null}</> : null}
   </section>;
 }

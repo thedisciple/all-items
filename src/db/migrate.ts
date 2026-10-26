@@ -38,6 +38,8 @@ async function migrate() {
       if (pending) console.log(`Verified pre-migration backup: ${await createMigrationBackup(client, directory)}`);
     }
     await applyMigrations(client, path.join(process.cwd(), "src/db/migrations"));
+    const { recoverInventoryImports } = await import("@/export/import");
+    await recoverInventoryImports(client, directory);
   } finally {
     await client.close();
   }

@@ -109,7 +109,7 @@ export function readInventoryArchive(input: Uint8Array) {
   let rawManifest: unknown;
   try { rawManifest = JSON.parse(Buffer.from(manifestBytes).toString("utf8")); }
   catch { throw new ArchiveError("The archive manifest is invalid."); }
-  if (typeof rawManifest !== "object" || rawManifest === null || (rawManifest as Record<string, unknown>).format !== ARCHIVE_FORMAT || ![2, ARCHIVE_VERSION].includes(Number((rawManifest as Record<string, unknown>).version))) throw new ArchiveError("Unsupported archive format. Regenerate the archive from the current All Items installation.");
+  if (typeof rawManifest !== "object" || rawManifest === null || (rawManifest as Record<string, unknown>).format !== ARCHIVE_FORMAT || ![2, 3, ARCHIVE_VERSION].includes(Number((rawManifest as Record<string, unknown>).version))) throw new ArchiveError("Unsupported archive format. Regenerate the archive from the current All Items installation.");
   try { manifest = manifestSchema.parse(rawManifest); inventory = portableInventorySchema.parse(JSON.parse(Buffer.from(inventoryBytes).toString("utf8"))); }
   catch { throw new ArchiveError("The archive metadata is invalid."); }
   const expected = new Map<string, { size: number; sha256: string }>();

@@ -117,7 +117,7 @@ Validated with 38 unit tests, typecheck, lint, production build, the 13-scenario
 
 - [x] Explicit inventory context and additive cross-inventory integrity checks across every read/write/media boundary
 - [x] Inventory switcher, create/rename, independent sequences, scoped search/collections and local selection preference
-- [ ] Validated import as a new inventory with full ID/reference remapping, private staging and interruption recovery
+- [x] Validated import as a new inventory with full ID/reference remapping, private staging and interruption recovery
 - [ ] Scoped deletion with explicit confirmation and preservation tests; no global Clear All or replacement shortcut
 
 Follow [the architecture decision](docs/architecture/adr-multiple-inventories.md). Future accounts remain a separate authorization boundary. Populated-inventory import protection stays enabled until the new workflow is complete.
