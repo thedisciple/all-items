@@ -6,6 +6,7 @@ import { useActionState, useEffect, useMemo, useRef, useState, type ChangeEvent,
 import { useRouter } from "next/navigation";
 import { addItemsToCollectionAction, removeCollectionMembershipAction, setCollectionCoverAction, type ActionFeedback } from "@/app/actions";
 import { FormSubmitButton } from "./form-submit-button";
+import { useInventory } from "./inventory-provider";
 import { useI18n } from "@/i18n/provider";
 import { CollectionEmojiField } from "./collection-emoji-field";
 
@@ -24,6 +25,7 @@ function handleDialogKeys(event: KeyboardEvent<HTMLElement>, close: () => void) 
 
 export function CollectionAddItems({ collectionId, items, existingIds }: { collectionId: string; items: SelectableItem[]; existingIds: string[] }) {
   const { t } = useI18n();
+  const { base } = useInventory();
   const [feedback, action] = useActionState(addItemsToCollectionAction, idle);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -49,15 +51,15 @@ export function CollectionAddItems({ collectionId, items, existingIds }: { colle
         <div className="collection-item-options" role="group" aria-label={t("collectionAddItems")}>
           {available.length ? available.map((item) => <label className="collection-item-option" key={item.id}>
             <input type="checkbox" checked={selected.includes(item.id)} onChange={(event) => setSelected((value) => event.target.checked ? [...value, item.id] : value.filter((id) => id !== item.id))}/>
-            {item.mediaId ? <PrivateImage variant="thumbnail" src={`/media/${item.id}/${item.mediaId}?variant=thumbnail`} alt="" width={52} height={52}/> : <span className="item-thumb" aria-hidden="true">{t("photoMissing")}</span>}
+            {item.mediaId ? <PrivateImage variant="thumbnail" src={`${base}/media/${item.id}/${item.mediaId}?variant=thumbnail`} alt="" width={52} height={52}/> : <span className="item-thumb" aria-hidden="true">{t("photoMissing")}</span>}
             <span className="collection-item-choice-text"><strong>{item.name}</strong>{item.model ? <small>{item.model}</small> : null}{item.category ? <small>{item.category}</small> : null}</span>
           </label>) : <p className="collection-items-no-results">{t(existing.size ? "noMatches" : "collectionNoInventory")}</p>}
         </div>
-        {feedback.status === "error" && feedback.message ? <p className="inline-status error-status" role="alert">{feedback.message}</p> : null}
+        {feedback.status === "error" && feedback.message ? <p className="inline-status error-status" role="alert">{feedback.message ? t(feedback.message, feedback.values) : ""}</p> : null}
         <div className="dialog-actions"><FormSubmitButton className="add-button" disabled={!selected.length} pendingLabel={t("adding")}>{t("collectionAddItems")}{selected.length ? ` ${selected.length}` : ""}</FormSubmitButton><button type="button" className="quiet-button" onClick={() => setOpen(false)}>{t("cancel")}</button></div>
-      </form> : <div className="empty-state collection-picker-empty"><h3>{t("collectionNoInventory")}</h3><a className="quiet-button link-button" href="/">{t("addItem")}</a><button type="button" className="quiet-button" onClick={() => setOpen(false)}>{t("cancel")}</button></div>}
+      </form> : <div className="empty-state collection-picker-empty"><h3>{t("collectionNoInventory")}</h3><a className="quiet-button link-button" href={base}>{t("addItem")}</a><button type="button" className="quiet-button" onClick={() => setOpen(false)}>{t("cancel")}</button></div>}
     </section></div> : null}
-    {feedback.status === "success" && feedback.message ? <p className="visually-hidden" role="status">{feedback.message}</p> : null}
+    {feedback.status === "success" && feedback.message ? <p className="visually-hidden" role="status">{feedback.message ? t(feedback.message, feedback.values) : ""}</p> : null}
   </>;
 }
 
@@ -87,11 +89,11 @@ export function CollectionCoverManager({ collectionId, options, add = false }: {
         {coverType === "item_photo" ? <label className="field"><span>{t("collectionCoverPickItem")}</span><select name="selectedPhoto" value={selectedPhoto} required onChange={(event) => setSelectedPhoto(event.target.value)}><option value="">{t("selectCategory")}</option>{options.map((option) => <option key={option.itemId} value={`${option.itemId}:${option.mediaId}`}>{option.name}{option.model ? ` ${option.model}` : ""}</option>)}</select></label> : null}
         {coverType === "upload" ? <><input ref={coverFile} className="visually-hidden" tabIndex={-1} aria-hidden="true" type="file" name="coverFile" accept="image/jpeg,image/png,image/webp" required onChange={(event: ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; setCoverPreview(file ? URL.createObjectURL(file) : ""); }}/><button type="button" className="photo-source-button collection-cover-pick" onClick={() => coverFile.current?.click()}>{t("collectionCoverUpload")}</button>{coverPreview ? <div className="collection-cover-preview"><PrivateImage variant="preview" src={coverPreview} alt={t("collectionCoverPreview")} width={480} height={240}/></div> : null}</> : null}
         {coverType === "emoji" ? <CollectionEmojiField label={t("collectionIcon")} value={icon} onChange={setIcon} required/> : null}
-        {feedback.status === "error" && feedback.message ? <p className="inline-status error-status" role="alert">{feedback.message}</p> : null}
+        {feedback.status === "error" && feedback.message ? <p className="inline-status error-status" role="alert">{feedback.message ? t(feedback.message, feedback.values) : ""}</p> : null}
         <div className="dialog-actions"><FormSubmitButton className="add-button" pendingLabel={t("savingChanges")}>{t("collectionCoverSave")}</FormSubmitButton><button type="button" className="quiet-button" onClick={() => setOpen(false)}>{t("cancel")}</button></div>
       </form>
     </section></div> : null}
-    {feedback.status === "success" && feedback.message ? <p className="visually-hidden" role="status">{feedback.message}</p> : null}
+    {feedback.status === "success" && feedback.message ? <p className="visually-hidden" role="status">{feedback.message ? t(feedback.message, feedback.values) : ""}</p> : null}
   </>;
 }
 
@@ -100,5 +102,5 @@ export function RemoveCollectionItem({ collectionId, itemId }: { collectionId: s
   const [feedback, action] = useActionState(removeCollectionMembershipAction, idle);
   const router = useRouter();
   useEffect(() => { if (feedback.status === "success") router.refresh(); }, [feedback, router]);
-  return <form action={action} className="collection-item-remove"><input type="hidden" name="collectionId" value={collectionId}/><input type="hidden" name="itemId" value={itemId}/><FormSubmitButton className="icon-button row-remove-button" label={t("remove")} pendingLabel={t("removing")}><Trash2 size={16} aria-hidden="true"/></FormSubmitButton>{feedback.status === "error" && feedback.message ? <span className="inline-status error-status" role="alert">{feedback.message}</span> : null}</form>;
+  return <form action={action} className="collection-item-remove"><input type="hidden" name="collectionId" value={collectionId}/><input type="hidden" name="itemId" value={itemId}/><FormSubmitButton className="icon-button row-remove-button" label={t("remove")} pendingLabel={t("removing")}><Trash2 size={16} aria-hidden="true"/></FormSubmitButton>{feedback.status === "error" && feedback.message ? <span className="inline-status error-status" role="alert">{feedback.message ? t(feedback.message, feedback.values) : ""}</span> : null}</form>;
 }

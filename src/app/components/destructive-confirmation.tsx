@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Trash2, X } from "lucide-react";
 import { useFormStatus } from "react-dom";
+import { InventoryField } from "./inventory-provider";
 import { useI18n } from "@/i18n/provider";
 
 type FormAction = (formData: FormData) => void | Promise<void>;
@@ -55,7 +56,7 @@ export function DestructiveConfirmation({ action, label, description, fields, ch
         {children}
         <form action={action} className="destructive-form">
           {Object.entries(fields).map(([name, value]) => <input key={name} type="hidden" name={name} value={value}/>)}
-          <input type="hidden" name="confirm" value="on"/>
+          <InventoryField/><input type="hidden" name="confirm" value="on"/>
           <div className="dialog-actions"><button type="button" className="text-button" disabled={pending} onClick={() => setOpen(false)}>{t("cancel")}</button><ConfirmButton label={label} pendingLabel={t("deleting")} onPendingChange={setPending}/></div>
         </form>
       </section>

@@ -1,6 +1,6 @@
 # ADR: multiple inventories and non-destructive archive import
 
-Status: accepted design for M3.3A; implementation has not started.
+Status: accepted; inventory context, integrity constraints, scoped services/routes and create/rename/switching implemented in M3.3A checkpoint B. Import-as-new and scoped deletion are subsequent checkpoints.
 
 ## Decision and concepts
 

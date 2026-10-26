@@ -23,7 +23,7 @@ export function ItemFilters({ categories, statuses, searchPlaceholder }: Props) 
   const [query, setQuery] = useState(params.get("q") ?? "");
   const filterRef = useRef<HTMLDivElement>(null);
   const scrollBeforeNavigation = useRef<number | null>(null);
-  function rememberScroll() { if (pathname.startsWith("/collections/")) scrollBeforeNavigation.current = window.scrollY; }
+  function rememberScroll() { if (pathname.includes("/collections/")) scrollBeforeNavigation.current = window.scrollY; }
   useLayoutEffect(() => {
     const previous = scrollBeforeNavigation.current;
     if (previous === null) return;

@@ -8,10 +8,11 @@ import { createItem, photoFirstItemValues, updateItem, type ItemFields } from "@
 import { createItemWithPhoto, deleteItemWithMedia, removePrimaryPhoto, replacePrimaryPhoto, MediaValidationError } from "@/media/service";
 import { addItemToCollection, addItemsToCollection, createCollection, deleteCollection, removeItemFromCollection, renameCollection, setCollectionCover } from "@/items/collections";
 import { replaceCollectionCoverUpload } from "@/media/collection-covers";
-import { getLocale } from "@/i18n/server";
-import { locales, translate, type MessageKey, type Locale } from "@/i18n/messages";
+import { resolveInventory } from "@/items/inventories";
+import { inventoryPath, inventoryReturnPath } from "@/items/inventory-context";
+import { locales, type MessageKey } from "@/i18n/messages";
 
-export type ActionFeedback = { status: "idle" | "success" | "error"; message: string; itemId?: string; collectionId?: string; count?: number };
+export type ActionFeedback = { status: "idle" | "success" | "error"; message: MessageKey | ""; values?: Record<string,string|number>; itemId?: string; collectionId?: string; count?: number };
 export type PhotoActionFeedback = ActionFeedback & { mediaId?: string };
 
 export async function setLanguageAction(formData: FormData) {
@@ -19,8 +20,8 @@ export async function setLanguageAction(formData: FormData) {
   (await cookies()).set("all-items-language", locale, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 60 * 60 * 24 * 365 });
 }
 
-function errorMessage(error: unknown, fallback: MessageKey, locale: Locale) {
-  if (!(error instanceof Error) || !error.message) return translate(locale, fallback);
+function errorMessage(error: unknown, fallback: MessageKey) {
+  if (!(error instanceof Error) || !error.message) return fallback;
   const known: Record<string, MessageKey> = {
     "Item not found": "itemNotFound",
     "Single item requires one unit and one location": "stockModeConflict",
@@ -31,7 +32,7 @@ function errorMessage(error: unknown, fallback: MessageKey, locale: Locale) {
     "Для уникальной вещи количество должно быть равно 1": "stockUniqueInvalid",
     "Укажите каждое место хранения один раз": "stockLocationsDuplicate",
   };
-  return known[error.message] ? translate(locale, known[error.message]!) : translate(locale, fallback);
+  return known[error.message] ? known[error.message]! : fallback;
 }
 
 function formValues(formData: FormData) {
@@ -46,8 +47,7 @@ function formValues(formData: FormData) {
 }
 
 export async function addItemAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
-  const locale = await getLocale();
-  const t = (key: MessageKey) => translate(locale, key);
+  const context = await resolveInventory(formData.get("inventoryId"));
   const uploaded = formData.get("photo");
   const file = uploaded instanceof File && uploaded.size > 0 ? uploaded : null;
   const sourceInput = formData.get("photoSource");
@@ -55,166 +55,159 @@ export async function addItemAction(_previous: ActionFeedback, formData: FormDat
   const cropValue = String(formData.get("crop") ?? "");
   const values = photoFirstItemValues(formValues(formData) as ItemFields, file !== null);
   const name = values.name.trim();
-  if (!name && !file) return { status: "error", message: t("invalidItem") };
+  if (!name && !file) return { status: "error", message: "invalidItem" };
   let item: { id: string };
   try {
     item = file
-      ? await createItemWithPhoto(values as ItemFields, file, sourceFile ?? file, cropValue, JSON.parse(String(formData.get("stock") ?? "[]")))
-      : await createItem(values as ItemFields, JSON.parse(String(formData.get("stock") ?? "[]")));
+      ? await createItemWithPhoto(context, values as ItemFields, file, sourceFile ?? file, cropValue, JSON.parse(String(formData.get("stock") ?? "[]")))
+      : await createItem(context, values as ItemFields, JSON.parse(String(formData.get("stock") ?? "[]")));
   } catch (error) {
-    if (error instanceof MediaValidationError) return { status: "error", message: t("invalidPhoto") };
-    return { status: "error", message: file ? t("itemSaveFailed") : errorMessage(error, "itemSaveGeneric", locale) };
+    if (error instanceof MediaValidationError) return { status: "error", message: "invalidPhoto" };
+    return { status: "error", message: file ? "itemSaveFailed" : errorMessage(error, "itemSaveGeneric") };
   }
-  revalidatePath("/");
-  return { status: "success", message: t("itemAdded"), itemId: item.id };
+  revalidatePath(inventoryPath(context));
+  return { status: "success", message: "itemAdded", itemId: item.id };
 }
 
 export async function replacePhotoAction(_previous: PhotoActionFeedback, formData: FormData): Promise<PhotoActionFeedback> {
-  const locale = await getLocale();
-  const t = (key: MessageKey) => translate(locale, key);
+  const context = await resolveInventory(formData.get("inventoryId"));
   const id = z.string().uuid().safeParse(String(formData.get("id") ?? ""));
-  if (!id.success) return { status: "error", message: t("missingPhotoItem") };
+  if (!id.success) return { status: "error", message: "missingPhotoItem" };
   const file = formData.get("photo");
-  if (!(file instanceof File) || file.size === 0) return { status: "error", message: t("choosePhoto") };
+  if (!(file instanceof File) || file.size === 0) return { status: "error", message: "choosePhoto" };
   const sourceInput = formData.get("photoSource");
   const sourceFile = sourceInput instanceof File && sourceInput.size > 0 ? sourceInput : file;
   const cropValue = String(formData.get("crop") ?? "");
   try {
-    const saved = await replacePrimaryPhoto(id.data, file, sourceFile, cropValue);
-    revalidatePath("/"); revalidatePath(`/items/${id.data}`);
-    return { status: "success", message: t("photoSaved"), mediaId: saved.id };
+    const saved = await replacePrimaryPhoto(context, id.data, file, sourceFile, cropValue);
+    revalidatePath(inventoryPath(context)); revalidatePath(inventoryPath(context,`/items/${id.data}`));
+    return { status: "success", message: "photoSaved", mediaId: saved.id };
   } catch (error) {
-    const message = error instanceof MediaValidationError ? t("invalidPhoto") : errorMessage(error, "photoSaveGeneric", locale);
+    const message = error instanceof MediaValidationError ? "invalidPhoto" : errorMessage(error, "photoSaveGeneric");
     return { status: "error", message };
   }
 }
 
 export async function removePhoto(formData: FormData) {
-  const locale = await getLocale();
+  const context = await resolveInventory(formData.get("inventoryId"));
   const id = z.string().uuid().parse(String(formData.get("id") ?? ""));
-  z.literal("on", { error: translate(locale, "photoDeleteConfirm") }).parse(formData.get("confirm"));
-  await removePrimaryPhoto(id);
-  revalidatePath("/"); revalidatePath(`/items/${id}`);
-  redirect(`/items/${id}`);
+  z.literal("on", { error: "photoDeleteConfirm" }).parse(formData.get("confirm"));
+  await removePrimaryPhoto(context, id);
+  revalidatePath(inventoryPath(context)); revalidatePath(inventoryPath(context,`/items/${id}`));
+  redirect(inventoryPath(context,`/items/${id}`));
 }
 
 export async function updateItemAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
-  const locale = await getLocale();
-  const t = (key: MessageKey) => translate(locale, key);
+  const context = await resolveInventory(formData.get("inventoryId"));
   const id = z.string().uuid().safeParse(String(formData.get("id") ?? ""));
-  if (!id.success) return { status: "error", message: t("missingItemId") };
-  const returnValue = String(formData.get("returnTo") ?? "/");
-  const returnTo = z.union([z.literal("/"), z.string().regex(/^\/collections\/[0-9a-f-]{36}$/i)]).safeParse(returnValue);
-  if (!returnTo.success) return { status: "error", message: t("itemUpdateGeneric") };
+  if (!id.success) return { status: "error", message: "missingItemId" };
+  let returnTo: string;
+  try { returnTo = inventoryReturnPath(context, formData.get("returnTo")); }
+  catch { return { status: "error", message: "itemUpdateGeneric" }; }
   try {
-    await updateItem(id.data, formValues(formData) as ItemFields, JSON.parse(String(formData.get("stock") ?? "[]")));
-    revalidatePath("/"); revalidatePath(`/items/${id.data}`); revalidatePath("/collections");
-    return { status: "success", message: t("changesSaved"), collectionId: returnTo.data.startsWith("/collections/") ? returnTo.data.split("/")[2] : undefined };
-  } catch (error) { return { status: "error", message: errorMessage(error, "itemUpdateGeneric", locale) }; }
+    await updateItem(context, id.data, formValues(formData) as ItemFields, JSON.parse(String(formData.get("stock") ?? "[]")));
+    revalidatePath(inventoryPath(context)); revalidatePath(inventoryPath(context,`/items/${id.data}`)); revalidatePath(inventoryPath(context,"/collections"));
+    return { status: "success", message: "changesSaved", collectionId: returnTo.startsWith(inventoryPath(context,"/collections/")) ? returnTo.split("/").at(-1) : undefined };
+  } catch (error) { return { status: "error", message: errorMessage(error, "itemUpdateGeneric") }; }
 }
 
 export async function createCollectionAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
-  const locale = await getLocale();
+  const context = await resolveInventory(formData.get("inventoryId"));
   try {
-    const collection = await createCollection({ name: formData.get("name"), icon: formData.get("icon") });
-    revalidatePath("/collections");
-    return { status: "success", message: translate(locale, "collectionCreated"), collectionId: collection.id };
-  } catch (error) { return { status: "error", message: errorMessage(error, "collectionCreateGeneric", locale) }; }
+    const collection = await createCollection(context, { name: formData.get("name"), icon: formData.get("icon") });
+    revalidatePath(inventoryPath(context,"/collections"));
+    return { status: "success", message: "collectionCreated", collectionId: collection.id };
+  } catch (error) { return { status: "error", message: errorMessage(error, "collectionCreateGeneric") }; }
 }
 
 export async function addItemsToCollectionAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
-  const locale = await getLocale();
-  const t = (key: MessageKey) => translate(locale, key);
+  const context = await resolveInventory(formData.get("inventoryId"));
   const collectionId = z.string().uuid().safeParse(formData.get("collectionId"));
   const itemIds = z.array(z.string().uuid()).min(1).max(500).safeParse(formData.getAll("itemId").map(String));
-  if (!collectionId.success || !itemIds.success) return { status: "error", message: t("chooseItems") };
+  if (!collectionId.success || !itemIds.success) return { status: "error", message: "chooseItems" };
   try {
-    const result = await addItemsToCollection(collectionId.data, itemIds.data);
-    revalidatePath("/"); revalidatePath("/collections"); revalidatePath(`/collections/${collectionId.data}`);
-    return { status: "success", message: translate(locale, "collectionItemsAdded", { count: result.added }), count: result.added };
-  } catch (error) { return { status: "error", message: errorMessage(error, "membershipAddGeneric", locale) }; }
+    const result = await addItemsToCollection(context, collectionId.data, itemIds.data);
+    revalidatePath(inventoryPath(context)); revalidatePath(inventoryPath(context,"/collections")); revalidatePath(inventoryPath(context,`/collections/${collectionId.data}`));
+    return { status: "success", message: "collectionItemsAdded", values: { count: result.added }, count: result.added };
+  } catch (error) { return { status: "error", message: errorMessage(error, "membershipAddGeneric") }; }
 }
 
 export async function setCollectionCoverAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
-  const locale = await getLocale();
-  const t = (key: MessageKey) => translate(locale, key);
+  const context = await resolveInventory(formData.get("inventoryId"));
   const collectionId = z.string().uuid().safeParse(formData.get("collectionId"));
-  if (!collectionId.success) return { status: "error", message: t("missingCollectionId") };
+  if (!collectionId.success) return { status: "error", message: "missingCollectionId" };
   const type = z.enum(["item_photo", "upload", "emoji", "default"]).safeParse(formData.get("coverType"));
-  if (!type.success) return { status: "error", message: t("collectionCoverSaveFailed") };
+  if (!type.success) return { status: "error", message: "collectionCoverSaveFailed" };
   try {
     if (type.data === "upload") {
       const file = formData.get("coverFile");
-      if (!(file instanceof File) || file.size < 1) return { status: "error", message: t("choosePhoto") };
-      await replaceCollectionCoverUpload(collectionId.data, file);
+      if (!(file instanceof File) || file.size < 1) return { status: "error", message: "choosePhoto" };
+      await replaceCollectionCoverUpload(context, collectionId.data, file);
     } else if (type.data === "item_photo") {
       const selected = z.string().regex(/^[0-9a-f-]{36}:[0-9a-f-]{36}$/i).safeParse(formData.get("selectedPhoto"));
-      if (!selected.success) return { status: "error", message: t("collectionCoverSaveFailed") };
+      if (!selected.success) return { status: "error", message: "collectionCoverSaveFailed" };
       const [itemId, mediaId] = selected.data.split(":");
-      await setCollectionCover(collectionId.data, { type: type.data, itemId, mediaId });
+      await setCollectionCover(context, collectionId.data, { type: type.data, itemId, mediaId });
     } else if (type.data === "emoji") {
-      await setCollectionCover(collectionId.data, { type: type.data, icon: formData.get("icon") });
+      await setCollectionCover(context, collectionId.data, { type: type.data, icon: formData.get("icon") });
     } else {
-      await setCollectionCover(collectionId.data, { type: type.data });
+      await setCollectionCover(context, collectionId.data, { type: type.data });
     }
-    revalidatePath("/collections"); revalidatePath(`/collections/${collectionId.data}`);
-    return { status: "success", message: t("collectionCoverSaved") };
+    revalidatePath(inventoryPath(context,"/collections")); revalidatePath(inventoryPath(context,`/collections/${collectionId.data}`));
+    return { status: "success", message: "collectionCoverSaved" };
   } catch (error) {
-    const message = error instanceof MediaValidationError ? t("invalidPhoto") : errorMessage(error, "collectionCoverSaveFailed", locale);
+    const message = error instanceof MediaValidationError ? "invalidPhoto" : errorMessage(error, "collectionCoverSaveFailed");
     return { status: "error", message };
   }
 }
 
 export async function renameCollectionAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
-  const locale = await getLocale();
-  const t = (key: MessageKey) => translate(locale, key);
+  const context = await resolveInventory(formData.get("inventoryId"));
   const id = z.string().uuid().safeParse(formData.get("id"));
-  if (!id.success) return { status: "error", message: t("missingCollectionId") };
+  if (!id.success) return { status: "error", message: "missingCollectionId" };
   try {
-    await renameCollection(id.data, { name: formData.get("name"), icon: formData.get("icon") });
-    revalidatePath("/collections"); revalidatePath(`/collections/${id.data}`);
-    return { status: "success", message: t("collectionRenameSaved") };
-  } catch (error) { return { status: "error", message: errorMessage(error, "collectionRenameGeneric", locale) }; }
+    await renameCollection(context, id.data, { name: formData.get("name"), icon: formData.get("icon") });
+    revalidatePath(inventoryPath(context,"/collections")); revalidatePath(inventoryPath(context,`/collections/${id.data}`));
+    return { status: "success", message: "collectionRenameSaved" };
+  } catch (error) { return { status: "error", message: errorMessage(error, "collectionRenameGeneric") }; }
 }
 
 export async function deleteCollectionAction(formData: FormData): Promise<void> {
-  const locale = await getLocale();
+  const context = await resolveInventory(formData.get("inventoryId"));
   const id = z.string().uuid().parse(formData.get("id"));
-  z.literal("on", { error: translate(locale, "collectionDeleteConfirmError") }).parse(formData.get("confirm"));
-  await deleteCollection(id);
-  revalidatePath("/collections"); revalidatePath(`/collections/${id}`); revalidatePath("/");
-  redirect("/collections");
+  z.literal("on", { error: "collectionDeleteConfirmError" }).parse(formData.get("confirm"));
+  await deleteCollection(context, id);
+  revalidatePath(inventoryPath(context,"/collections")); revalidatePath(inventoryPath(context,`/collections/${id}`)); revalidatePath(inventoryPath(context));
+  redirect(inventoryPath(context,"/collections"));
 }
 
 export async function addCollectionMembershipAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
-  const locale = await getLocale();
-  const t = (key: MessageKey) => translate(locale, key);
+  const context = await resolveInventory(formData.get("inventoryId"));
   const itemId = z.string().uuid().safeParse(formData.get("itemId"));
   const collectionId = z.string().uuid().safeParse(formData.get("collectionId"));
-  if (!itemId.success || !collectionId.success) return { status: "error", message: t("chooseCollection") };
+  if (!itemId.success || !collectionId.success) return { status: "error", message: "chooseCollection" };
   try {
-    await addItemToCollection(collectionId.data, itemId.data);
-    revalidatePath(`/items/${itemId.data}`); revalidatePath("/collections");
-    return { status: "success", message: t("collectionAdded") };
-  } catch (error) { return { status: "error", message: errorMessage(error, "membershipAddGeneric", locale) }; }
+    await addItemToCollection(context, collectionId.data, itemId.data);
+    revalidatePath(inventoryPath(context,`/items/${itemId.data}`)); revalidatePath(inventoryPath(context,"/collections"));
+    return { status: "success", message: "collectionAdded" };
+  } catch (error) { return { status: "error", message: errorMessage(error, "membershipAddGeneric") }; }
 }
 
 export async function removeCollectionMembershipAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
-  const locale = await getLocale();
-  const t = (key: MessageKey) => translate(locale, key);
+  const context = await resolveInventory(formData.get("inventoryId"));
   const itemId = z.string().uuid().safeParse(formData.get("itemId"));
   const collectionId = z.string().uuid().safeParse(formData.get("collectionId"));
-  if (!itemId.success || !collectionId.success) return { status: "error", message: t("membershipUnknown") };
-  await removeItemFromCollection(collectionId.data, itemId.data);
-  revalidatePath(`/items/${itemId.data}`); revalidatePath(`/collections/${collectionId.data}`);
-  return { status: "success", message: t("collectionRemoved") };
+  if (!itemId.success || !collectionId.success) return { status: "error", message: "membershipUnknown" };
+  await removeItemFromCollection(context, collectionId.data, itemId.data);
+  revalidatePath(inventoryPath(context,`/items/${itemId.data}`)); revalidatePath(inventoryPath(context,`/collections/${collectionId.data}`));
+  return { status: "success", message: "collectionRemoved" };
 }
 
 export async function removeItem(formData: FormData) {
-  const locale = await getLocale();
+  const context = await resolveInventory(formData.get("inventoryId"));
   const id = z.string().uuid().parse(String(formData.get("id") ?? ""));
-  z.literal("on", { error: translate(locale, "itemDeleteConfirmError") }).parse(formData.get("confirm"));
-  await deleteItemWithMedia(id);
-  revalidatePath("/");
-  redirect("/");
+  z.literal("on", { error: "itemDeleteConfirmError" }).parse(formData.get("confirm"));
+  await deleteItemWithMedia(context, id);
+  revalidatePath(inventoryPath(context));
+  redirect(inventoryPath(context));
 }

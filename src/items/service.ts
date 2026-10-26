@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { initializeWorkspace } from "@/db/client";
+import { inventoryDatabase } from "@/items/inventories";
+import type { InventoryContext } from "@/items/inventory-context";
 import { canonicalCategories, categoryKeyForStoredValue } from "./categories";
 
 const optionalText = (max: number) => z.string().trim().max(max).optional().transform((value) => value || null);
@@ -79,7 +80,7 @@ async function serializeLocalWrite<T>(operation: () => Promise<T>): Promise<T> {
   finally { release(); }
 }
 
-async function beginWriteTransaction(db: Awaited<ReturnType<typeof initializeWorkspace>>["db"]) {
+async function beginWriteTransaction(db: Awaited<ReturnType<typeof inventoryDatabase>>["db"]) {
   for (let attempt = 0; ; attempt += 1) {
     try {
       return await db.$client.transaction("write");
@@ -91,11 +92,11 @@ async function beginWriteTransaction(db: Awaited<ReturnType<typeof initializeWor
   }
 }
 
-export async function createItem(input: ItemFields, stock?: unknown) {
+export async function createItem(context: InventoryContext, input: ItemFields, stock?: unknown) {
   return serializeLocalWrite(async () => {
   const parsed = itemFields.parse(input);
   const rows = normalizedStock(stock ?? [{ location: "", quantity: parsed.trackingMode === "unique" ? 1 : 0 }], parsed.trackingMode);
-  const { db, workspaceId } = await initializeWorkspace();
+  const { db, workspaceId } = await inventoryDatabase(context);
   const tx = await beginWriteTransaction(db);
   try {
     const allocated = await tx.execute({ sql: "UPDATE workspaces SET next_inventory_number = next_inventory_number + 1 WHERE id = ?", args: [workspaceId] });
@@ -122,9 +123,9 @@ export async function createItem(input: ItemFields, stock?: unknown) {
   });
 }
 
-export async function listItems(filters: { search?: string; category?: string; status?: string; sort?: string; direction?: string; collectionId?: string } = {}): Promise<Array<Record<string, unknown> & { categories: string[] }>> {
+export async function listItems(context: InventoryContext, filters: { search?: string; category?: string; status?: string; sort?: string; direction?: string; collectionId?: string } = {}): Promise<Array<Record<string, unknown> & { categories: string[] }>> {
   const parsedFilters = itemListFilters.parse(filters);
-  const { db, workspaceId } = await initializeWorkspace();
+  const { db, workspaceId } = await inventoryDatabase(context);
   const search = parsedFilters.search || "";
   const clauses = ["i.workspace_id = ?"];
   const args: (string | number)[] = [workspaceId];
@@ -155,9 +156,9 @@ export async function listItems(filters: { search?: string; category?: string; s
   return result.rows.map((row) => { const categories = JSON.parse(String(row.categories_json)) as string[]; return { ...rowObject(row as Record<string, unknown>), categories, category: categories[0] ?? null }; });
 }
 
-export async function listCategoryValues(collectionIdValue?: unknown) {
+export async function listCategoryValues(context: InventoryContext, collectionIdValue?: unknown) {
   const collectionId = collectionIdValue === undefined ? undefined : z.string().uuid().parse(collectionIdValue);
-  const { db, workspaceId } = await initializeWorkspace();
+  const { db, workspaceId } = await inventoryDatabase(context);
   const membership = collectionId
     ? "AND EXISTS (SELECT 1 FROM item_collection_memberships cm WHERE cm.item_id = i.id AND cm.collection_id = ?)"
     : "";
@@ -169,15 +170,15 @@ export async function listCategoryValues(collectionIdValue?: unknown) {
   return result.rows.map((row) => String(row.category));
 }
 
-export async function countItems() {
-  const { db, workspaceId } = await initializeWorkspace();
+export async function countItems(context: InventoryContext) {
+  const { db, workspaceId } = await inventoryDatabase(context);
   const result = await db.$client.execute({ sql: "SELECT COUNT(*) AS count FROM items WHERE workspace_id = ?", args: [workspaceId] });
   return Number(result.rows[0]?.count ?? 0);
 }
 
-export async function getItem(id: string): Promise<ItemDetailDTO | null> {
+export async function getItem(context: InventoryContext, id: string): Promise<ItemDetailDTO | null> {
   id = itemIdInput.parse(id);
-  const { db, workspaceId } = await initializeWorkspace();
+  const { db, workspaceId } = await inventoryDatabase(context);
   const result = await db.$client.execute({
     sql: `SELECT i.id, i.name, i.model, i.inventory_number, i.brand, (SELECT json_group_array(category) FROM (SELECT category FROM item_categories WHERE item_id=i.id ORDER BY category)) AS categories_json, i.original_marking,
                  i.notes, i.description, i.identification_status, i.tracking_mode, i.sale_intent,
@@ -258,11 +259,11 @@ async function replaceStock(tx: Awaited<ReturnType<typeof beginWriteTransaction>
 
 }
 
-export async function updateItem(id: string, input: ItemFields, stock?: unknown) {
+export async function updateItem(context: InventoryContext, id: string, input: ItemFields, stock?: unknown) {
   id = itemIdInput.parse(id);
   const parsed = itemFields.parse(input);
   return serializeLocalWrite(async () => {
-    const { db, workspaceId } = await initializeWorkspace();
+    const { db, workspaceId } = await inventoryDatabase(context);
     const tx = await beginWriteTransaction(db);
     try {
       const existing = await tx.execute({ sql: "SELECT id FROM items WHERE id=? AND workspace_id=?", args: [id,workspaceId] });
@@ -281,10 +282,10 @@ export async function updateItem(id: string, input: ItemFields, stock?: unknown)
   });
 }
 
-export async function saveStock(id: string, input: unknown) {
+export async function saveStock(context: InventoryContext, id: string, input: unknown) {
   id = itemIdInput.parse(id);
   return serializeLocalWrite(async () => {
-    const { db, workspaceId } = await initializeWorkspace();
+    const { db, workspaceId } = await inventoryDatabase(context);
     const tx = await beginWriteTransaction(db);
     try {
       const item = await tx.execute({sql:"SELECT tracking_mode FROM items WHERE id=? AND workspace_id=?",args:[id,workspaceId]});
@@ -295,11 +296,13 @@ export async function saveStock(id: string, input: unknown) {
   });
 }
 
-export async function deleteItem(id: string) {
+export async function deleteItem(context: InventoryContext, id: string) {
   id = itemIdInput.parse(id);
-  const { db, workspaceId } = await initializeWorkspace();
+  const { db, workspaceId } = await inventoryDatabase(context);
   const tx = await beginWriteTransaction(db);
   try {
+    const item = await tx.execute({ sql: "SELECT id FROM items WHERE id=? AND workspace_id=?", args: [id, workspaceId] });
+    if (!item.rows.length) { await tx.commit(); return; }
     await tx.execute({ sql: "DELETE FROM stock_entries WHERE item_id = ?", args: [id] });
     await tx.execute({ sql: "DELETE FROM items WHERE id = ? AND workspace_id = ?", args: [id, workspaceId] });
     await tx.commit();

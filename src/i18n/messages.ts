@@ -1,4 +1,19 @@
 const ru = {
+  inventoryCreate: "Создать инвентарь",
+  inventoryName: "Название инвентаря",
+  inventoryCurrent: "Текущий инвентарь",
+  inventoryManage: "Настройки инвентаря",
+  inventoryCreateFailed: "Не удалось создать инвентарь. Проверьте название и попробуйте ещё раз.",
+  inventoryRenameFailed: "Не удалось переименовать инвентарь.",
+  inventoryNotFound: "Инвентарь не найден.",
+  inventoryEmptyInstallation: "Создайте инвентарь",
+  inventoryDelete: "Удалить инвентарь",
+  inventoryDeleteFailed: "Не удалось удалить инвентарь.",
+  inventoryDeleteCounts: "Вещей: {items}. Коллекций: {collections}.",
+  inventoryDeleteName: "Введите название инвентаря для подтверждения",
+  importInventoryName: "Название нового инвентаря",
+  importAsNew: "Импортировать как новый инвентарь",
+
   collectionAddCover: "Добавить обложку",
   stockModeConflict: "Для одной вещи нужна одна единица в одном месте. Вернитесь к прежнему типу и измените запас перед переключением.",
   addCategory: "Добавить",
@@ -249,6 +264,21 @@ const ru = {
 } as const;
 
 const en: Record<MessageKey, string> = {
+  inventoryCreate: "Create inventory",
+  inventoryName: "Inventory name",
+  inventoryCurrent: "Current inventory",
+  inventoryManage: "Inventory settings",
+  inventoryCreateFailed: "Could not create the inventory. Check the name and try again.",
+  inventoryRenameFailed: "Could not rename the inventory.",
+  inventoryNotFound: "Inventory not found.",
+  inventoryEmptyInstallation: "Create an inventory",
+  inventoryDelete: "Delete inventory",
+  inventoryDeleteFailed: "Could not delete the inventory.",
+  inventoryDeleteCounts: "Items: {items}. Collections: {collections}.",
+  inventoryDeleteName: "Enter the inventory name to confirm",
+  importInventoryName: "New inventory name",
+  importAsNew: "Import as new inventory",
+
   collectionAddCover: "Add cover",
   stockModeConflict: "A single item needs one unit at one location. Switch back and adjust stock before changing type.",
   addCategory: "Add",
@@ -332,6 +362,21 @@ const en: Record<MessageKey, string> = {
 };
 
 const uk: Record<MessageKey, string> = {
+  inventoryCreate: "Створити інвентар",
+  inventoryName: "Назва інвентарю",
+  inventoryCurrent: "Поточний інвентар",
+  inventoryManage: "Налаштування інвентарю",
+  inventoryCreateFailed: "Не вдалося створити інвентар. Перевірте назву та спробуйте ще раз.",
+  inventoryRenameFailed: "Не вдалося перейменувати інвентар.",
+  inventoryNotFound: "Інвентар не знайдено.",
+  inventoryEmptyInstallation: "Створіть інвентар",
+  inventoryDelete: "Видалити інвентар",
+  inventoryDeleteFailed: "Не вдалося видалити інвентар.",
+  inventoryDeleteCounts: "Речей: {items}. Колекцій: {collections}.",
+  inventoryDeleteName: "Введіть назву інвентарю для підтвердження",
+  importInventoryName: "Назва нового інвентарю",
+  importAsNew: "Імпортувати як новий інвентар",
+
   collectionAddCover: "Додати обкладинку",
   stockModeConflict: "Для однієї речі потрібна одна одиниця в одному місці. Поверніться до попереднього типу й змініть запас перед перемиканням.",
   addCategory: "Додати",
@@ -354,6 +399,21 @@ const uk: Record<MessageKey, string> = {
 };
 
 const srLatn: Record<MessageKey, string> = {
+  inventoryCreate: "Kreiraj inventar",
+  inventoryName: "Naziv inventara",
+  inventoryCurrent: "Trenutni inventar",
+  inventoryManage: "Podešavanja inventara",
+  inventoryCreateFailed: "Kreiranje inventara nije uspelo. Proverite naziv i pokušajte ponovo.",
+  inventoryRenameFailed: "Promena naziva inventara nije uspela.",
+  inventoryNotFound: "Inventar nije pronađen.",
+  inventoryEmptyInstallation: "Kreirajte inventar",
+  inventoryDelete: "Obriši inventar",
+  inventoryDeleteFailed: "Brisanje inventara nije uspelo.",
+  inventoryDeleteCounts: "Stvari: {items}. Kolekcije: {collections}.",
+  inventoryDeleteName: "Unesite naziv inventara za potvrdu",
+  importInventoryName: "Naziv novog inventara",
+  importAsNew: "Uvezi kao novi inventar",
+
   collectionAddCover: "Dodaj naslovnu sliku",
   stockModeConflict: "Jedna stvar zahteva jednu jedinicu na jednom mestu. Vratite prethodni tip i prilagodite zalihe pre promene.",
   addCategory: "Dodaj",
@@ -376,6 +436,21 @@ const srLatn: Record<MessageKey, string> = {
 };
 
 const zhHans: Record<MessageKey, string> = {
+  inventoryCreate: "创建库存",
+  inventoryName: "库存名称",
+  inventoryCurrent: "当前库存",
+  inventoryManage: "库存设置",
+  inventoryCreateFailed: "无法创建库存。请检查名称后重试。",
+  inventoryRenameFailed: "无法重命名库存。",
+  inventoryNotFound: "未找到库存。",
+  inventoryEmptyInstallation: "创建一个库存",
+  inventoryDelete: "删除库存",
+  inventoryDeleteFailed: "无法删除库存。",
+  inventoryDeleteCounts: "物品：{items}。收藏集：{collections}。",
+  inventoryDeleteName: "输入库存名称以确认",
+  importInventoryName: "新库存名称",
+  importAsNew: "导入为新库存",
+
   collectionAddCover: "添加封面",
   stockModeConflict: "单件物品需要一个位置的一件库存。请切回原类型并调整库存后再更改。",
   addCategory: "添加",
@@ -400,6 +475,7 @@ const zhHans: Record<MessageKey, string> = {
 export const locales = ["ru", "en", "uk", "sr-Latn", "zh-Hans"] as const;
 export type Locale = typeof locales[number];
 export type MessageKey = keyof typeof ru;
+export function isMessageKey(value: unknown): value is MessageKey { return typeof value === "string" && Object.hasOwn(ru, value); }
 export const messages: Record<Locale, Record<MessageKey, string>> = { ru, en, uk, "sr-Latn": srLatn, "zh-Hans": zhHans };
 
 export function translate(locale: Locale, key: MessageKey, values: Record<string, string | number> = {}) {

@@ -5,19 +5,18 @@ import path from "node:path";
 import sharp, { type Metadata } from "sharp";
 import { z } from "zod";
 import { canonicalCategories } from "@/items/categories";
-import { dataDirectory, getDatabase } from "@/db/client";
 import { cropDataSchema } from "@/media/crop-data";
 import { readInventoryArchive } from "./archive";
 
-const workspaceId = "00000000-0000-4000-8000-000000000001";
+import { ORIGINAL_INVENTORY_ID } from "@/items/inventory-context";
 const id = z.string().uuid();
 const nullableText = z.string().nullable();
 const timestamp = z.string().min(1).max(100);
-const locationSchema = z.object({ id, workspace_id: z.literal(workspaceId), name: z.string().min(1).max(120), created_at: timestamp });
+const locationSchema = z.object({ id, workspace_id: id, name: z.string().min(1).max(120), created_at: timestamp });
 const stockSchema = z.object({ id, item_id: id, location_id: id.nullable(), quantity: z.number().int().min(0).max(1_000_000), created_at: timestamp, updated_at: timestamp });
 const mediaSchema = z.object({ id, isPrimary: z.boolean(), displayOrder: z.number().int().nonnegative().nullable(), originalFilename: z.string().max(255), mimeType: z.literal("image/webp"), width: z.number().int().positive().max(12_000), height: z.number().int().positive().max(12_000), cropData: nullableText, createdAt: timestamp, imagePath: z.string(), thumbnailPath: z.string(), sourcePath: z.string().nullable() });
 const itemSchema = z.object({
-  id, workspace_id: z.literal(workspaceId), inventory_number: z.string().regex(/^INV-\d{6,}$/), name: z.string().min(1).max(160), model: nullableText, brand: nullableText,
+  id, workspace_id: id, inventory_number: z.string().regex(/^INV-\d{6,}$/), name: z.string().min(1).max(160), model: nullableText, brand: nullableText,
   category: nullableText, categories: z.array(z.string().min(1).max(80)).max(20), original_marking: nullableText, notes: nullableText, description: nullableText,
   identification_status: z.enum(["unknown", "user_confirmed", "source_verified"]), tracking_mode: z.enum(["unique", "bulk", "consumable"]),
   sale_intent: z.enum(["not_for_sale", "considering", "willing_to_sell"]), asking_price_minor: z.number().int().nonnegative().nullable(), asking_currency: nullableText,
@@ -25,12 +24,12 @@ const itemSchema = z.object({
 });
 const coverSchema = z.object({ id, width: z.number().int().positive().max(12_000), height: z.number().int().positive().max(12_000), createdAt: timestamp, path: z.string(), thumbnailPath: z.string() });
 const collectionSchema = z.object({
-  id, workspace_id: z.literal(workspaceId), name: z.string().trim().min(1).max(120), normalized_name: z.string().min(1), created_at: timestamp, updated_at: timestamp,
+  id, workspace_id: id, name: z.string().trim().min(1).max(120), normalized_name: z.string().min(1), created_at: timestamp, updated_at: timestamp,
   icon: nullableText, cover_type: z.enum(["item_photo", "upload", "emoji", "default"]).nullable(), cover_icon: nullableText,
   cover_item_id: id.nullable(), cover_media_id: id.nullable(), cover_upload_id: id.nullable(), itemIds: z.array(id), uploadCover: coverSchema.nullable(),
 });
 const membershipSchema = z.object({ id, item_id: id, collection_id: id, created_at: timestamp });
-const inventorySchema = z.object({ workspace: z.object({ id: z.literal(workspaceId), name: z.string(), created_at: timestamp, next_inventory_number: z.number().int().positive() }), locations: z.array(locationSchema), items: z.array(itemSchema), collections: z.array(collectionSchema), memberships: z.array(membershipSchema) });
+const inventorySchema = z.object({ workspace: z.object({ id: id, name: z.string(), created_at: timestamp, next_inventory_number: z.number().int().positive() }), locations: z.array(locationSchema), items: z.array(itemSchema), collections: z.array(collectionSchema), memberships: z.array(membershipSchema) });
 type Inventory = z.infer<typeof inventorySchema>;
 type Promotion = { archivePath: string; relativePath: string };
 type Executor = Pick<Client, "execute">;
@@ -42,6 +41,7 @@ function validatedRecords(value: unknown): Inventory {
   const result = inventorySchema.safeParse(value);
   if (!result.success) throw new ImportError("The archive contains invalid inventory records.");
   const inventory = result.data;
+  if ([...inventory.items,...inventory.locations,...inventory.collections].some(row=>row.workspace_id!==inventory.workspace.id)) throw new ImportError("Records cross the archived inventory boundary.");
   const itemIds = new Set<string>();
   const numbers = new Set<string>();
   const locationIds = new Set<string>();
@@ -112,6 +112,7 @@ async function validatedArchive(input: Uint8Array) {
   const { manifest, inventory: untyped, files } = readInventoryArchive(input);
   const records = manifest.version === 2 ? { ...untyped, items: (untyped.items as Array<Record<string, unknown>>).map(item => ({ ...item, categories: canonicalCategories(typeof item.category === "string" ? [item.category] : []) })) } : untyped;
   const inventory = validatedRecords(records);
+  if (manifest.version < 4 && inventory.workspace.id !== ORIGINAL_INVENTORY_ID) throw new ImportError("Legacy archive inventory identity is invalid.");
   const promotions: Promotion[] = [];
   for (const item of inventory.items) for (const media of item.mediaAssets) {
     const base = `media/items/${item.id}/${media.id}`;
@@ -134,9 +135,10 @@ export async function previewInventoryArchive(input: Uint8Array): Promise<Import
   return (await validatedArchive(input)).preview;
 }
 
-async function isOccupied(client: Executor) {
-  const result = await client.execute("SELECT (SELECT COUNT(*) FROM items) + (SELECT COUNT(*) FROM collections) + (SELECT COUNT(*) FROM locations) + (SELECT COUNT(*) FROM media_assets) + (SELECT COUNT(*) FROM collection_cover_assets) AS count");
-  return Number(result.rows[0]?.count ?? 0) > 0;
+async function isOccupied(client: Executor, workspaceId: string) {
+  const result = await client.execute({sql:"SELECT (SELECT COUNT(*) FROM items WHERE workspace_id=?) + (SELECT COUNT(*) FROM collections WHERE workspace_id=?) + (SELECT COUNT(*) FROM locations WHERE workspace_id=?) AS count",args:[workspaceId,workspaceId,workspaceId]});
+  const sequence=await client.execute({sql:"SELECT next_inventory_number FROM workspaces WHERE id=?",args:[workspaceId]});
+  return Number(result.rows[0]?.count ?? 0) > 0 || Number(sequence.rows[0]?.next_inventory_number ?? 1)>1;
 }
 
 function safeStage(root: string, entry: string) {
@@ -147,13 +149,15 @@ function safeStage(root: string, entry: string) {
 
 async function recoverInterruptedImports(client: Client, directory: string) {
   const entries = await readdir(directory, { withFileTypes: true });
-  const occupied = await isOccupied(client);
   for (const entry of entries) {
     if (!entry.isDirectory() || !/^\.import-[0-9a-f-]{36}$/.test(entry.name)) continue;
     const stage = safeStage(directory, entry.name);
     try {
       const journal = z.array(z.string().regex(/^media\/(?:items|collections)\/[0-9a-f-]{36}\/[0-9a-f-]{36}(?:-thumb|-source)?\.webp$/)).parse(JSON.parse(await readFile(path.join(stage, "journal.json"), "utf8")));
-      if (!occupied) for (const relative of journal) await rm(safeStage(directory, relative), { force: true });
+      for (const relative of journal) {
+        const referenced = await client.execute({sql:"SELECT 1 FROM media_assets WHERE ('media/items/'||storage_path)=? OR ('media/items/'||thumbnail_path)=? OR ('media/items/'||source_storage_path)=? UNION ALL SELECT 1 FROM collection_cover_assets WHERE ('media/'||storage_path)=? OR ('media/'||thumbnail_path)=? LIMIT 1",args:[relative,relative,relative,relative,relative]});
+        if (!referenced.rows.length) await rm(safeStage(directory, relative), { force: true });
+      }
     } catch (error) {
       if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw new ImportError("An interrupted import needs recovery before continuing.", "failed");
     }
@@ -170,13 +174,14 @@ async function insertRow(client: Executor, table: string, columns: string[], row
   await client.execute({ sql: `INSERT INTO ${table} (${columns.join(",")}) VALUES (${columns.map(() => "?").join(",")})`, args });
 }
 
-export async function restoreInventoryArchive(input: Uint8Array, context?: { client: Client; directory: string }, fault?: "stage" | "prepare" | "promote") {
+export async function restoreInventoryArchive(input: Uint8Array, context: { client: Client; directory: string; workspaceId: string }, fault?: "stage" | "prepare" | "promote") {
   const archive = await validatedArchive(input);
-  const directory = context?.directory ?? dataDirectory();
-  const client = context?.client ?? (await getDatabase()).$client;
+  const {directory,client,workspaceId}=context;
+  id.parse(workspaceId);
+  if (archive.inventory.workspace.id!==workspaceId) throw new ImportError("Archive belongs to a different inventory.");
   await mkdir(directory, { recursive: true });
   await recoverInterruptedImports(client, directory);
-  if (await isOccupied(client)) throw new ImportError("Import requires an empty inventory.", "occupied");
+  if (await isOccupied(client,workspaceId)) throw new ImportError("Import requires an empty inventory.", "occupied");
   const stage = path.join(directory, `.import-${randomUUID()}`);
   await mkdir(stage);
   const promoted: string[] = [];
@@ -196,7 +201,7 @@ export async function restoreInventoryArchive(input: Uint8Array, context?: { cli
     // The write transaction hides rows until every staged file has reached its generated private path.
     const tx = await client.transaction("write");
     try {
-      if (await isOccupied(tx)) throw new ImportError("Import requires an empty inventory.", "occupied");
+      if (await isOccupied(tx,workspaceId)) throw new ImportError("Import requires an empty inventory.", "occupied");
       for (const promotion of archive.promotions) {
         const target = safeStage(directory, promotion.relativePath);
         await mkdir(path.dirname(target), { recursive: true });
@@ -221,6 +226,7 @@ export async function restoreInventoryArchive(input: Uint8Array, context?: { cli
 }
 
 async function persistInventoryInTransaction(client: Executor, inventory: Inventory) {
+  const workspaceId=inventory.workspace.id;
   const workspace = await client.execute({ sql: "SELECT id FROM workspaces WHERE id = ?", args: [workspaceId] });
   if (!workspace.rows.length) await insertRow(client, "workspaces", ["id", "name", "created_at", "next_inventory_number"], inventory.workspace);
   else await client.execute({ sql: "UPDATE workspaces SET name = ?, created_at = ?, next_inventory_number = ? WHERE id = ?", args: [inventory.workspace.name, inventory.workspace.created_at, inventory.workspace.next_inventory_number, workspaceId] });
@@ -235,10 +241,11 @@ async function persistInventoryInTransaction(client: Executor, inventory: Invent
     });
   }
   for (const collection of inventory.collections) {
-    await insertRow(client, "collections", ["id", "workspace_id", "name", "normalized_name", "created_at", "updated_at", "icon", "cover_type", "cover_icon", "cover_item_id", "cover_media_id", "cover_upload_id"], collection);
+    await insertRow(client, "collections", ["id", "workspace_id", "name", "normalized_name", "created_at", "updated_at", "icon", "cover_type", "cover_icon", "cover_item_id", "cover_media_id", "cover_upload_id"], {...collection,cover_type:"default",cover_item_id:null,cover_media_id:null,cover_upload_id:null});
     if (collection.uploadCover) await insertRow(client, "collection_cover_assets", ["id", "collection_id", "storage_path", "thumbnail_path", "width", "height", "created_at"], {
       id: collection.uploadCover.id, collection_id: collection.id, storage_path: `collections/${collection.id}/${collection.uploadCover.id}.webp`, thumbnail_path: `collections/${collection.id}/${collection.uploadCover.id}-thumb.webp`, width: collection.uploadCover.width, height: collection.uploadCover.height, created_at: collection.uploadCover.createdAt,
     });
   }
   for (const membership of inventory.memberships) await insertRow(client, "item_collection_memberships", ["id", "collection_id", "item_id", "created_at"], membership);
+  for (const collection of inventory.collections) await client.execute({sql:"UPDATE collections SET cover_type=?,cover_item_id=?,cover_media_id=?,cover_upload_id=? WHERE id=? AND workspace_id=?",args:[collection.cover_type,collection.cover_item_id,collection.cover_media_id,collection.cover_upload_id,collection.id,workspaceId]});
 }

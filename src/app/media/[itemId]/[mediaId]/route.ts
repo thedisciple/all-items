@@ -1,3 +1,5 @@
+import { resolveInventory } from "@/items/inventories";
+import { ORIGINAL_INVENTORY_ID } from "@/items/inventory-context";
 import { ZodError } from "zod";
 import { readPrimaryPhoto } from "@/media/service";
 
@@ -9,7 +11,8 @@ type Context = { params: Promise<{ itemId: string; mediaId: string }> };
 export async function GET(request: Request, { params }: Context) {
   const { itemId, mediaId } = await params;
   try {
-    const photo = await readPrimaryPhoto(itemId, mediaId, new URL(request.url).searchParams.get("variant"));
+    const context=await resolveInventory(ORIGINAL_INVENTORY_ID);
+    const photo = await readPrimaryPhoto(context,itemId, mediaId, new URL(request.url).searchParams.get("variant"));
     if (!photo) return new Response(null, { status: 404 });
     return new Response(new Uint8Array(photo), {
       status: 200,

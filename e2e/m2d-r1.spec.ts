@@ -26,7 +26,7 @@ async function selectPhoto(page: Page, name = "synthetic.png", buffer?: Buffer) 
 }
 
 async function createWithCrop(page: Page, name: string) {
-  await page.goto("/");
+  await page.goto("/inventories/00000000-0000-4000-8000-000000000001");
   await page.locator(".add-dialog-trigger").click();
   const addDialog = page.getByRole("dialog", { name: "Добавить вещь" });
   const editor = await selectPhoto(page);
@@ -57,7 +57,7 @@ async function createWithCrop(page: Page, name: string) {
 }
 
 async function createNoPhotoItem(page: Page, name: string, category: string) {
-  await page.goto("/");
+  await page.goto("/inventories/00000000-0000-4000-8000-000000000001");
   await page.locator(".add-dialog-trigger").click();
   const dialog = page.getByRole("dialog", { name: "Добавить вещь" });
   await dialog.getByLabel("Название").fill(name);
@@ -78,7 +78,7 @@ test("waits for image readiness, applies zoom and aspect controls, crops, and op
   page.on("pageerror", (error) => pageErrors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(`${message.text()} (${message.location().url}:${message.location().lineNumber})`); if (message.type() === "warning") consoleWarnings.push(message.text()); });
   page.on("response", (response) => { if (response.status() >= 400) failedResponses.push(`${response.status()} ${response.url()}`); });
-  await page.goto("/");
+  await page.goto("/inventories/00000000-0000-4000-8000-000000000001");
   await page.locator(".add-dialog-trigger").click();
   const addDialog = page.getByRole("dialog", { name: "Добавить вещь" });
   const editor = await selectPhoto(page);
@@ -187,7 +187,7 @@ test("deletes a saved photo immediately and allows a replacement without a reloa
   await confirmation.getByRole("button", { name: "Удалить фотографию" }).click();
   await expect(page.locator(".compact-photo-placeholder")).toBeVisible();
   await expect(page.locator(".photo-viewer-image img.detail-photo")).toHaveCount(0);
-  await page.goto("/");
+  await page.goto("/inventories/00000000-0000-4000-8000-000000000001");
   const photoLessRow = page.getByRole("link", { name: /M2D-R2 delete and re-upload/ });
   await expect(photoLessRow.locator(".item-photo")).toHaveCount(0);
   await expect(photoLessRow.locator(".item-thumb")).toBeVisible();
@@ -203,7 +203,7 @@ test("deletes a saved photo immediately and allows a replacement without a reloa
   await page.getByRole("button", { name: "Удалить вещь" }).click();
   const itemConfirmation = page.getByRole("alertdialog", { name: "Удалить вещь" });
   await itemConfirmation.getByRole("button", { name: "Удалить вещь" }).click();
-  await expect(page).toHaveURL("/");
+  await expect(page).toHaveURL("/inventories/00000000-0000-4000-8000-000000000001");
   await expect(page.getByRole("link", { name: /M2D-R2 delete and re-upload/ })).toHaveCount(0);
 });
 
@@ -217,7 +217,7 @@ test("category and text filters update automatically and preserve browser histor
   await page.locator('select[name="identificationStatus"]').selectOption("user_confirmed");
   await page.locator('.inventory-stock-fields input[inputmode="numeric"]').fill("7");
   await page.getByRole("button", { name: "Сохранить изменения" }).click();
-  await expect(page).toHaveURL("/");
+  await expect(page).toHaveURL("/inventories/00000000-0000-4000-8000-000000000001");
   const filters = page.locator(".filter-bar");
   await expect.poll(async () => (await page.locator(".item-row h3").allTextContents()).filter((name) => /Alpha Legacy|Middle Custom|Zulu Stable/.test(name))).toEqual(["Middle Custom", "Alpha Legacy", "Zulu Stable"]);
   await filters.getByLabel("Категория").selectOption("electronics");
@@ -246,7 +246,7 @@ test("category and text filters update automatically and preserve browser histor
   await filters.getByLabel("Сортировка").selectOption("quantity");
   await expect.poll(async () => (await page.locator(".item-row h3").allTextContents()).filter((name) => /Alpha Legacy|Middle Custom|Zulu Stable/.test(name))[0]).toBe("Zulu Stable");
 
-  await page.goto("/collections");
+  await page.goto("/inventories/00000000-0000-4000-8000-000000000001/collections");
   await page.getByRole("button", { name: "Создать коллекцию" }).click();
   const dialog = page.getByRole("dialog", { name: "Создать коллекцию" });
   await dialog.getByLabel("Название коллекции").fill("Filter collection");
@@ -266,7 +266,7 @@ test("category and text filters update automatically and preserve browser histor
 });
 
 test("collection name, icon, cover and deletion are contextual and immediately visible", async ({ page }) => {
-  await page.goto("/collections");
+  await page.goto("/inventories/00000000-0000-4000-8000-000000000001/collections");
   await page.getByRole("button", { name: "Язык" }).click();
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("ArrowDown");
@@ -316,12 +316,12 @@ test("collection name, icon, cover and deletion are contextual and immediately v
   const confirmation = page.getByRole("alertdialog", { name: "Delete collection" });
   await expect(confirmation).toContainText("Items and photos will remain");
   await confirmation.getByRole("button", { name: "Delete collection" }).click();
-  await expect(page).toHaveURL("/collections");
+  await expect(page).toHaveURL("/inventories/00000000-0000-4000-8000-000000000001/collections");
   await expect(page.locator(".collection-card").filter({ hasText: "Renamed collection" })).toHaveCount(0);
 });
 
 test("Original crop covers portrait source and rotated orientation", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/inventories/00000000-0000-4000-8000-000000000001");
   await page.locator(".add-dialog-trigger").click();
   const addDialog = page.getByRole("dialog", { name: "Добавить вещь" });
   const editor = await selectPhoto(page, "portrait.png", await syntheticPhoto(480, 640));
@@ -342,7 +342,7 @@ test("Original crop covers portrait source and rotated orientation", async ({ pa
 });
 
 test("rejects invalid crop coordinates and allows item creation with the original image", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/inventories/00000000-0000-4000-8000-000000000001");
   await page.locator(".add-dialog-trigger").click();
   const addDialog = page.getByRole("dialog", { name: "Добавить вещь" });
   const editor = await selectPhoto(page);

@@ -8,12 +8,12 @@ import { canonicalCategories, canonicalCategory } from "@/items/categories";
 import { getDatabase, dataDirectory } from "@/db/client";
 
 export const ARCHIVE_FORMAT = "all-items-portable-inventory";
-export const ARCHIVE_VERSION = 3;
+export const ARCHIVE_VERSION = 4;
 export const MAX_ARCHIVE_BYTES = 128 * 1024 * 1024;
 export const MAX_ENTRY_BYTES = 32 * 1024 * 1024;
 export const MAX_ARCHIVE_ENTRIES = 20_000;
 export const MAX_ARCHIVE_PATH = 240;
-const workspaceId = "00000000-0000-4000-8000-000000000001";
+import { inventoryContextSchema, type InventoryContext } from "@/items/inventory-context";
 
 const digest = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
 const windowsDevice = /^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)/i;
@@ -75,7 +75,7 @@ function canonicalizeInventory(inventory: Record<string, unknown>, assets: Recor
   return { inventory: copy, assets: mapped };
 }
 const manifestSchema = z.object({
-  format: z.literal(ARCHIVE_FORMAT), version: z.union([z.literal(2), z.literal(ARCHIVE_VERSION)]), exportedAt: z.string().datetime(), applicationVersion: z.string(),
+  format: z.literal(ARCHIVE_FORMAT), version: z.union([z.literal(2), z.literal(3), z.literal(ARCHIVE_VERSION)]), exportedAt: z.string().datetime(), applicationVersion: z.string(),
   entries: z.array(z.object({ path: z.string(), size: z.number().int().nonnegative(), sha256: z.string().regex(/^[0-9a-f]{64}$/) })).max(MAX_ARCHIVE_ENTRIES),
 });
 const portableInventorySchema = z.object({
@@ -298,24 +298,34 @@ async function readSafeAsset(root: string, relative: string): Promise<Uint8Array
   return new Uint8Array(bytes);
 }
 
-export async function createInventoryArchive(context?: { client: Client; directory: string }) {
+export async function createInventoryArchive(inventory: InventoryContext, context?: { client: Client; directory: string }) {
+  const { workspaceId } = inventoryContextSchema.parse(inventory);
   const client = context?.client ?? (await getDatabase()).$client;
   const tx = await client.transaction("read");
   let snapshot: Record<string, Array<Record<string, unknown>>>;
   try {
     const workspace = await tx.execute({ sql: "SELECT id, name, created_at, next_inventory_number FROM workspaces WHERE id = ?", args: [workspaceId] });
+    if (!workspace.rows.length) throw new ArchiveError("Inventory not found");
     const items = await tx.execute({ sql: "SELECT * FROM items WHERE workspace_id = ? ORDER BY inventory_number", args: [workspaceId] });
     const locations = await tx.execute({ sql: "SELECT * FROM locations WHERE workspace_id = ? ORDER BY name", args: [workspaceId] });
-    const categoryAssignments = await tx.execute("SELECT ic.* FROM item_categories ic JOIN items i ON i.id=ic.item_id WHERE i.workspace_id='00000000-0000-4000-8000-000000000001' ORDER BY ic.item_id,ic.category");
-    const stock = await tx.execute("SELECT * FROM stock_entries ORDER BY item_id, created_at, id");
-    const media = await tx.execute("SELECT * FROM media_assets ORDER BY item_id, created_at, id");
+    const categoryAssignments = await tx.execute({sql:"SELECT ic.* FROM item_categories ic JOIN items i ON i.id=ic.item_id WHERE i.workspace_id=? ORDER BY ic.item_id,ic.category",args:[workspaceId]});
+    const stock = await tx.execute({sql:"SELECT s.* FROM stock_entries s JOIN items p ON p.id=s.item_id WHERE p.workspace_id=? ORDER BY s.item_id,s.created_at,s.id",args:[workspaceId]});
+    const media = await tx.execute({sql:"SELECT m.* FROM media_assets m JOIN items p ON p.id=m.item_id WHERE p.workspace_id=? ORDER BY m.item_id,m.created_at,m.id",args:[workspaceId]});
     const collections = await tx.execute({ sql: "SELECT * FROM collections WHERE workspace_id = ? ORDER BY created_at, id", args: [workspaceId] });
-    const memberships = await tx.execute("SELECT * FROM item_collection_memberships ORDER BY collection_id, item_id");
+    const memberships = await tx.execute({sql:"SELECT cm.* FROM item_collection_memberships cm JOIN collections p ON p.id=cm.collection_id WHERE p.workspace_id=? ORDER BY cm.collection_id,cm.item_id",args:[workspaceId]});
     const covers = await tx.execute({ sql: `SELECT ca.* FROM collection_cover_assets ca JOIN collections c ON c.id = ca.collection_id
       WHERE c.workspace_id = ? AND c.cover_type = 'upload' AND c.cover_upload_id = ca.id ORDER BY ca.collection_id, ca.id`, args: [workspaceId] });
     snapshot = { categoryAssignments: categoryAssignments.rows as unknown as Array<Record<string, unknown>>, workspaces: workspace.rows as unknown as Array<Record<string, unknown>>, items: items.rows as unknown as Array<Record<string, unknown>>, locations: locations.rows as unknown as Array<Record<string, unknown>>, stock: stock.rows as unknown as Array<Record<string, unknown>>, media: media.rows as unknown as Array<Record<string, unknown>>, collections: collections.rows as unknown as Array<Record<string, unknown>>, memberships: memberships.rows as unknown as Array<Record<string, unknown>>, covers: covers.rows as unknown as Array<Record<string, unknown>> };
     await tx.commit();
   } catch (error) { await tx.rollback(); throw error; }
+  for (const asset of snapshot.media) {
+    const base=`${asset.item_id}/${asset.id}`;
+    if (asset.storage_path!==`${base}.webp` || asset.thumbnail_path!==`${base}-thumb.webp` || asset.source_storage_path!==null && asset.source_storage_path!==`${base}-source.webp`) throw new ArchiveError("Stored item media does not match its generated identifiers.");
+  }
+  for (const asset of snapshot.covers) {
+    const base=`collections/${asset.collection_id}/${asset.id}`;
+    if(asset.storage_path!==`${base}.webp` || asset.thumbnail_path!==`${base}-thumb.webp`) throw new ArchiveError("Stored cover does not match its generated identifiers.");
+  }
   const total = snapshot.media.reduce((count, row) => count + (row.source_storage_path ? 3 : 2), 0) + snapshot.covers.length * 2 + 3;
   if (total > MAX_ARCHIVE_ENTRIES) throw new ArchiveError("This inventory contains too many archive entries.");
   const mediaRoot = path.join(context?.directory ?? dataDirectory(), "media");
@@ -330,7 +340,9 @@ export async function createInventoryArchive(context?: { client: Client; directo
   const mediaAssets = snapshot.media.flatMap((asset) => [asset.storage_path, asset.thumbnail_path, ...(asset.source_storage_path ? [asset.source_storage_path] : [])].map((value) => `items/${String(value)}`));
   const collectionAssets = snapshot.covers.flatMap((asset) => [asset.storage_path, asset.thumbnail_path].map((value) => collectionCoverPath(String(value))));
   for (const relative of [...mediaAssets, ...collectionAssets]) assets[`media/${relative}`] = await readSafeAsset(mediaRoot, relative);
-  return buildInventoryArchive(payload, assets);
+  const archive = buildInventoryArchive(payload, assets);
+  verifyInventoryArchive(archive);
+  return archive;
 }
 
 function collectionCoverPath(storagePath: string) {
@@ -350,8 +362,10 @@ export function formatInventoryCsv(rows: Array<Record<string, unknown>>) {
   return Buffer.from(`\uFEFF${[columns, ...rows.map((row) => [row.inventory_number, row.name, row.model, row.brand, JSON.stringify(row.categories ?? (row.category ? [row.category] : [])), row.quantity, row.locations, row.identification_status, row.sale_intent, row.asking_price_minor == null ? null : (Number(row.asking_price_minor) / 100).toFixed(2), row.asking_currency, row.description, row.notes])].map((row) => row.map(csvCell).join(",")).join("\r\n")}\r\n`, "utf8");
 }
 
-export async function createInventoryCsv() {
-  const db = await getDatabase();
+export async function createInventoryCsv(context: InventoryContext) {
+  const { workspaceId } = inventoryContextSchema.parse(context);
+  const { inventoryDatabase } = await import("@/items/inventories");
+  const { db } = await inventoryDatabase(context);
   const rows = await db.$client.execute({ sql: `SELECT i.inventory_number, i.name, i.model, i.brand, (SELECT json_group_array(category) FROM (SELECT category FROM item_categories WHERE item_id=i.id ORDER BY category)) AS categories_json, i.identification_status, i.sale_intent, i.asking_price_minor, i.asking_currency, i.description, i.notes, COALESCE(SUM(s.quantity), 0) AS quantity, GROUP_CONCAT(l.name, '; ') AS locations FROM items i LEFT JOIN stock_entries s ON s.item_id = i.id LEFT JOIN locations l ON l.id = s.location_id WHERE i.workspace_id = ? GROUP BY i.id ORDER BY i.inventory_number`, args: [workspaceId] });
   return formatInventoryCsv(rows.rows.map(row => ({ ...row, categories: JSON.parse(String(row.categories_json)) })));
 }

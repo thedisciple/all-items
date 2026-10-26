@@ -1,22 +1,24 @@
 "use client";
 
+import { useInventory } from "./inventory-provider";
 import { useState } from "react";
 import { Archive, Download, FileSpreadsheet } from "lucide-react";
-import { type Locale, translate } from "@/i18n/messages";
+import { type Locale, type MessageKey, isMessageKey, translate } from "@/i18n/messages";
 
 type ExportKind = "archive" | "csv";
 
 export function ExportControls({ locale }: { locale: Locale }) {
+  const { base } = useInventory();
   const [pending, setPending] = useState<ExportKind | null>(null);
-  const [feedback, setFeedback] = useState("");
+  const [feedback, setFeedback] = useState<MessageKey | null>(null);
   async function download(kind: ExportKind) {
     if (pending) return;
-    setPending(kind); setFeedback("");
+    setPending(kind); setFeedback(null);
     try {
-      const response = await fetch(`/api/export/${kind}`, { cache: "no-store" });
+      const response = await fetch(`${base}/api/export/${kind}`, { cache: "no-store" });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({})) as { error?: string };
-        throw new Error(payload.error || translate(locale, kind === "archive" ? "exportArchiveFailed" : "exportCsvFailed"));
+        throw new Error(isMessageKey(payload.error) ? payload.error : kind === "archive" ? "exportArchiveFailed" : "exportCsvFailed");
       }
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
@@ -26,7 +28,7 @@ export function ExportControls({ locale }: { locale: Locale }) {
       document.body.append(anchor); anchor.click(); anchor.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (error) {
-      setFeedback(error instanceof Error ? error.message : translate(locale, kind === "archive" ? "exportArchiveFailed" : "exportCsvFailed"));
+      setFeedback(error instanceof Error && isMessageKey(error.message) ? error.message : kind === "archive" ? "exportArchiveFailed" : "exportCsvFailed");
     } finally { setPending(null); }
   }
   return <>
@@ -34,6 +36,6 @@ export function ExportControls({ locale }: { locale: Locale }) {
       <button className="add-button" type="button" disabled={pending !== null} onClick={() => void download("archive")}>{pending === "archive" ? <Download size={16} aria-hidden="true"/> : <Archive size={16} aria-hidden="true"/>}{pending === "archive" ? translate(locale, "exportPreparing") : translate(locale, "downloadArchive")}</button>
       <div className="export-option"><button className="quiet-button" type="button" disabled={pending !== null} onClick={() => void download("csv")}>{pending === "csv" ? <Download size={16} aria-hidden="true"/> : <FileSpreadsheet size={16} aria-hidden="true"/>}{pending === "csv" ? translate(locale, "exportPreparing") : translate(locale, "exportCsv")}</button><p className="export-note">{translate(locale, "exportCsvNote")}</p></div>
     </div>
-    {feedback ? <p className="form-feedback error" role="alert">{feedback}</p> : null}
+    {feedback ? <p className="form-feedback error" role="alert">{translate(locale,feedback)}</p> : null}
   </>;
 }

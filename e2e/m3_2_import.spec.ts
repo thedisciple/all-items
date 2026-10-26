@@ -9,7 +9,7 @@ test("downloads a complete archive and restores it through the browser into a fr
   const image = await sharp({ create: { width: 260, height: 180, channels: 3, background: "#678853" } }).png().toBuffer();
   const cover = await sharp({ create: { width: 400, height: 200, channels: 3, background: "#68639a" } }).png().toBuffer();
 
-  await page.goto("/");
+  await page.goto("/inventories/00000000-0000-4000-8000-000000000001");
   await page.locator(".add-dialog-trigger").click();
   const add = page.getByRole("dialog", { name: "Добавить вещь" });
   await add.getByRole("button", { name: "Добавить фото" }).click();
@@ -22,7 +22,7 @@ test("downloads a complete archive and restores it through the browser into a fr
   await add.getByRole("button", { name: "Добавить вещь" }).click();
   await expect(page).toHaveURL(/added=/);
 
-  await page.goto("/collections");
+  await page.goto("/inventories/00000000-0000-4000-8000-000000000001/collections");
   await page.getByRole("button", { name: "Создать коллекцию" }).click();
   const create = page.getByRole("dialog", { name: "Создать коллекцию" });
   await create.getByLabel("Название коллекции").fill("Portable DIY");
@@ -41,7 +41,7 @@ test("downloads a complete archive and restores it through the browser into a fr
   await coverDialog.getByRole("button", { name: "Сохранить обложку" }).click();
   await expect(page.locator(".collection-detail-cover")).toBeVisible();
 
-  await page.goto("/data");
+  await page.goto("/inventories/00000000-0000-4000-8000-000000000001/data");
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Скачать архив" }).click();
   const download = await downloadPromise;

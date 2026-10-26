@@ -7,7 +7,7 @@ test("consistent controls, dismissible categories and unobscured collection crea
   test.setTimeout(120_000);
   for (const width of [1365, 360]) {
     await page.setViewportSize({ width, height: 800 });
-    await page.goto("/");
+    await page.goto("/inventories/00000000-0000-4000-8000-000000000001");
     await expect(page.locator(".brand")).toContainText("All Items");
     await expect(page.locator(".nav-link.active")).toContainText("Инвентарь");
     const search = page.locator(".search-field");
@@ -34,7 +34,7 @@ test("consistent controls, dismissible categories and unobscured collection crea
     await expect(add.locator(".category-selection .category-chip")).toHaveCount(1);
     await add.getByRole("button", { name: "Добавить вещь", exact: true }).click();
     await expect(page).toHaveURL(/added=/);
-    await page.goto("/collections");
+    await page.goto("/inventories/00000000-0000-4000-8000-000000000001/collections");
     await page.getByRole("button", { name: "Создать коллекцию", exact: true }).click();
     const create = page.getByRole("dialog", { name: "Создать коллекцию" });
     const name = create.getByLabel("Название коллекции");
@@ -55,7 +55,7 @@ test("consistent controls, dismissible categories and unobscured collection crea
 });
 
 test("collection cover opens the whole image and offers contextual change; crop dialog grows with controls", async ({ page }) => {
-  await page.goto("/collections");
+  await page.goto("/inventories/00000000-0000-4000-8000-000000000001/collections");
   await page.getByRole("button", { name: "Создать коллекцию", exact: true }).click();
   const create = page.getByRole("dialog", { name: "Создать коллекцию" });
   await create.getByLabel("Название коллекции").fill("M33 cover portrait");
@@ -77,7 +77,7 @@ test("collection cover opens the whole image and offers contextual change; crop 
   await viewer.getByRole("button", { name: "Закрыть" }).press("Escape");
   await expect(viewer).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Увеличить фото" })).toBeFocused();
-  await page.goto("/"); await page.locator(".add-dialog-trigger").click();
+  await page.goto("/inventories/00000000-0000-4000-8000-000000000001"); await page.locator(".add-dialog-trigger").click();
   await page.getByRole("button", { name: "Добавить фото", exact: true }).click();
   await page.locator('input[name="photo"]').setInputFiles({ name: "crop.png", mimeType: "image/png", buffer: await sharp({ create: { width: 480, height: 320, channels: 3, background: "#7385a2" } }).png().toBuffer() });
   const crop = page.getByRole("dialog", { name: "Редактировать фото" });

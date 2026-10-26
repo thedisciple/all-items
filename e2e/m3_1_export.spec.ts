@@ -7,7 +7,7 @@ import { verifyInventoryArchive } from "../src/export/archive";
 test("downloads an independently verifiable archive and a separate CSV without changing inventory", async ({ page }) => {
   const consoleErrors: string[] = [];
   page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
-  await page.goto("/");
+  await page.goto("/inventories/00000000-0000-4000-8000-000000000001");
   await page.locator(".add-dialog-trigger").click();
   const dialog = page.getByRole("dialog", { name: "Добавить вещь" });
   await dialog.getByRole("button", { name: "Добавить фото" }).click();
@@ -18,7 +18,7 @@ test("downloads an independently verifiable archive and a separate CSV without c
   await dialog.getByLabel("Название").fill("Archive export Проверка 中文");
   await dialog.getByRole("button", { name: "Добавить вещь" }).click();
   await expect(page).toHaveURL(/added=/);
-  await page.goto("/data");
+  await page.goto("/inventories/00000000-0000-4000-8000-000000000001/data");
   await page.setViewportSize({ width: 360, height: 800 });
   await expect(page.getByRole("button", { name: "Скачать архив" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Экспорт CSV" })).toBeVisible();
@@ -54,7 +54,7 @@ test("downloads an independently verifiable archive and a separate CSV without c
   const csvPath = await csv.path();
   if (!csvPath) throw new Error("The downloaded CSV is missing a local test path.");
   expect(await readFile(csvPath, "utf8")).toContain("Archive export Проверка 中文");
-  await page.goto("/");
+  await page.goto("/inventories/00000000-0000-4000-8000-000000000001");
   await expect(page.getByRole("link", { name: /Archive export Проверка 中文/ })).toBeVisible();
   expect(consoleErrors).toEqual([]);
 });

@@ -1,7 +1,9 @@
 # Changelog
 
-## M3.3A — checkpoint A
+## M3.3A — checkpoints A and B
 
+- Added explicit inventory contexts and routes, create/rename/switching, independent numbering, scoped exports and database ownership constraints.
+- ZIP revision 4 supports arbitrary inventory UUIDs; revisions 2/3 retain their original import contracts.
 - Unified control geometry, stable filter slots, compact dismissible category selection, and consistent dialog action rows.
 - Fixed collection creation grid inheritance and emoji palette containment; centered close icons.
 - Removed repeated item-edit summaries, refined crop dialog sizing/handles, and added full collection cover viewing with contextual editing.

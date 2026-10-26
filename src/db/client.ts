@@ -6,11 +6,10 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import * as schema from "@/db/schema";
 
-const workspaceId = "00000000-0000-4000-8000-000000000001";
 let databasePromise: Promise<ReturnType<typeof drizzle<typeof schema>>> | undefined;
 
 export function dataDirectory() {
-  const directory = path.resolve(process.env.ALL_ITEMS_DATA_DIR || path.join(process.env.LOCALAPPDATA || os.homedir(), "AllItems"));
+  const directory = path.resolve(process.env.ALL_ITEMS_DATA_DIR || (process.platform === "win32" ? path.join(process.env.LOCALAPPDATA || os.homedir(), "AllItems") : path.join(os.homedir(), ".all-items")));
   const repository = path.resolve(process.cwd());
   const relative = path.relative(repository, directory);
   if (relative === "" || (!relative.startsWith(`..${path.sep}`) && relative !== ".." && !path.isAbsolute(relative))) {
@@ -29,14 +28,4 @@ export async function getDatabase() {
     })();
   }
   return databasePromise;
-}
-
-export async function initializeWorkspace() {
-  const db = await getDatabase();
-  await db.insert(schema.workspaces).values({
-    id: workspaceId,
-    name: "Моя коллекция",
-    createdAt: new Date().toISOString(),
-  }).onConflictDoNothing();
-  return { db, workspaceId };
 }

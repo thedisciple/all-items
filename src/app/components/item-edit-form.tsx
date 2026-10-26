@@ -15,7 +15,7 @@ type Draft = {
   askingCurrency: string; description: string; notes: string;
 };
 
-export function ItemEditForm({ itemId, initial, initialRows, returnTo = "/" }: { itemId: string; initial: Draft; initialRows: { location: string | null; quantity: number }[]; returnTo?: string }) {
+export function ItemEditForm({ itemId, initial, initialRows, returnTo }: { itemId: string; initial: Draft; initialRows: { location: string | null; quantity: number }[]; returnTo: string }) {
   const { t } = useI18n();
   const [draft, setDraft] = useState(initial);
   const initialStock = initialRows.length ? initialRows.map(row => ({ location: row.location ?? "", quantity: String(row.quantity) })) : [{ location: "", quantity: initial.trackingMode === "unique" ? "1" : "0" }];
@@ -48,7 +48,7 @@ export function ItemEditForm({ itemId, initial, initialRows, returnTo = "/" }: {
     </div></details>
     <div className="form-action-row"><FormSubmitButton className="add-button" disabled={pending || !dirty || !draft.name.trim() || !validStockDraft(rows, draft.trackingMode)} pendingLabel={t("savingChanges")}>{pending ? t("savingChanges") : t("saveChanges")}</FormSubmitButton>
       <a className="quiet-button" href={returnTo}>{t("cancel")}</a>
-      {feedback.status === "error" && feedback.message ? <p className="inline-status error-status" role="alert">{feedback.message}</p> : null}
+      {feedback.status === "error" && feedback.message ? <p className="inline-status error-status" role="alert">{feedback.message ? t(feedback.message, feedback.values) : ""}</p> : null}
     </div>
   </form>;
 }

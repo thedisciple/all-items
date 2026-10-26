@@ -1,3 +1,5 @@
+import { resolveInventory } from "@/items/inventories";
+import { ORIGINAL_INVENTORY_ID } from "@/items/inventory-context";
 import { ZodError } from "zod";
 import { readCollectionCover } from "@/media/collection-covers";
 
@@ -9,9 +11,10 @@ type Context = { params: Promise<{ collectionId: string; mediaId: string }> };
 export async function GET(request: Request, { params }: Context) {
   const { collectionId, mediaId } = await params;
   try {
+    const context=await resolveInventory(ORIGINAL_INVENTORY_ID);
     const variant = new URL(request.url).searchParams.get("variant");
     if (variant && variant !== "image" && variant !== "thumbnail") return new Response(null, { status: 400 });
-    const photo = await readCollectionCover(collectionId, mediaId, variant !== "image");
+    const photo = await readCollectionCover(context,collectionId, mediaId, variant !== "image");
     if (!photo) return new Response(null, { status: 404 });
     return new Response(new Uint8Array(photo), { status: 200, headers: {
       "Content-Type": "image/webp", "Content-Disposition": 'inline; filename="collection-cover.webp"',

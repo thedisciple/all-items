@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import sharp from "sharp";
 
 async function createPhotoItem(page: Page, name: string) {
-  await page.goto("/");
+  await page.goto("/inventories/00000000-0000-4000-8000-000000000001");
   await page.locator(".add-dialog-trigger").click();
   const dialog = page.getByRole("dialog", { name: "Добавить вещь" });
   await dialog.getByRole("button", { name: "Добавить фото" }).click();
@@ -57,19 +57,19 @@ test("delayed and interrupted thumbnails remain clickable during navigation and 
   release();
   await page.unroute("**/media/**?variant=thumbnail");
   await page.route("**/media/**?variant=thumbnail", route => route.abort("internetdisconnected"));
-  await page.goto("/");
+  await page.goto("/inventories/00000000-0000-4000-8000-000000000001");
   await expect(row.locator(".private-image-frame")).toHaveAttribute("data-image-state", "error");
   await row.click();
   await expect(page).toHaveURL(/\/items\//);
   await page.unroute("**/media/**?variant=thumbnail");
-  await page.goto("/");
+  await page.goto("/inventories/00000000-0000-4000-8000-000000000001");
   await expect(row.locator(".private-image-frame")).toHaveAttribute("data-image-state", "loaded");
   expect(errors).toEqual([]);
 });
 
 test("one item save retains a failed draft and commits type, stock and multiple categories together", async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 800 });
-  await page.goto("/");
+  await page.goto("/inventories/00000000-0000-4000-8000-000000000001");
   await page.locator(".add-dialog-trigger").click();
   const add = page.getByRole("dialog", { name: "Добавить вещь" });
   await add.getByLabel("Название").fill("R1 combined");
@@ -109,7 +109,7 @@ test("one item save retains a failed draft and commits type, stock and multiple 
   await expect(form.getByLabel("Количество", { exact: true }).nth(1)).toHaveValue("4");
   await form.locator('input[name="id"]').evaluate((input, id) => { (input as HTMLInputElement).value = id; }, itemId);
   await form.getByRole("button", { name: "Сохранить изменения" }).click();
-  await expect(page).toHaveURL("/");
+  await expect(page).toHaveURL("/inventories/00000000-0000-4000-8000-000000000001");
   const saved = page.getByRole("link", { name: /R1 combined saved/ });
   await expect(saved).toContainText("7");
   await page.locator(".filter-bar").getByLabel("Категория", { exact: true }).selectOption("tools");
@@ -124,7 +124,7 @@ test("one item save retains a failed draft and commits type, stock and multiple 
 test("collection filters keep uploaded cover geometry and a predictable scroll anchor on desktop and mobile", async ({ page }) => {
   test.setTimeout(90_000);
   for (let index=0;index<3;index++) {
-    await page.goto("/"); await page.locator(".add-dialog-trigger").click();
+    await page.goto("/inventories/00000000-0000-4000-8000-000000000001"); await page.locator(".add-dialog-trigger").click();
     const add = page.getByRole("dialog", { name: "Добавить вещь" });
     await add.getByLabel("Название").fill(`R1 geometry ${index}`);
     await add.locator(".category-trigger").click();
@@ -133,7 +133,7 @@ test("collection filters keep uploaded cover geometry and a predictable scroll a
     await add.getByRole("button", { name: "Добавить вещь", exact: true }).click();
     await expect(page).toHaveURL(/added=/);
   }
-  await page.goto("/collections"); await page.getByRole("button", { name: "Создать коллекцию" }).click();
+  await page.goto("/inventories/00000000-0000-4000-8000-000000000001/collections"); await page.getByRole("button", { name: "Создать коллекцию" }).click();
   const create = page.getByRole("dialog", { name: "Создать коллекцию" });
   await create.getByLabel("Название коллекции").fill("R1 stable header");
   await create.getByRole("button", { name: "Создать коллекцию" }).click();

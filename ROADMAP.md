@@ -113,10 +113,10 @@ M3.2-R1 now exports revision 3 and retains a tested revision 2 import adapter. R
 
 Validated with 38 unit tests, typecheck, lint, production build, the 13-scenario Edge suite, separate archive restoration and focused mobile/export checks. Physical touch-device testing remains separate. The original reported RSC/network incident was not conclusively reproduced; controlled media failures are covered.
 
-### M3.3A Multiple Inventories & Non-destructive Import - NOT STARTED
+### M3.3A Multiple Inventories & Non-destructive Import - IN PROGRESS
 
-- [ ] Explicit inventory context and additive cross-inventory integrity checks across every read/write/media boundary
-- [ ] Inventory switcher, create/rename, independent sequences, scoped search/collections and local selection preference
+- [x] Explicit inventory context and additive cross-inventory integrity checks across every read/write/media boundary
+- [x] Inventory switcher, create/rename, independent sequences, scoped search/collections and local selection preference
 - [ ] Validated import as a new inventory with full ID/reference remapping, private staging and interruption recovery
 - [ ] Scoped deletion with explicit confirmation and preservation tests; no global Clear All or replacement shortcut
 

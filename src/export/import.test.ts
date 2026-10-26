@@ -21,8 +21,8 @@ const collectionA = "66666666-6666-4666-8666-666666666666";
 const collectionB = "77777777-7777-4777-8777-777777777777";
 const coverId = "88888888-8888-4888-8888-888888888888";
 const date = "2025-06-12T10:11:12.000Z";
-let source: { client: Client; directory: string };
-let destination: { client: Client; directory: string };
+let source: { client: Client; directory: string; workspaceId: string };
+let destination: { client: Client; directory: string; workspaceId: string };
 let root: string;
 let validArchive: Uint8Array;
 
@@ -30,7 +30,7 @@ async function installation(directory: string) {
   await mkdir(directory, { recursive: true });
   const client = createClient({ url: pathToFileURL(path.join(directory, "all-items.db")).href });
   await applyMigrations(client, path.join(process.cwd(), "src/db/migrations"));
-  return { client, directory };
+  return { client, directory, workspaceId };
 }
 
 async function photo(width: number, height: number) {
@@ -39,7 +39,7 @@ async function photo(width: number, height: number) {
 
 async function seed() {
   const c = source.client;
-  await c.execute({ sql: "INSERT INTO workspaces (id,name,created_at,next_inventory_number) VALUES (?,?,?,?)", args: [workspaceId, "My tools", date, 9] });
+  await c.execute({ sql: "INSERT INTO workspaces (id,name,created_at,next_inventory_number) VALUES (?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,created_at=excluded.created_at,next_inventory_number=excluded.next_inventory_number", args: [workspaceId, "My tools", date, 9] });
   for (const [id, name] of [[locationA, "Shelf A"], [locationB, "箱子"]]) await c.execute({ sql: "INSERT INTO locations (id,workspace_id,name,created_at) VALUES (?,?,?,?)", args: [id, workspaceId, name, date] });
   for (const [id, name, number, mode, category, sale] of [
     [itemA, "FT232RL module", "INV-000001", "unique", "electronics", "considering"],
@@ -50,8 +50,9 @@ async function seed() {
   for (const [id, item, location, quantity] of [[randomUUID(), itemA, locationA, 1], [randomUUID(), itemB, locationA, 2], [randomUUID(), itemB, locationB, 3]]) await c.execute({ sql: "INSERT INTO stock_entries (id,item_id,location_id,quantity,created_at,updated_at) VALUES (?,?,?,?,?,?)", args: [id, item, location, quantity, date, date] });
   const crop = JSON.stringify({ x: 0, y: 0, width: 64, height: 64, rotate: 0, scaleX: 1, scaleY: 1 });
   await c.execute({ sql: "INSERT INTO media_assets (id,item_id,storage_path,thumbnail_path,source_storage_path,crop_data,original_filename,mime_type,width,height,created_at,is_primary) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", args: [photoId, itemA, `${itemA}/${photoId}.webp`, `${itemA}/${photoId}-thumb.webp`, `${itemA}/${photoId}-source.webp`, crop, "synthetic.png", "image/webp", 64, 64, date, 1] });
-  for (const [id, name, type, icon, upload] of [[collectionA, "DIY", "upload", "🛠️", coverId], [collectionB, "Подарки", "emoji", "🎁", null]]) await c.execute({ sql: "INSERT INTO collections (id,workspace_id,name,normalized_name,created_at,updated_at,icon,cover_type,cover_icon,cover_upload_id) VALUES (?,?,?,?,?,?,?,?,?,?)", args: [id, workspaceId, name, String(name).toLowerCase(), date, date, icon, type, type === "emoji" ? icon : null, upload] });
+  for (const [id, name, type, icon] of [[collectionA, "DIY", "upload", "🛠️", coverId], [collectionB, "Подарки", "emoji", "🎁", null]]) await c.execute({ sql: "INSERT INTO collections (id,workspace_id,name,normalized_name,created_at,updated_at,icon,cover_type,cover_icon,cover_upload_id) VALUES (?,?,?,?,?,?,?,?,?,?)", args: [id, workspaceId, name, String(name).toLowerCase(), date, date, icon, type === "upload" ? "default" : type, type === "emoji" ? icon : null, null] });
   await c.execute({ sql: "INSERT INTO collection_cover_assets (id,collection_id,storage_path,thumbnail_path,width,height,created_at) VALUES (?,?,?,?,?,?,?)", args: [coverId, collectionA, `collections/${collectionA}/${coverId}.webp`, `collections/${collectionA}/${coverId}-thumb.webp`, 80, 50, date] });
+  await c.execute({sql:"UPDATE collections SET cover_type='upload',cover_upload_id=? WHERE id=?",args:[coverId,collectionA]});
   for (const [collection, item] of [[collectionA, itemA], [collectionA, itemB], [collectionB, itemB]]) await c.execute({ sql: "INSERT INTO item_collection_memberships (id,collection_id,item_id,created_at) VALUES (?,?,?,?)", args: [randomUUID(), collection, item, date] });
   const files = [
     [`media/items/${itemA}/${photoId}.webp`, await photo(64, 64)], [`media/items/${itemA}/${photoId}-thumb.webp`, await photo(32, 32)], [`media/items/${itemA}/${photoId}-source.webp`, await photo(100, 100)],
@@ -82,8 +83,8 @@ beforeAll(async () => {
   source = await installation(path.join(root, "source"));
   destination = await installation(path.join(root, "destination"));
   await seed();
-  validArchive = await createInventoryArchive(source);
-});
+  validArchive = await createInventoryArchive(source,source);
+},30_000);
 afterAll(async () => { await source?.client.close(); await destination?.client.close(); if (root) try { await rm(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 }); } catch (error) { if (!(error instanceof Error && "code" in error && error.code === "EBUSY")) throw error; } }, 30_000);
 
 describe("current and transitional archive restore", () => {
@@ -124,8 +125,8 @@ describe("current and transitional archive restore", () => {
       await restoreInventoryArchive(revision2,target);
       expect((await target.client.execute("SELECT category FROM item_categories ORDER BY category")).rows.map(row => row.category)).toEqual(expect.arrayContaining(["electronics"]));
       expect((await target.client.execute("SELECT COUNT(*) AS n FROM items")).rows[0]!.n).toBe(2);
-      const exported=readInventoryArchive(await createInventoryArchive(target));
-      expect(exported.manifest.version).toBe(3);
+      const exported=readInventoryArchive(await createInventoryArchive(target,target));
+      expect(exported.manifest.version).toBe(4);
       expect((exported.inventory.items as Array<{categories: string[]}>)[0]!.categories).toContain("electronics");
     } finally { target.client.close(); }
   });
@@ -154,7 +155,7 @@ describe("current and transitional archive restore", () => {
       expect(restored.rows).toEqual(original.rows);
     }
     const { inventory, files } = readInventoryArchive(validArchive);
-    const restoredArchive = await createInventoryArchive(destination);
+    const restoredArchive = await createInventoryArchive(destination,destination);
     const restored = readInventoryArchive(restoredArchive);
     expect(restored.inventory).toEqual(inventory);
     for (const [name, bytes] of Object.entries(files)) if (name.startsWith("Items/") || name.startsWith("Collections/")) expect(createHash("sha256").update(restored.files[name]!).digest("hex")).toBe(createHash("sha256").update(bytes).digest("hex"));

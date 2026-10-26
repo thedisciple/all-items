@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { initializeWorkspace } from "@/db/client";
+import { inventoryDatabase } from "@/items/inventories";
+import type { InventoryContext } from "@/items/inventory-context";
 
 const collectionIdSchema = z.string().uuid();
 export const collectionIcons = ["🙂", "⭐", "🎁", "🛠️", "🏠", "🌿", "📷", "📚", "🎨", "📦"] as const;
@@ -19,8 +20,8 @@ function isUniqueViolation(error: unknown) {
   return error instanceof Error && /UNIQUE constraint failed/i.test(error.message);
 }
 
-export async function listCollections() {
-  const { db, workspaceId } = await initializeWorkspace();
+export async function listCollections(context: InventoryContext) {
+  const { db, workspaceId } = await inventoryDatabase(context);
   const result = await db.$client.execute({
     sql: `SELECT c.id, c.name, c.created_at AS createdAt, c.updated_at AS updatedAt, c.icon,
                  CASE WHEN c.cover_type = 'item_photo' AND EXISTS (
@@ -47,9 +48,9 @@ export async function listCollections() {
   }));
 }
 
-export async function getCollection(idValue: unknown) {
+export async function getCollection(context: InventoryContext, idValue: unknown) {
   const id = collectionIdSchema.parse(idValue);
-  const { db, workspaceId } = await initializeWorkspace();
+  const { db, workspaceId } = await inventoryDatabase(context);
   const result = await db.$client.execute({
     sql: `SELECT c.id, c.name, c.created_at AS createdAt, c.updated_at AS updatedAt, c.icon,
                  CASE WHEN c.cover_type = 'item_photo' AND EXISTS (SELECT 1 FROM item_collection_memberships cm JOIN media_assets m ON m.item_id = cm.item_id AND m.id = c.cover_media_id AND m.is_primary = 1 WHERE cm.collection_id = c.id AND cm.item_id = c.cover_item_id) THEN 'item_photo'
@@ -66,9 +67,9 @@ export async function getCollection(idValue: unknown) {
   return { id: String(row.id), name: String(row.name), createdAt: String(row.createdAt), updatedAt: String(row.updatedAt), itemCount: Number(row.itemCount), icon: row.icon == null ? null : String(row.icon), coverType: row.coverType == null ? "default" : String(row.coverType), coverIcon: row.coverIcon == null ? null : String(row.coverIcon), coverItemId: row.coverItemId == null ? null : String(row.coverItemId), coverMediaId: row.coverMediaId == null ? null : String(row.coverMediaId), coverUploadId: row.coverUploadId == null ? null : String(row.coverUploadId) };
 }
 
-export async function createCollection(input: unknown) {
+export async function createCollection(context: InventoryContext, input: unknown) {
   const { name, icon } = collectionCreateSchema.parse(input);
-  const { db, workspaceId } = await initializeWorkspace();
+  const { db, workspaceId } = await inventoryDatabase(context);
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
   try {
@@ -80,11 +81,11 @@ export async function createCollection(input: unknown) {
   return { id, name, icon: icon ?? null };
 }
 
-export async function renameCollection(idValue: unknown, input: unknown) {
+export async function renameCollection(context: InventoryContext, idValue: unknown, input: unknown) {
   const id = collectionIdSchema.parse(idValue);
   const { name, icon } = collectionInputSchema.parse(input);
   const iconProvided = typeof input === "object" && input !== null && Object.hasOwn(input, "icon");
-  const { db, workspaceId } = await initializeWorkspace();
+  const { db, workspaceId } = await inventoryDatabase(context);
   try {
     const result = iconProvided
       ? await db.$client.execute({ sql: "UPDATE collections SET name = ?, normalized_name = ?, icon = ?, cover_icon = CASE WHEN cover_type = 'emoji' THEN ? ELSE cover_icon END, updated_at = ? WHERE id = ? AND workspace_id = ?", args: [name, normalizedName(name), icon ?? null, icon ?? null, new Date().toISOString(), id, workspaceId] })
@@ -96,23 +97,26 @@ export async function renameCollection(idValue: unknown, input: unknown) {
   }
 }
 
-export async function deleteCollection(idValue: unknown) {
+export async function deleteCollection(context: InventoryContext, idValue: unknown) {
   const id = collectionIdSchema.parse(idValue);
-  const { db, workspaceId } = await initializeWorkspace();
-  const assets = await db.$client.execute({ sql: "SELECT ca.id, ca.collection_id, ca.storage_path, ca.thumbnail_path FROM collection_cover_assets ca JOIN collections c ON c.id = ca.collection_id WHERE ca.collection_id = ? AND c.workspace_id = ?", args: [id, workspaceId] });
-  const result = await db.$client.execute({ sql: "DELETE FROM collections WHERE id = ? AND workspace_id = ?", args: [id, workspaceId] });
-  if (assets.rows.length) {
-    const { removeCollectionCoverAssetFiles } = await import("@/media/collection-covers");
-    for (const asset of assets.rows as unknown as Array<{ id: string; collection_id: string; storage_path: string; thumbnail_path: string }>) {
-      try { await removeCollectionCoverAssetFiles(asset); } catch (error) { console.error("Unable to remove deleted collection cover files", error); }
-    }
-  }
-  return result.rowsAffected > 0;
+  const { db, workspaceId } = await inventoryDatabase(context);
+  const tx=await db.$client.transaction("write");
+  let assets: Array<{id:string;collection_id:string;storage_path:string;thumbnail_path:string}>=[];
+  let deleted=false;
+  try {
+    const rows=await tx.execute({sql:"SELECT ca.id,ca.collection_id,ca.storage_path,ca.thumbnail_path FROM collection_cover_assets ca JOIN collections c ON c.id=ca.collection_id WHERE c.id=? AND c.workspace_id=?",args:[id,workspaceId]});
+    assets=rows.rows as unknown as typeof assets;
+    deleted=(await tx.execute({sql:"DELETE FROM collections WHERE id=? AND workspace_id=?",args:[id,workspaceId]})).rowsAffected>0;
+    await tx.commit();
+  } catch(error) { await tx.rollback(); throw error; }
+  const {removeCollectionCoverAssetFiles}=await import("@/media/collection-covers");
+  for(const asset of assets) try { await removeCollectionCoverAssetFiles(context,asset); } catch { console.error("Deleted collection cover cleanup failed"); }
+  return deleted;
 }
 
-export async function listItemCollections(itemIdValue: unknown) {
+export async function listItemCollections(context: InventoryContext, itemIdValue: unknown) {
   const itemId = collectionIdSchema.parse(itemIdValue);
-  const { db, workspaceId } = await initializeWorkspace();
+  const { db, workspaceId } = await inventoryDatabase(context);
   const result = await db.$client.execute({
     sql: `SELECT c.id, c.name FROM collections c
           INNER JOIN item_collection_memberships icm ON icm.collection_id = c.id
@@ -123,10 +127,10 @@ export async function listItemCollections(itemIdValue: unknown) {
   return result.rows.map((row) => ({ id: String(row.id), name: String(row.name) }));
 }
 
-export async function addItemToCollection(collectionIdValue: unknown, itemIdValue: unknown) {
+export async function addItemToCollection(context: InventoryContext, collectionIdValue: unknown, itemIdValue: unknown) {
   const collectionId = collectionIdSchema.parse(collectionIdValue);
   const itemId = collectionIdSchema.parse(itemIdValue);
-  const { db, workspaceId } = await initializeWorkspace();
+  const { db, workspaceId } = await inventoryDatabase(context);
   const tx = await db.$client.transaction("write");
   try {
     const collection = await tx.execute({ sql: "SELECT id FROM collections WHERE id = ? AND workspace_id = ?", args: [collectionId, workspaceId] });
@@ -138,10 +142,10 @@ export async function addItemToCollection(collectionIdValue: unknown, itemIdValu
   } catch (error) { await tx.rollback(); throw error; }
 }
 
-export async function addItemsToCollection(collectionIdValue: unknown, itemIdsValue: unknown) {
+export async function addItemsToCollection(context: InventoryContext, collectionIdValue: unknown, itemIdsValue: unknown) {
   const collectionId = collectionIdSchema.parse(collectionIdValue);
   const itemIds = batchItemIdsSchema.parse(itemIdsValue);
-  const { db, workspaceId } = await initializeWorkspace();
+  const { db, workspaceId } = await inventoryDatabase(context);
   const tx = await db.$client.transaction("write");
   try {
     const collection = await tx.execute({ sql: "SELECT id FROM collections WHERE id = ? AND workspace_id = ?", args: [collectionId, workspaceId] });
@@ -160,23 +164,23 @@ export async function addItemsToCollection(collectionIdValue: unknown, itemIdsVa
   } catch (error) { await tx.rollback(); throw error; }
 }
 
-export async function listCollectionCoverOptions(collectionIdValue: unknown) {
+export async function listCollectionCoverOptions(context: InventoryContext, collectionIdValue: unknown) {
   const collectionId = collectionIdSchema.parse(collectionIdValue);
-  const { db, workspaceId } = await initializeWorkspace();
+  const { db, workspaceId } = await inventoryDatabase(context);
   const result = await db.$client.execute({
     sql: `SELECT i.id AS itemId, i.name, i.model, m.id AS mediaId
           FROM item_collection_memberships cm JOIN items i ON i.id = cm.item_id
           JOIN media_assets m ON m.item_id = i.id AND m.is_primary = 1
-          WHERE cm.collection_id = ? AND i.workspace_id = ? ORDER BY lower(i.name), i.id`,
+          WHERE cm.collection_id = ? AND i.workspace_id = ? AND EXISTS(SELECT 1 FROM collections c WHERE c.id=cm.collection_id AND c.workspace_id=i.workspace_id) ORDER BY lower(i.name), i.id`,
     args: [collectionId, workspaceId],
   });
   return result.rows.map((row) => ({ itemId: String(row.itemId), name: String(row.name), model: row.model == null ? null : String(row.model), mediaId: String(row.mediaId) }));
 }
 
-export async function setCollectionCover(collectionIdValue: unknown, input: unknown) {
+export async function setCollectionCover(context: InventoryContext, collectionIdValue: unknown, input: unknown) {
   const collectionId = collectionIdSchema.parse(collectionIdValue);
   const selection = coverSelectionSchema.parse(input);
-  const { db, workspaceId } = await initializeWorkspace();
+  const { db, workspaceId } = await inventoryDatabase(context);
   const tx = await db.$client.transaction("write");
   let oldUpload: { id: string; collection_id: string; storage_path: string; thumbnail_path: string } | null = null;
   try {
@@ -197,14 +201,14 @@ export async function setCollectionCover(collectionIdValue: unknown, input: unkn
   } catch (error) { await tx.rollback(); throw error; }
   if (oldUpload) {
     const { removeCollectionCoverAssetFiles } = await import("@/media/collection-covers");
-    try { await removeCollectionCoverAssetFiles(oldUpload); } catch (error) { console.error("Unable to remove replaced collection cover files", error); }
+    try { await removeCollectionCoverAssetFiles(context, oldUpload); } catch (error) { console.error("Unable to remove replaced collection cover files", error); }
   }
 }
 
-export async function removeItemFromCollection(collectionIdValue: unknown, itemIdValue: unknown) {
+export async function removeItemFromCollection(context: InventoryContext, collectionIdValue: unknown, itemIdValue: unknown) {
   const collectionId = collectionIdSchema.parse(collectionIdValue);
   const itemId = collectionIdSchema.parse(itemIdValue);
-  const { db, workspaceId } = await initializeWorkspace();
+  const { db, workspaceId } = await inventoryDatabase(context);
   const result = await db.$client.execute({
     sql: `DELETE FROM item_collection_memberships
           WHERE collection_id = ? AND item_id = ? AND EXISTS (SELECT 1 FROM collections c WHERE c.id = ? AND c.workspace_id = ?)

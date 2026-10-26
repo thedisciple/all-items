@@ -11,6 +11,7 @@ import { createItem, deleteItem, getItem, listCategoryValues, listItems, saveSto
 import { createItemWithPhoto, deleteItemWithMedia, getNormalizedPhotoForAnalysis, getPrimaryPhoto, MAX_IMAGE_BYTES, readPrimaryPhoto, removePrimaryPhoto, replacePrimaryPhoto } from "@/media/service";
 import { readCollectionCover, replaceCollectionCoverUpload } from "@/media/collection-covers";
 
+const inventory = { workspaceId: "00000000-0000-4000-8000-000000000001" };
 const migrations = path.join(process.cwd(), "src/db/migrations");
 let directory = "";
 let client: ReturnType<typeof createClient>;
@@ -38,95 +39,95 @@ describe("M1 inventory", () => {
   });
 
   it("backfills existing rows with stable inventory numbers and stock", async () => {
-    const row = await getItem("00000000-0000-4000-8000-000000000010");
+    const row = await getItem(inventory, "00000000-0000-4000-8000-000000000010");
     expect(row).toMatchObject({ id: "00000000-0000-4000-8000-000000000010", name: "Legacy item", model: "old model", inventory_number: "INV-000001", quantity: 1 });
     expect(row?.stock).toHaveLength(1);
   });
 
   it("creates, searches, edits, tracks stock, and deletes items", async () => {
-    const first = await createItem({ name: "Радиодеталь", model: "R-1", brand: "Мастер", category: "Электроника", originalMarking: "A1", notes: "верхняя полка", trackingMode: "bulk" });
-    const second = await createItem({ name: "Крепёж", trackingMode: "unique" });
+    const first = await createItem(inventory, { name: "Радиодеталь", model: "R-1", brand: "Мастер", category: "Электроника", originalMarking: "A1", notes: "верхняя полка", trackingMode: "bulk" });
+    const second = await createItem(inventory, { name: "Крепёж", trackingMode: "unique" });
     expect(first.inventoryNumber).toBe("INV-000002");
     expect(second.inventoryNumber).toBe("INV-000003");
-    expect((await listItems({ search: "верхняя" })).map((item) => item.id)).toContain(first.id);
-    expect((await listItems({ category: "Электроника" })).map((item) => item.id)).toContain(first.id);
-    expect((await listItems({ search: "INV-000002" })).map((item) => item.id)).toContain(first.id);
+    expect((await listItems(inventory, { search: "верхняя" })).map((item) => item.id)).toContain(first.id);
+    expect((await listItems(inventory, { category: "Электроника" })).map((item) => item.id)).toContain(first.id);
+    expect((await listItems(inventory, { search: "INV-000002" })).map((item) => item.id)).toContain(first.id);
 
-    await updateItem(first.id, { name: "Резисторы", model: "R-1", brand: "Мастер", category: "Электроника", originalMarking: "A1", notes: "верхняя полка", description: "", identificationStatus: "user_confirmed", trackingMode: "bulk", saleIntent: "willing_to_sell", askingPrice: "12.50", askingCurrency: "EUR" });
-    await saveStock(first.id, [{ location: "Шкаф A", quantity: 4 }, { location: "Ящик 2", quantity: 6 }]);
-    const updated = await getItem(first.id);
+    await updateItem(inventory, first.id, { name: "Резисторы", model: "R-1", brand: "Мастер", category: "Электроника", originalMarking: "A1", notes: "верхняя полка", description: "", identificationStatus: "user_confirmed", trackingMode: "bulk", saleIntent: "willing_to_sell", askingPrice: "12.50", askingCurrency: "EUR" });
+    await saveStock(inventory, first.id, [{ location: "Шкаф A", quantity: 4 }, { location: "Ящик 2", quantity: 6 }]);
+    const updated = await getItem(inventory, first.id);
     expect(updated).toMatchObject({ name: "Резисторы", inventory_number: "INV-000002", quantity: 10, sale_intent: "willing_to_sell", asking_price_minor: 1250, asking_currency: "EUR" });
     expect(updated?.stock).toHaveLength(2);
-    expect((await listItems({ search: "A1" })).map((item) => item.id)).toContain(first.id);
-    expect((await listItems({ search: "Мастер" })).map((item) => item.id)).toContain(first.id);
-    expect((await listItems({ search: "Шкаф A" })).map((item) => item.id)).toContain(first.id);
-    expect((await listItems({ status: "user_confirmed" })).map((item) => item.id)).toContain(first.id);
-    expect((await listItems({ search: "Резисторы" }))[0]).not.toHaveProperty("sale_intent");
-    await expect(saveStock(second.id, [{ location: "Полка", quantity: -1 }])).rejects.toThrow();
-    await expect(saveStock(second.id, [{ location: "Полка", quantity: 2 }])).rejects.toThrow("Single item");
-    await deleteItem(first.id);
-    expect(await getItem(first.id)).toBeNull();
-    expect((await listItems()).map((item) => item.id)).not.toContain(first.id);
+    expect((await listItems(inventory, { search: "A1" })).map((item) => item.id)).toContain(first.id);
+    expect((await listItems(inventory, { search: "Мастер" })).map((item) => item.id)).toContain(first.id);
+    expect((await listItems(inventory, { search: "Шкаф A" })).map((item) => item.id)).toContain(first.id);
+    expect((await listItems(inventory, { status: "user_confirmed" })).map((item) => item.id)).toContain(first.id);
+    expect((await listItems(inventory, { search: "Резисторы" }))[0]).not.toHaveProperty("sale_intent");
+    await expect(saveStock(inventory, second.id, [{ location: "Полка", quantity: -1 }])).rejects.toThrow();
+    await expect(saveStock(inventory, second.id, [{ location: "Полка", quantity: 2 }])).rejects.toThrow("Single item");
+    await deleteItem(inventory, first.id);
+    expect(await getItem(inventory, first.id)).toBeNull();
+    expect((await listItems(inventory)).map((item) => item.id)).not.toContain(first.id);
   });
 
   it("matches stable and legacy category values and applies deterministic sort directions", async () => {
-    const stable = await createItem({ name: "M2D-R2 Electronics stable", category: "electronics", trackingMode: "bulk" });
-    const russianLegacy = await createItem({ name: "M2D-R2 Electronics Russian legacy", category: "Электроника", trackingMode: "bulk" });
-    const englishLegacy = await createItem({ name: "M2D-R2 Electronics English legacy", category: "Electronics", trackingMode: "bulk" });
-    const custom = await createItem({ name: "M2D-R2 Custom category", category: "Bench components", trackingMode: "bulk" });
-    expect((await listItems({ category: "electronics" })).map((row) => row.id)).toEqual(expect.arrayContaining([stable.id, russianLegacy.id, englishLegacy.id]));
-    expect((await listItems({ category: "Electronics", search: "English legacy" })).map((row) => row.id)).toContain(englishLegacy.id);
-    expect((await listItems({ category: "Bench components" })).map((row) => row.id)).toContain(custom.id);
-    expect((await listCategoryValues()).filter((value) => value === "Bench components")).toEqual(["Bench components"]);
-    const scoped = await createCollection({ name: "M2D-R2 category scope" });
-    await addItemsToCollection(scoped.id, [stable.id, russianLegacy.id, englishLegacy.id, custom.id]);
-    expect((await listItems({ collectionId: scoped.id, category: "electronics" })).map((row) => row.id)).toEqual(expect.arrayContaining([stable.id, russianLegacy.id]));
-    expect((await listItems({ collectionId: scoped.id, search: "English legacy", category: "electronics" })).map((row) => row.id)).toContain(englishLegacy.id);
-    expect(await listCategoryValues(scoped.id)).toEqual(expect.arrayContaining(["Bench components"]));
+    const stable = await createItem(inventory, { name: "M2D-R2 Electronics stable", category: "electronics", trackingMode: "bulk" });
+    const russianLegacy = await createItem(inventory, { name: "M2D-R2 Electronics Russian legacy", category: "Электроника", trackingMode: "bulk" });
+    const englishLegacy = await createItem(inventory, { name: "M2D-R2 Electronics English legacy", category: "Electronics", trackingMode: "bulk" });
+    const custom = await createItem(inventory, { name: "M2D-R2 Custom category", category: "Bench components", trackingMode: "bulk" });
+    expect((await listItems(inventory, { category: "electronics" })).map((row) => row.id)).toEqual(expect.arrayContaining([stable.id, russianLegacy.id, englishLegacy.id]));
+    expect((await listItems(inventory, { category: "Electronics", search: "English legacy" })).map((row) => row.id)).toContain(englishLegacy.id);
+    expect((await listItems(inventory, { category: "Bench components" })).map((row) => row.id)).toContain(custom.id);
+    expect((await listCategoryValues(inventory)).filter((value) => value === "Bench components")).toEqual(["Bench components"]);
+    const scoped = await createCollection(inventory, { name: "M2D-R2 category scope" });
+    await addItemsToCollection(inventory, scoped.id, [stable.id, russianLegacy.id, englishLegacy.id, custom.id]);
+    expect((await listItems(inventory, { collectionId: scoped.id, category: "electronics" })).map((row) => row.id)).toEqual(expect.arrayContaining([stable.id, russianLegacy.id]));
+    expect((await listItems(inventory, { collectionId: scoped.id, search: "English legacy", category: "electronics" })).map((row) => row.id)).toContain(englishLegacy.id);
+    expect(await listCategoryValues(inventory, scoped.id)).toEqual(expect.arrayContaining(["Bench components"]));
 
-    const alpha = await createItem({ name: "M2D-R2 sort fixture Alpha", trackingMode: "bulk" });
-    const beta = await createItem({ name: "M2D-R2 sort fixture Beta", trackingMode: "bulk" });
-    const gamma = await createItem({ name: "M2D-R2 sort fixture Gamma", trackingMode: "bulk" });
-    await saveStock(alpha.id, [{ location: "", quantity: 1 }]);
-    await saveStock(beta.id, [{ location: "", quantity: 9 }]);
-    await saveStock(gamma.id, [{ location: "", quantity: 4 }]);
+    const alpha = await createItem(inventory, { name: "M2D-R2 sort fixture Alpha", trackingMode: "bulk" });
+    const beta = await createItem(inventory, { name: "M2D-R2 sort fixture Beta", trackingMode: "bulk" });
+    const gamma = await createItem(inventory, { name: "M2D-R2 sort fixture Gamma", trackingMode: "bulk" });
+    await saveStock(inventory, alpha.id, [{ location: "", quantity: 1 }]);
+    await saveStock(inventory, beta.id, [{ location: "", quantity: 9 }]);
+    await saveStock(inventory, gamma.id, [{ location: "", quantity: 4 }]);
     await client.execute({ sql: "UPDATE items SET created_at = ? WHERE id = ?", args: ["2020-01-01T00:00:00.000Z", alpha.id] });
     await client.execute({ sql: "UPDATE items SET created_at = ? WHERE id = ?", args: ["2022-01-01T00:00:00.000Z", beta.id] });
     await client.execute({ sql: "UPDATE items SET created_at = ? WHERE id = ?", args: ["2021-01-01T00:00:00.000Z", gamma.id] });
-    expect((await listItems({ search: "M2D-R2 sort fixture", sort: "name" })).map((row) => row.name)).toEqual([
+    expect((await listItems(inventory, { search: "M2D-R2 sort fixture", sort: "name" })).map((row) => row.name)).toEqual([
       "M2D-R2 sort fixture Alpha", "M2D-R2 sort fixture Beta", "M2D-R2 sort fixture Gamma",
     ]);
-    expect((await listItems({ search: "M2D-R2 sort fixture", sort: "quantity" })).map((row) => row.name)).toEqual([
+    expect((await listItems(inventory, { search: "M2D-R2 sort fixture", sort: "quantity" })).map((row) => row.name)).toEqual([
       "M2D-R2 sort fixture Beta", "M2D-R2 sort fixture Gamma", "M2D-R2 sort fixture Alpha",
     ]);
-    expect((await listItems({ search: "M2D-R2 sort fixture", sort: "date" })).map((row) => row.name)).toEqual([
+    expect((await listItems(inventory, { search: "M2D-R2 sort fixture", sort: "date" })).map((row) => row.name)).toEqual([
       "M2D-R2 sort fixture Beta", "M2D-R2 sort fixture Gamma", "M2D-R2 sort fixture Alpha",
     ]);
   });
 
   it("saves mode, stock and multiple categories in one transaction and omits blank stock drafts", async () => {
-    const created = await createItem({ name: "Combined draft", categories: ["electronics", "tools", "Bench custom"], trackingMode: "bulk" }, [{ location: "  Shelf X  ", quantity: 2 }, { location: "  ", quantity: 0 }]);
-    const saved = await getItem(created.id);
+    const created = await createItem(inventory, { name: "Combined draft", categories: ["electronics", "tools", "Bench custom"], trackingMode: "bulk" }, [{ location: "  Shelf X  ", quantity: 2 }, { location: "  ", quantity: 0 }]);
+    const saved = await getItem(inventory, created.id);
     expect(saved?.categories).toEqual(["Bench custom", "electronics", "tools"]);
     expect(saved?.stock).toEqual([{ location: "Shelf X", quantity: 2 }]);
-    expect((await listItems({ category: "tools" })).filter(item => item.id === created.id)).toHaveLength(1);
-    await expect(updateItem(created.id, { name: "Do not persist", categories: ["home"], trackingMode: "unique" }, [{ location: "Shelf X", quantity: 2 }])).rejects.toThrow("Single item");
-    expect(await getItem(created.id)).toEqual(saved);
+    expect((await listItems(inventory, { category: "tools" })).filter(item => item.id === created.id)).toHaveLength(1);
+    await expect(updateItem(inventory, created.id, { name: "Do not persist", categories: ["home"], trackingMode: "unique" }, [{ location: "Shelf X", quantity: 2 }])).rejects.toThrow("Single item");
+    expect(await getItem(inventory, created.id)).toEqual(saved);
     await client.execute("CREATE TRIGGER r1_fail_stock BEFORE INSERT ON stock_entries WHEN NEW.quantity=17 BEGIN SELECT RAISE(ABORT,'injected stock failure'); END");
     try {
-      await expect(updateItem(created.id, { name: "Rollback metadata", categories: ["home"], trackingMode: "consumable" }, [{ location: "Rollback location", quantity: 17 }])).rejects.toThrow();
-      expect(await getItem(created.id)).toEqual(saved);
+      await expect(updateItem(inventory, created.id, { name: "Rollback metadata", categories: ["home"], trackingMode: "consumable" }, [{ location: "Rollback location", quantity: 17 }])).rejects.toThrow();
+      expect(await getItem(inventory, created.id)).toEqual(saved);
       expect((await client.execute("SELECT id FROM locations WHERE name='Rollback location'")).rows).toHaveLength(0);
     } finally { await client.execute("DROP TRIGGER r1_fail_stock"); }
-    await updateItem(created.id, { name: "Combined saved", categories: ["tools", "tools", "Bench custom"], trackingMode: "consumable" }, [{ location: "", quantity: 1 }, { location: "Shelf Z", quantity: 3 }, { location: " ", quantity: 0 }]);
-    expect(await getItem(created.id)).toMatchObject({ name: "Combined saved", tracking_mode: "consumable", quantity: 4, categories: ["Bench custom", "tools"] });
-    await updateItem(created.id, { name: "Single saved", trackingMode: "unique" }, [{ location: "Shelf Z", quantity: 1 }]);
-    expect(await getItem(created.id)).toMatchObject({ name: "Single saved", tracking_mode: "unique", quantity: 1, categories: ["Bench custom", "tools"] });
+    await updateItem(inventory, created.id, { name: "Combined saved", categories: ["tools", "tools", "Bench custom"], trackingMode: "consumable" }, [{ location: "", quantity: 1 }, { location: "Shelf Z", quantity: 3 }, { location: " ", quantity: 0 }]);
+    expect(await getItem(inventory, created.id)).toMatchObject({ name: "Combined saved", tracking_mode: "consumable", quantity: 4, categories: ["Bench custom", "tools"] });
+    await updateItem(inventory, created.id, { name: "Single saved", trackingMode: "unique" }, [{ location: "Shelf Z", quantity: 1 }]);
+    expect(await getItem(inventory, created.id)).toMatchObject({ name: "Single saved", tracking_mode: "unique", quantity: 1, categories: ["Bench custom", "tools"] });
     await expect(client.execute({ sql: "INSERT INTO item_categories (item_id,category) VALUES (?,?)", args: [created.id,"tools"] })).rejects.toThrow();
-    await deleteItem(created.id);
+    await deleteItem(inventory, created.id);
   });
   it("allocates distinct sequential inventory numbers during concurrent creates", async () => {
-    const created = await Promise.all(Array.from({ length: 8 }, (_, index) => createItem({ name: `Concurrent ${index}`, trackingMode: "bulk" })));
+    const created = await Promise.all(Array.from({ length: 8 }, (_, index) => createItem(inventory, { name: `Concurrent ${index}`, trackingMode: "bulk" })));
     const numbers = created.map((item) => item.inventoryNumber);
     expect(new Set(numbers).size).toBe(8);
     const sequence = numbers.map((value) => Number(value.slice(4))).sort((a,b) => a-b);
@@ -136,67 +137,67 @@ describe("M1 inventory", () => {
   it("applies migrations repeatedly without duplicating schema", async () => {
     await applyMigrations(client, migrations);
     const names = await client.execute("SELECT name FROM _all_items_migrations ORDER BY name");
-    expect(names.rows.map((row) => row.name)).toEqual(["0001_foundation", "0002_inventory_management", "0003_private_media", "0004_collections", "0005_editable_media_source", "0006_collection_covers", "0007_item_categories"]);
+    expect(names.rows.map((row) => row.name)).toEqual(["0001_foundation", "0002_inventory_management", "0003_private_media", "0004_collections", "0005_editable_media_source", "0006_collection_covers", "0007_item_categories", "0008_inventory_boundaries"]);
   });
 });
 
 describe("collections", () => {
   it("adds multiple existing items transactionally and keeps collection covers explicit", async () => {
     const image = await sharp({ create: { width: 80, height: 60, channels: 3, background: "#325577" } }).jpeg().toBuffer();
-    const first = await createItemWithPhoto({ name: "Batch camera" }, new File([new Uint8Array(image)], "camera.jpg", { type: "image/jpeg" }));
-    const second = await createItem({ name: "Batch tool" });
-    const collection = await createCollection({ name: "Batch collection", icon: "🤖" });
-    await expect(addItemsToCollection(collection.id, [first.id, second.id, first.id])).rejects.toThrow();
-    expect((await listItemCollections(first.id))).toHaveLength(0);
-    expect(await addItemsToCollection(collection.id, [first.id, second.id])).toEqual({ added: 2 });
-    expect(await addItemsToCollection(collection.id, [first.id, second.id])).toEqual({ added: 0 });
-    expect(await listCollectionCoverOptions(collection.id)).toEqual([{ itemId: first.id, name: "Batch camera", model: null, mediaId: (await getPrimaryPhoto(first.id))!.id }]);
-    expect((await listCollections()).find((row) => row.id === collection.id)).toMatchObject({ coverType: "emoji", coverIcon: "🤖", coverMediaId: null });
+    const first = await createItemWithPhoto(inventory, { name: "Batch camera" }, new File([new Uint8Array(image)], "camera.jpg", { type: "image/jpeg" }));
+    const second = await createItem(inventory, { name: "Batch tool" });
+    const collection = await createCollection(inventory, { name: "Batch collection", icon: "🤖" });
+    await expect(addItemsToCollection(inventory, collection.id, [first.id, second.id, first.id])).rejects.toThrow();
+    expect((await listItemCollections(inventory, first.id))).toHaveLength(0);
+    expect(await addItemsToCollection(inventory, collection.id, [first.id, second.id])).toEqual({ added: 2 });
+    expect(await addItemsToCollection(inventory, collection.id, [first.id, second.id])).toEqual({ added: 0 });
+    expect(await listCollectionCoverOptions(inventory, collection.id)).toEqual([{ itemId: first.id, name: "Batch camera", model: null, mediaId: (await getPrimaryPhoto(inventory, first.id))!.id }]);
+    expect((await listCollections(inventory)).find((row) => row.id === collection.id)).toMatchObject({ coverType: "emoji", coverIcon: "🤖", coverMediaId: null });
 
-    const photo = await getPrimaryPhoto(first.id);
-    await setCollectionCover(collection.id, { type: "item_photo", itemId: first.id, mediaId: photo!.id });
-    expect((await listCollections()).find((row) => row.id === collection.id)).toMatchObject({ coverType: "item_photo", coverItemId: first.id, coverMediaId: photo!.id });
-    await removePrimaryPhoto(first.id);
-    expect((await listCollections()).find((row) => row.id === collection.id)?.coverType).toBe("default");
-    await expect(setCollectionCover(collection.id, { type: "item_photo", itemId: second.id, mediaId: photo!.id })).rejects.toThrow();
-    await setCollectionCover(collection.id, { type: "emoji", icon: "📷" });
-    expect((await getCollection(collection.id))?.coverIcon).toBe("📷");
-    await setCollectionCover(collection.id, { type: "default" });
-    expect((await getCollection(collection.id))?.coverType).toBe("default");
-    expect(await getItem(second.id)).not.toBeNull();
+    const photo = await getPrimaryPhoto(inventory, first.id);
+    await setCollectionCover(inventory, collection.id, { type: "item_photo", itemId: first.id, mediaId: photo!.id });
+    expect((await listCollections(inventory)).find((row) => row.id === collection.id)).toMatchObject({ coverType: "item_photo", coverItemId: first.id, coverMediaId: photo!.id });
+    await removePrimaryPhoto(inventory, first.id);
+    expect((await listCollections(inventory)).find((row) => row.id === collection.id)?.coverType).toBe("default");
+    await expect(setCollectionCover(inventory, collection.id, { type: "item_photo", itemId: second.id, mediaId: photo!.id })).rejects.toThrow();
+    await setCollectionCover(inventory, collection.id, { type: "emoji", icon: "📷" });
+    expect((await getCollection(inventory, collection.id))?.coverIcon).toBe("📷");
+    await setCollectionCover(inventory, collection.id, { type: "default" });
+    expect((await getCollection(inventory, collection.id))?.coverType).toBe("default");
+    expect(await getItem(inventory, second.id)).not.toBeNull();
   });
 
   it("normalizes private collection-cover uploads and cleans replaced and deleted files", async () => {
-    const collection = await createCollection({ name: "Uploaded cover collection" });
+    const collection = await createCollection(inventory, { name: "Uploaded cover collection" });
     const first = await sharp({ create: { width: 180, height: 120, channels: 3, background: "#ca8734" } }).jpeg().withExif({ IFD0: { ImageDescription: "private synthetic cover" } }).toBuffer();
     const second = await sharp({ create: { width: 120, height: 180, channels: 3, background: "#426532" } }).png().toBuffer();
-    const coverId = await replaceCollectionCoverUpload(collection.id, new File([new Uint8Array(first)], "cover.jpg", { type: "image/jpeg" }));
-    const firstCover = await readCollectionCover(collection.id, coverId, false);
+    const coverId = await replaceCollectionCoverUpload(inventory, collection.id, new File([new Uint8Array(first)], "cover.jpg", { type: "image/jpeg" }));
+    const firstCover = await readCollectionCover(inventory, collection.id, coverId, false);
     expect((await sharp(firstCover!).metadata()).exif).toBeUndefined();
-    expect((await readCollectionCover(collection.id, coverId))?.byteLength).toBeGreaterThan(0);
-    const nextCoverId = await replaceCollectionCoverUpload(collection.id, new File([new Uint8Array(second)], "cover.png", { type: "image/png" }));
-    expect(await readCollectionCover(collection.id, coverId)).toBeNull();
-    expect((await listCollections()).find((row) => row.id === collection.id)?.coverUploadId).toBe(nextCoverId);
-    await setCollectionCover(collection.id, { type: "default" });
-    expect(await readCollectionCover(collection.id, nextCoverId)).toBeNull();
-    const finalCoverId = await replaceCollectionCoverUpload(collection.id, new File([new Uint8Array(first)], "cover.jpg", { type: "image/jpeg" }));
-    expect(await deleteCollection(collection.id)).toBe(true);
-    expect(await readCollectionCover(collection.id, finalCoverId)).toBeNull();
+    expect((await readCollectionCover(inventory, collection.id, coverId))?.byteLength).toBeGreaterThan(0);
+    const nextCoverId = await replaceCollectionCoverUpload(inventory, collection.id, new File([new Uint8Array(second)], "cover.png", { type: "image/png" }));
+    expect(await readCollectionCover(inventory, collection.id, coverId)).toBeNull();
+    expect((await listCollections(inventory)).find((row) => row.id === collection.id)?.coverUploadId).toBe(nextCoverId);
+    await setCollectionCover(inventory, collection.id, { type: "default" });
+    expect(await readCollectionCover(inventory, collection.id, nextCoverId)).toBeNull();
+    const finalCoverId = await replaceCollectionCoverUpload(inventory, collection.id, new File([new Uint8Array(first)], "cover.jpg", { type: "image/jpeg" }));
+    expect(await deleteCollection(inventory, collection.id)).toBe(true);
+    expect(await readCollectionCover(inventory, collection.id, finalCoverId)).toBeNull();
   });
 
   it("returns explicit plain-object detail and collection DTOs for item pages", async () => {
     const image = await sharp({ create: { width: 48, height: 36, channels: 3, background: "#426584" } }).png().toBuffer();
-    const item = await createItemWithPhoto({ name: "Serializable detail fixture", trackingMode: "bulk" }, new File([new Uint8Array(image)], "detail.png", { type: "image/png" }));
-    await saveStock(item.id, [{ location: "", quantity: 2 }, { location: "Shelf A", quantity: 3 }, { location: "Box 2", quantity: 4 }]);
-    const first = await createCollection({ name: "Serializable collection A" });
-    const second = await createCollection({ name: "Serializable collection B" });
-    await addItemToCollection(first.id, item.id);
-    await addItemToCollection(second.id, item.id);
-    expect((await listItems({ search: "Shelf A" })).map((row) => row.id)).toContain(item.id);
-    expect((await listItems({ search: "Serializable collection A" })).map((row) => row.id)).toContain(item.id);
+    const item = await createItemWithPhoto(inventory, { name: "Serializable detail fixture", trackingMode: "bulk" }, new File([new Uint8Array(image)], "detail.png", { type: "image/png" }));
+    await saveStock(inventory, item.id, [{ location: "", quantity: 2 }, { location: "Shelf A", quantity: 3 }, { location: "Box 2", quantity: 4 }]);
+    const first = await createCollection(inventory, { name: "Serializable collection A" });
+    const second = await createCollection(inventory, { name: "Serializable collection B" });
+    await addItemToCollection(inventory, first.id, item.id);
+    await addItemToCollection(inventory, second.id, item.id);
+    expect((await listItems(inventory, { search: "Shelf A" })).map((row) => row.id)).toContain(item.id);
+    expect((await listItems(inventory, { search: "Serializable collection A" })).map((row) => row.id)).toContain(item.id);
 
-    const detail = await getItem(item.id);
-    const memberships = await listItemCollections(item.id);
+    const detail = await getItem(inventory, item.id);
+    const memberships = await listItemCollections(inventory, item.id);
     expect(detail).not.toBeNull();
     expect(Object.getPrototypeOf(detail)).toBe(Object.prototype);
     expect(detail).toMatchObject({ id: item.id, quantity: 9, primary_media_id: expect.any(String) });
@@ -211,32 +212,32 @@ describe("collections", () => {
 
   it("creates, renames, filters, supports multiple memberships, and deletes without deleting items or photos", async () => {
     const source = await sharp({ create: { width: 48, height: 36, channels: 3, background: "#47652e" } }).jpeg().toBuffer();
-    const item = await createItemWithPhoto({ name: "Collection fixture" }, new File([new Uint8Array(source)], "collection.jpg", { type: "image/jpeg" }));
-    const first = await createCollection({ name: "  Робототехника  ", icon: "🤖" });
-    const second = await createCollection({ name: "Домашняя мастерская" });
-    await expect(createCollection({ name: "робототехника" })).rejects.toThrow("уже есть");
-    await addItemToCollection(first.id, item.id);
-    await addItemToCollection(first.id, item.id);
-    await addItemToCollection(second.id, item.id);
-    await saveStock(item.id, [{ location: "Studio shelf", quantity: 1 }]);
-    expect((await listItems({ search: "Studio shelf" })).map((row) => row.id)).toContain(item.id);
-    expect(await listItemCollections(item.id)).toHaveLength(2);
-    expect((await listItems({ collectionId: first.id })).map((row) => row.id)).toContain(item.id);
-    expect(Number((await listCollections()).find((collection) => collection.id === first.id)?.itemCount)).toBe(1);
+    const item = await createItemWithPhoto(inventory, { name: "Collection fixture" }, new File([new Uint8Array(source)], "collection.jpg", { type: "image/jpeg" }));
+    const first = await createCollection(inventory, { name: "  Робототехника  ", icon: "🤖" });
+    const second = await createCollection(inventory, { name: "Домашняя мастерская" });
+    await expect(createCollection(inventory, { name: "робототехника" })).rejects.toThrow("уже есть");
+    await addItemToCollection(inventory, first.id, item.id);
+    await addItemToCollection(inventory, first.id, item.id);
+    await addItemToCollection(inventory, second.id, item.id);
+    await saveStock(inventory, item.id, [{ location: "Studio shelf", quantity: 1 }]);
+    expect((await listItems(inventory, { search: "Studio shelf" })).map((row) => row.id)).toContain(item.id);
+    expect(await listItemCollections(inventory, item.id)).toHaveLength(2);
+    expect((await listItems(inventory, { collectionId: first.id })).map((row) => row.id)).toContain(item.id);
+    expect(Number((await listCollections(inventory)).find((collection) => collection.id === first.id)?.itemCount)).toBe(1);
 
-    await renameCollection(first.id, { name: "Мои роботы" });
-    expect((await getCollection(first.id))?.name).toBe("Мои роботы");
-    expect((await getCollection(first.id))?.icon).toBe("🤖");
-    await removeItemFromCollection(first.id, item.id);
-    expect((await listItemCollections(item.id)).map((collection) => collection.id)).toEqual([second.id]);
+    await renameCollection(inventory, first.id, { name: "Мои роботы" });
+    expect((await getCollection(inventory, first.id))?.name).toBe("Мои роботы");
+    expect((await getCollection(inventory, first.id))?.icon).toBe("🤖");
+    await removeItemFromCollection(inventory, first.id, item.id);
+    expect((await listItemCollections(inventory, item.id)).map((collection) => collection.id)).toEqual([second.id]);
 
-    const photo = await getPrimaryPhoto(item.id);
-    expect(await deleteCollection(second.id)).toBe(true);
-    expect(await getCollection(second.id)).toBeNull();
-    expect(await getItem(item.id)).not.toBeNull();
-    expect((await listItems()).map((row) => row.id)).toContain(item.id);
-    expect((await listItemCollections(item.id))).toHaveLength(0);
-    expect((await readPrimaryPhoto(item.id, photo!.id, "image"))?.byteLength).toBeGreaterThan(0);
+    const photo = await getPrimaryPhoto(inventory, item.id);
+    expect(await deleteCollection(inventory, second.id)).toBe(true);
+    expect(await getCollection(inventory, second.id)).toBeNull();
+    expect(await getItem(inventory, item.id)).not.toBeNull();
+    expect((await listItems(inventory)).map((row) => row.id)).toContain(item.id);
+    expect((await listItemCollections(inventory, item.id))).toHaveLength(0);
+    expect((await readPrimaryPhoto(inventory, item.id, photo!.id, "image"))?.byteLength).toBeGreaterThan(0);
   });
 
   it("isolates collection and item membership to the local workspace", async () => {
@@ -246,12 +247,12 @@ describe("collections", () => {
     await client.execute({ sql: "INSERT INTO workspaces (id, name, created_at) VALUES (?, ?, ?)", args: [foreignWorkspace, "Other test workspace", "2025-01-01T00:00:00.000Z"] });
     await client.execute({ sql: `INSERT INTO items (id, workspace_id, name, model, inventory_number, identification_status, tracking_mode, sale_intent, created_at, updated_at) VALUES (?, ?, ?, NULL, ?, 'unknown', 'bulk', 'not_for_sale', ?, ?)`, args: [foreignItem, foreignWorkspace, "Other workspace item", "INV-000001", "2025-01-02T00:00:00.000Z", "2025-01-02T00:00:00.000Z"] });
     await client.execute({ sql: "INSERT INTO collections (id, workspace_id, name, normalized_name, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", args: [foreignCollection, foreignWorkspace, "Other collection", "other collection", "2025-01-01T00:00:00.000Z", "2025-01-01T00:00:00.000Z"] });
-    const localItem = await createItem({ name: "Local workspace item", trackingMode: "bulk" });
-    const localCollection = await createCollection({ name: "Local collection" });
-    await expect(addItemToCollection(localCollection.id, foreignItem)).rejects.toThrow("Вещь не найдена");
-    await expect(addItemToCollection(foreignCollection, localItem.id)).rejects.toThrow("Коллекция не найдена");
+    const localItem = await createItem(inventory, { name: "Local workspace item", trackingMode: "bulk" });
+    const localCollection = await createCollection(inventory, { name: "Local collection" });
+    await expect(addItemToCollection(inventory, localCollection.id, foreignItem)).rejects.toThrow("Вещь не найдена");
+    await expect(addItemToCollection(inventory, foreignCollection, localItem.id)).rejects.toThrow("Коллекция не найдена");
     await expect(client.execute({ sql: "INSERT INTO item_collection_memberships (id, collection_id, item_id, created_at) VALUES (?, ?, ?, ?)", args: ["00000000-0000-4000-8000-000000000096", localCollection.id, foreignItem, "2025-01-03T00:00:00.000Z"] })).rejects.toThrow("same workspace");
-    expect(await getCollection(foreignCollection)).toBeNull();
+    expect(await getCollection(inventory, foreignCollection)).toBeNull();
   });
 });
 
@@ -260,16 +261,16 @@ describe("private image storage", () => {
     const source = await sharp({ create: { width: 800, height: 600, channels: 3, background: { r: 160, g: 80, b: 30 } } })
       .jpeg().withExif({ IFD0: { ImageDescription: "private fixture" }, IFD3: { GPSLatitudeRef: "N", GPSLatitude: "47/1 30/1 0/1" } }).toBuffer();
     const file = new File([new Uint8Array(source)], "C:\\private\\camera.jpg", { type: "image/jpeg" });
-    const created = await createItemWithPhoto({ name: "Неизвестный предмет", model: "HC-12", trackingMode: "unique" }, file);
-    const item = await getItem(created.id);
-    const photo = await getPrimaryPhoto(created.id);
+    const created = await createItemWithPhoto(inventory, { name: "Неизвестный предмет", model: "HC-12", trackingMode: "unique" }, file);
+    const item = await getItem(inventory, created.id);
+    const photo = await getPrimaryPhoto(inventory, created.id);
     expect(item).toMatchObject({ name: "Неизвестный предмет", model: "HC-12", identification_status: "unknown" });
     expect(photo).toMatchObject({ width: 800, height: 600 });
     expect(item?.primary_media_id).toBe(photo?.id);
 
-    const full = await readPrimaryPhoto(created.id, photo!.id, "image");
-    const thumbnail = await readPrimaryPhoto(created.id, photo!.id, "thumbnail");
-    const cleanSource = await readPrimaryPhoto(created.id, photo!.id, "source");
+    const full = await readPrimaryPhoto(inventory, created.id, photo!.id, "image");
+    const thumbnail = await readPrimaryPhoto(inventory, created.id, photo!.id, "thumbnail");
+    const cleanSource = await readPrimaryPhoto(inventory, created.id, photo!.id, "source");
     const fullMetadata = await sharp(full!).metadata();
     const thumbnailMetadata = await sharp(thumbnail!).metadata();
     const sourceMetadata = await sharp(cleanSource!).metadata();
@@ -279,7 +280,7 @@ describe("private image storage", () => {
     expect(thumbnailMetadata.width).toBeLessThanOrEqual(480);
     expect(sourceMetadata.width).toBe(800);
     expect(sourceMetadata.exif).toBeUndefined();
-    expect((await getNormalizedPhotoForAnalysis(created.id))?.mimeType).toBe("image/webp");
+    expect((await getNormalizedPhotoForAnalysis(inventory, created.id))?.mimeType).toBe("image/webp");
   });
 
   it("keeps a clean source while storing a cropped display derivative and crop data", async () => {
@@ -288,10 +289,10 @@ describe("private image storage", () => {
     const source = new File([new Uint8Array(sourceBytes)], "source.jpg", { type: "image/jpeg" });
     const display = new File([new Uint8Array(cropBytes)], "crop.webp", { type: "image/webp" });
     const data = JSON.stringify({ x: 40, y: 30, width: 160, height: 120, rotate: 0, scaleX: 1, scaleY: 1 });
-    const item = await createItemWithPhoto({ name: "Editable source fixture" }, display, source, data);
-    const photo = await getPrimaryPhoto(item.id);
-    const storedSource = await readPrimaryPhoto(item.id, photo!.id, "source");
-    const storedDisplay = await readPrimaryPhoto(item.id, photo!.id, "image");
+    const item = await createItemWithPhoto(inventory, { name: "Editable source fixture" }, display, source, data);
+    const photo = await getPrimaryPhoto(inventory, item.id);
+    const storedSource = await readPrimaryPhoto(inventory, item.id, photo!.id, "source");
+    const storedDisplay = await readPrimaryPhoto(inventory, item.id, photo!.id, "image");
     expect((await sharp(storedSource!).metadata()).width).toBe(320);
     expect((await sharp(storedDisplay!).metadata()).width).toBe(160);
     const media = await client.execute({ sql: "SELECT source_storage_path, crop_data FROM media_assets WHERE id = ?", args: [photo!.id] });
@@ -301,46 +302,46 @@ describe("private image storage", () => {
 
   it("rejects invalid, oversized, oversized-dimension, and path-traversal input without losing the current photo", async () => {
     const source = await sharp({ create: { width: 80, height: 60, channels: 3, background: "#667788" } }).png().toBuffer();
-    const created = await createItemWithPhoto({ name: "Fixture with photo" }, new File([new Uint8Array(source)], "photo.png", { type: "image/png" }));
-    const current = await getPrimaryPhoto(created.id);
+    const created = await createItemWithPhoto(inventory, { name: "Fixture with photo" }, new File([new Uint8Array(source)], "photo.png", { type: "image/png" }));
+    const current = await getPrimaryPhoto(inventory, created.id);
     const invalid = new File(["not an image"], "bad.png", { type: "image/png" });
-    const priorItems = await listItems();
-    await expect(createItemWithPhoto({ name: "Неизвестный предмет" }, invalid)).rejects.toThrow();
-    expect(await listItems()).toHaveLength(priorItems.length);
-    await expect(replacePrimaryPhoto(created.id, invalid)).rejects.toThrow("Не удалось прочитать");
-    expect((await getPrimaryPhoto(created.id))?.id).toBe(current?.id);
+    const priorItems = await listItems(inventory);
+    await expect(createItemWithPhoto(inventory, { name: "Неизвестный предмет" }, invalid)).rejects.toThrow();
+    expect(await listItems(inventory)).toHaveLength(priorItems.length);
+    await expect(replacePrimaryPhoto(inventory, created.id, invalid)).rejects.toThrow("Не удалось прочитать");
+    expect((await getPrimaryPhoto(inventory, created.id))?.id).toBe(current?.id);
     const oversized = new File([new Uint8Array(MAX_IMAGE_BYTES + 1)], "large.jpg", { type: "image/jpeg" });
-    await expect(replacePrimaryPhoto(created.id, oversized)).rejects.toThrow("не более 10 МиБ");
+    await expect(replacePrimaryPhoto(inventory, created.id, oversized)).rejects.toThrow("не более 10 МиБ");
     const wide = await sharp({ create: { width: 12001, height: 1, channels: 3, background: "#000000" } }).png().toBuffer();
-    await expect(replacePrimaryPhoto(created.id, new File([new Uint8Array(wide)], "wide.png", { type: "image/png" }))).rejects.toThrow("12 000");
-    await expect(readPrimaryPhoto("../../outside", current!.id, "image")).rejects.toThrow();
-    await expect(readPrimaryPhoto(created.id, "../../outside", "image")).rejects.toThrow();
-    await expect(readPrimaryPhoto(created.id, current!.id, "../../outside")).rejects.toThrow();
+    await expect(replacePrimaryPhoto(inventory, created.id, new File([new Uint8Array(wide)], "wide.png", { type: "image/png" }))).rejects.toThrow("12 000");
+    await expect(readPrimaryPhoto(inventory, "../../outside", current!.id, "image")).rejects.toThrow();
+    await expect(readPrimaryPhoto(inventory, created.id, "../../outside", "image")).rejects.toThrow();
+    await expect(readPrimaryPhoto(inventory, created.id, current!.id, "../../outside")).rejects.toThrow();
   });
 
   it("replaces and removes a photo, then deletes item media without leaving files", async () => {
     const first = await sharp({ create: { width: 40, height: 30, channels: 3, background: "#335577" } }).jpeg().toBuffer();
     const second = await sharp({ create: { width: 64, height: 48, channels: 4, background: { r: 10, g: 200, b: 90, alpha: 0.5 } } }).png().toBuffer();
-    const item = await createItemWithPhoto({ name: "Replace fixture" }, new File([new Uint8Array(first)], "first.jpg", { type: "image/jpeg" }));
-    const previous = await getPrimaryPhoto(item.id);
+    const item = await createItemWithPhoto(inventory, { name: "Replace fixture" }, new File([new Uint8Array(first)], "first.jpg", { type: "image/jpeg" }));
+    const previous = await getPrimaryPhoto(inventory, item.id);
     const directoryPath = path.join(directory, "media", "items", item.id);
     const previousFile = path.join(directoryPath, `${previous!.id}.webp`);
-    await replacePrimaryPhoto(item.id, new File([new Uint8Array(second)], "replacement.png", { type: "image/png" }));
-    const current = await getPrimaryPhoto(item.id);
+    await replacePrimaryPhoto(inventory, item.id, new File([new Uint8Array(second)], "replacement.png", { type: "image/png" }));
+    const current = await getPrimaryPhoto(inventory, item.id);
     expect(current?.id).not.toBe(previous?.id);
-    expect(await readPrimaryPhoto(item.id, previous!.id, "image")).toBeNull();
+    expect(await readPrimaryPhoto(inventory, item.id, previous!.id, "image")).toBeNull();
     await expect(access(previousFile)).rejects.toThrow();
-    expect((await sharp((await readPrimaryPhoto(item.id, current!.id, "image"))!).metadata()).hasAlpha).toBe(true);
-    expect(await removePrimaryPhoto(item.id)).toBe(true);
-    expect(await getPrimaryPhoto(item.id)).toBeNull();
-    expect(await removePrimaryPhoto(item.id)).toBe(false);
+    expect((await sharp((await readPrimaryPhoto(inventory, item.id, current!.id, "image"))!).metadata()).hasAlpha).toBe(true);
+    expect(await removePrimaryPhoto(inventory, item.id)).toBe(true);
+    expect(await getPrimaryPhoto(inventory, item.id)).toBeNull();
+    expect(await removePrimaryPhoto(inventory, item.id)).toBe(false);
 
-    const withPhoto = await createItemWithPhoto({ name: "Delete fixture" }, new File([new Uint8Array(first)], "first.jpg", { type: "image/jpeg" }));
-    const attached = await getPrimaryPhoto(withPhoto.id);
+    const withPhoto = await createItemWithPhoto(inventory, { name: "Delete fixture" }, new File([new Uint8Array(first)], "first.jpg", { type: "image/jpeg" }));
+    const attached = await getPrimaryPhoto(inventory, withPhoto.id);
     const attachedFile = path.join(directory, "media", "items", withPhoto.id, `${attached!.id}.webp`);
     const attachedSourceFile = path.join(directory, "media", "items", withPhoto.id, `${attached!.id}-source.webp`);
-    await deleteItemWithMedia(withPhoto.id);
-    expect(await getItem(withPhoto.id)).toBeNull();
+    await deleteItemWithMedia(inventory, withPhoto.id);
+    expect(await getItem(inventory, withPhoto.id)).toBeNull();
     await expect(access(attachedFile)).rejects.toThrow();
     await expect(access(attachedSourceFile)).rejects.toThrow();
   });

@@ -1,5 +1,14 @@
 # Architecture
 
+## M3.3A inventory boundaries
+
+The current implementation uses explicit InventoryContext values throughout item, stock, collection, media, category, CSV and ZIP services. Canonical pages and controlled media/API routes live under `/inventories/<UUID>`. Forms carry the route inventory ID; a cookie only chooses the landing preference. Legacy detail and media routes deliberately target the original inventory and never infer an edit target from the preference. New installations seed the original workspace once in migration 0008; reads and startup after an explicit final deletion do not recreate it. Installation-wide create/list operations remain separate from inventory-scoped domain services.
+
+Migration 0008_inventory_boundaries adds immutable ownership and human-number triggers, a monotonic sequence guard, stock-location and cover ownership checks, and default-cover cleanup when selected media or membership is removed. Human numbers are scoped per inventory, immutable, and never automatically reused after deletion. Existing UUIDs, rows and private paths are preserved. File cleanup receives the operation inventory and rejects live assets owned elsewhere. ZIP revision 4 permits arbitrary inventory UUIDs; revisions 2/3 retain their original single-inventory contract. Every export snapshot query joins its selected parent inventory, checks generated media identities, and runs the read-only archive verifier before returning bytes.
+
+The following sections retain historical milestone details. Import-as-new, its identity mapping and scoped deletion are completed in later M3.3A checkpoints.
+
+
 ## M3.2-R1 category and editing transition
 
 Migration 0007 adds `item_categories(item_id, category)` with a unique pair and a category/item index. A category value is either a stable global system key or an exact custom label; there is no duplicate per-workspace taxonomy. Existing recognized English/Russian aliases are backfilled to keys, unknown values remain custom, and all original item rows remain intact. `items.category` is an immutable legacy snapshot. Reads, search, filters, editing, CSV and current archives use the relation exclusively. The single-category URL filter uses EXISTS, so multiple assignments never duplicate an item; category, status, search and collection scope combine with AND.

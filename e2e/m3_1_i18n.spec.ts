@@ -16,7 +16,7 @@ async function chooseLocale(page: Page, native: string) {
 
 test("five local languages render on inventory, details, collections, and photo editing without changing item data", async ({ page }) => {
   test.setTimeout(90_000);
-  await page.goto("/");
+  await page.goto("/inventories/00000000-0000-4000-8000-000000000001");
   await page.locator(".add-dialog-trigger").click();
   const addDialog = page.getByRole("dialog", { name: "Добавить вещь" });
   await addDialog.getByLabel("Название").fill("Мітка Srpski 中文");
@@ -34,17 +34,17 @@ test("five local languages render on inventory, details, collections, and photo 
     await expect(page.locator(".category-trigger")).toHaveText(entry.categorySelect);
     await expect(page.locator("html")).toHaveAttribute("lang", entry.locale);
 
-    await page.goto("/");
+    await page.goto("/inventories/00000000-0000-4000-8000-000000000001");
     await expect(page.getByRole("heading", { name: entry.title, level: 1 })).toBeVisible();
-    await page.goto("/collections");
+    await page.goto("/inventories/00000000-0000-4000-8000-000000000001/collections");
     await expect(page.getByRole("heading", { name: entry.collection, level: 1 })).toBeVisible();
-    await page.goto("/data");
+    await page.goto("/inventories/00000000-0000-4000-8000-000000000001/data");
     await expect(page.getByRole("heading", { name: entry.data, level: 1 })).toBeVisible();
     await expect(page.getByRole("button", { name: entry.download })).toBeVisible();
     await expect(page.getByRole("button", { name: entry.csv })).toBeVisible();
     await expect(page.getByRole("button", { name: entry.import })).toBeVisible();
 
-    await page.goto("/");
+    await page.goto("/inventories/00000000-0000-4000-8000-000000000001");
     await page.locator(".add-dialog-trigger").click();
     const createDialog = page.getByRole("dialog");
     await createDialog.getByRole("button", { name: entry.addPhoto }).click();
