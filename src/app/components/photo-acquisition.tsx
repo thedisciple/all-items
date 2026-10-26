@@ -131,13 +131,7 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
       return;
     }
     setSelectionError("");
-    onDraftChange?.(true);
     closeSources();
-    setSelectedFile(null);
-    setSourceFile(file);
-    setCropData(null);
-    setPreviewUrl(null);
-    onPreviewChange?.(null);
     setCropFile(file);
   }
 
@@ -145,7 +139,9 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
     setCropFile(null);
     triggerRef.current?.focus();
     setInputFile(inputRef, file);
-    if (sourceFile) setInputFile(sourceInputRef, sourceFile);
+    const original = cropFile ?? file;
+    setInputFile(sourceInputRef, original);
+    setSourceFile(original);
     setSelectedFile(file);
     setCropData(data);
     onDraftChange?.(true);
@@ -163,7 +159,7 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
   }
 
   function useOriginalPhoto() {
-    const original = sourceFile ?? cropFile;
+    const original = cropFile ?? sourceFile;
     if (!original) { cancelCrop(); return; }
     acceptSelection(original, null);
   }
@@ -176,11 +172,6 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
       if (!response.ok) throw new Error("Photo unavailable");
       const blob = await response.blob();
       const file = new File([blob], "saved-photo.webp", { type: blob.type || "image/webp", lastModified: Date.now() });
-      setSourceFile(file);
-      onDraftChange?.(true);
-      setSelectedFile(null);
-      setPreviewUrl(null);
-      onPreviewChange?.(null);
       setCropFile(file);
     } catch {
       setSelectionError("photoSelectionFailed");
@@ -244,7 +235,8 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
 
   function cancelCrop() {
     setCropFile(null);
-    clearSelection();
+    if (selectedFile) setInputFile(inputRef, selectedFile);
+    else if (inputRef.current) inputRef.current.value = "";
     triggerRef.current?.focus();
   }
 
@@ -283,11 +275,11 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
         {stream ? <>
           <video ref={videoRef} className="camera-preview" autoPlay playsInline muted aria-label={t("photo")}/>
           {cameraMessage ? <p className="form-error" role="alert">{t(cameraMessage)}</p> : null}
-          <div className="dialog-actions"><button type="button" className="quiet-button" onClick={() => void capturePhoto()}>{t("cameraCapture")}</button><button type="button" className="text-button" onClick={() => { const next = facingMode === "environment" ? "user" : "environment"; setFacingMode(next); void startCamera(next); }}>{t("switchCamera")}</button><button type="button" className="text-button" onClick={closeSources}>{t("cancel")}</button></div>
+          <div className="dialog-actions"><button type="button" className="quiet-button" onClick={() => void capturePhoto()}>{t("cameraCapture")}</button><button type="button" className="text-button" onClick={() => { const next = facingMode === "environment" ? "user" : "environment"; setFacingMode(next); void startCamera(next); }}>{t("switchCamera")}</button></div>
         </> : <>
           <p className="dialog-copy">{t("photoOnlyDevice")}</p>
           {cameraMessage ? <p className="form-error" role="alert">{t(cameraMessage)}</p> : null}
-          <div className="dialog-actions"><button type="button" className="quiet-button" onClick={() => void startCamera()}>{t("cameraOpen")}</button><button type="button" className="quiet-button" onClick={() => inputRef.current?.click()}>{t("chooseFile")}</button><button type="button" className="text-button" onClick={closeSources}>{t("cancel")}</button></div>
+          <div className="dialog-actions"><button type="button" className="quiet-button" onClick={() => void startCamera()}>{t("cameraOpen")}</button><button type="button" className="quiet-button" onClick={() => inputRef.current?.click()}>{t("chooseFile")}</button></div>
         </>}
       </section>
     </div> : null}

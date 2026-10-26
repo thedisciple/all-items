@@ -1,10 +1,9 @@
 import { routeInventory } from "@/app/inventory-routing";
 import { inventoryPath } from "@/items/inventory-context";
-import { listCollections } from "@/items/collections";
 import { AppSidebar } from "@/app/components/app-sidebar";
 import { AddItemForm } from "@/app/components/add-item-form";
 import { categories, categoryMessageKey } from "@/items/categories";
-import { countItems, listCategoryValues, listItems } from "@/items/service";
+import { listCategoryValues, listItems } from "@/items/service";
 import { getLocale } from "@/i18n/server";
 import { translate } from "@/i18n/messages";
 import { AppHeader } from "@/app/components/app-header";
@@ -18,11 +17,9 @@ export default async function Home({ searchParams, params: routeParams }: Props)
   const context = await routeInventory((await routeParams).inventoryId);
   const base = inventoryPath(context);
   const params = await searchParams;
-  const [locale, items, collections, totalCount, storedCategories] = await Promise.all([
+  const [locale, items, storedCategories] = await Promise.all([
     getLocale(),
     listItems(context, { search: params.q, category: params.category || undefined, status: params.status || undefined, sort: params.sort }),
-    listCollections(context),
-    countItems(context),
     listCategoryValues(context),
   ]);
   const t = (key: Parameters<typeof translate>[1], values?: Record<string, string | number>) => translate(locale, key, values);
@@ -31,7 +28,7 @@ export default async function Home({ searchParams, params: routeParams }: Props)
   const categoryOptions: { value: string; label: string }[] = [...categories.map((key) => ({ value: key, label: categoryEmoji[key] + " " + t(categoryMessageKey(key)!) }))];
   for (const value of storedCategories) if (!categoryKeyForStoredValue(value)) categoryOptions.push({ value, label: value });
   return <main className="app-shell">
-    <AppSidebar active="items" itemCount={totalCount} collectionCount={collections.length} locale={locale}/>
+    <AppSidebar active="items" locale={locale}/>
     <section className="main-content">
       <AppHeader/>
       <div className="content-wrap"><h1 className="visually-hidden">{t("inventory")}</h1>

@@ -54,3 +54,8 @@ Keep the All Items brand separate from the Inventory section and current invento
 ## M3.3B navigation and lists
 
 Keep the current inventory selector and its settings together at the start of the header, with language selection at the end. The inventory name is sufficient orientation; avoid another large duplicate heading. Counts remain scoped and visible throughout the inventory shell. Settings has its own location and a clear way back. An item row separates identity, categories, stock, and status; a category link filters the current inventory or collection while the item link opens the item. Use distinct focusable controls rather than nesting links. Long selected filter names remain legible as controls adapt to available width.
+
+
+## M3.3B compact category and photo editing
+
+Chosen categories live inside one token field. Opening its bounded, viewport-aware panel must not move adjacent fields; Escape and outside activation dismiss it without saving the item. Item rows keep their item and category links independently actionable. Show the complete selected crop in a bounded contained preview, including unusual aspect ratios. A photo source dialog uses one Close control, and closing the crop editor preserves a previously selected photo. Rotate directions and Reset have distinct labels; avoid clipped custom tooltip bubbles.

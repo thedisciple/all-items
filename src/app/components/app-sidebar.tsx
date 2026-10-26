@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Boxes, Database, LibraryBig } from "lucide-react";
 import { type Locale, translate } from "@/i18n/messages";
 
-export function AppSidebar({ active, locale }: { active: "items" | "collections" | "data" | "settings"; itemCount?: number; collectionCount?: number; locale: Locale }) {
+export function AppSidebar({ active, locale }: { active: "items" | "collections" | "data" | "settings"; locale: Locale }) {
   const { base, counts } = useInventory();
   return <aside className="sidebar">
     <Link className="brand" href={base} aria-label={`All Items — ${translate(locale, "inventory")}`}><span className="brand-mark" aria-hidden="true">A</span><span>All Items</span></Link>

@@ -52,3 +52,5 @@ An explicit route identifies the current organizational space. Switching clears 
 ## Navigation and row actions
 
 The header identifies the current inventory and places creation in the inventory menu. The same scoped counts appear on all inventory routes; settings does not pretend to be the item list. Item identity, categories, stock and status occupy stable zones. Category activation filters the current list, while item activation opens the item. Keep these actions independently reachable by keyboard and retain query history.
+
+Category tokens and the transient option panel should behave as one field without pushing neighboring content. Preview the entire selected crop within the available frame; preserve the prior selection when a replacement crop is cancelled.

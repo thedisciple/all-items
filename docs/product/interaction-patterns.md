@@ -88,3 +88,10 @@ Data exports the explicit current inventory. Import previews a validated ZIP, pr
 ## M3.3B header and inventory rows
 
 The header inventory menu uses a button, explicit selection entries and a distinct Create action, plus a nearby Settings control. Arrow keys and Escape support menu navigation; duplicate existing names show short identifiers rather than being silently renamed. The settings page offers a link back to the selected inventory and no misleading active Inventory state. The common shell provides scoped counts to every navigation view. Item rows expose one stretched item link and separate category filter links, without nested interactive elements; category activation retains the current search/status/sort and remains within the current collection when applicable.
+
+
+## M3.3B category tokens and crop preview
+
+The category control contains selected removable tokens and one trigger. Its transient panel is positioned against the field and flips/clamps to the viewport; it does not participate in form layout. Outside clicks and Escape dismiss it, keyboard arrows navigate options, Space/Enter toggle, and Backspace removes the last token from the trigger. Input and selections remain a draft until the item form is saved. Custom-category emoji and their archive representation remain in progress.
+
+The selected crop uses a bounded grid with zero minimum track sizes and `contain`; the image must not exceed the preview frame. The former automatic grid minimum could expand a portrait beyond the fixed-height frame and clip it. A synthetic marker test reproduces the former geometry and checks both preview pixels and normalized saved pixels at portrait, landscape, tall, and 20:1 ratios. Choosing a replacement opens the crop editor without discarding the existing selected file; cancelling restores the existing selection. Camera/photo source dialogs close with X, Escape or backdrop and always stop camera tracks. Crop Cancel remains explicit because it discards the pending crop. Rotation controls have native accessible labels and the Reset control is visibly named; crop undo/redo and annotation tools are future work.

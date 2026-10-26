@@ -13,13 +13,12 @@ export function InventoryItemRow({ item, base, locale, query, collectionId, high
   const status=String(item.identification_status);
   const statusKey=status==="user_confirmed"?"itemStatusConfirmed":status==="source_verified"?"itemStatusVerified":null;
   return <div className={`item-row item-grid-row${highlighted?" item-row-highlight":""}`}>
-    <Link href={itemPath} className="item-row-link" aria-label={String(item.name)}><span className="visually-hidden">{String(item.name)} {String(item.inventory_number)} {String(item.quantity)}</span></Link>
     {item.primary_media_id?<PrivateImage variant="thumbnail" className="item-photo" src={`${base}/media/${item.id}/${item.primary_media_id}?variant=thumbnail`} alt="" width={80} height={80}/>:<div className="item-thumb" aria-hidden="true"><span>{t("photo")}</span></div>}
-    <div className="item-identity"><h3>{String(item.name)}</h3><div className="item-identity-meta"><span className="inventory-number">{String(item.inventory_number)}</span>{item.model?<span>{String(item.model)}</span>:null}{item.brand?<span>{String(item.brand)}</span>:null}</div></div>
+    <div className="item-identity"><Link href={itemPath} className="item-row-link" aria-label={String(item.name)}><h3>{String(item.name)}</h3><span className="visually-hidden">{String(item.inventory_number)} {String(item.quantity)}</span></Link><div className="item-identity-meta"><span className="inventory-number">{String(item.inventory_number)}</span>{item.model?<span>{String(item.model)}</span>:null}{item.brand?<span>{String(item.brand)}</span>:null}</div></div>
     <div className="item-categories">{item.categories.map(value=>{
       const key=categoryKeyForStoredValue(value), label=key?translate(locale,categoryMessageKey(key)!):value;
       const params=new URLSearchParams();for(const [name,entry] of Object.entries(query))if(entry&&["q","status","sort"].includes(name))params.set(name,entry);
-      params.set("category",value);
+      params.set("category",key ?? value);
       return <Link key={value} href={`${path}?${params}`} scroll={false} className="category-chip item-category-filter">{key?<span aria-hidden="true">{categoryEmoji[key]}</span>:null}{label}</Link>;
     })}</div>
     <div className="item-stock"><span>{t("quantity")}: {new Intl.NumberFormat(locale).format(Number(item.quantity))}</span>{item.locations?<span>{String(item.locations)}</span>:null}</div>

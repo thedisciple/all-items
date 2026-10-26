@@ -6,7 +6,7 @@ import { z } from "zod";
 import { AppSidebar } from "@/app/components/app-sidebar";
 import { CollectionManageForms } from "@/app/components/collection-forms";
 import { CollectionAddItems, CollectionCoverManager, RemoveCollectionItem } from "@/app/components/collection-tools";
-import { listCollectionCoverOptions, listCollections, getCollection } from "@/items/collections";
+import { listCollectionCoverOptions, getCollection } from "@/items/collections";
 import { listCategoryValues, listItems } from "@/items/service";
 import { getLocale } from "@/i18n/server";
 import { formatItemCount, translate } from "@/i18n/messages";
@@ -27,9 +27,8 @@ export default async function CollectionPage({ params, searchParams }: Props) {
   if (!parsedId.success) notFound();
   const collection = await getCollection(context, parsedId.data);
   if (!collection) notFound();
-  const [locale, collections, items, members, inventory, coverOptions, storedCategories] = await Promise.all([
+  const [locale, items, members, inventory, coverOptions, storedCategories] = await Promise.all([
     getLocale(),
-    listCollections(context),
     listItems(context, { collectionId: id, search: query.q, category: query.category || undefined, status: query.status || undefined, sort: query.sort }),
     listItems(context, { collectionId: id }),
     listItems(context),
@@ -42,7 +41,7 @@ export default async function CollectionPage({ params, searchParams }: Props) {
   const selectableItems = inventory.map((item) => ({ id: String(item.id), name: String(item.name), model: item.model == null ? null : String(item.model), category: item.categories.join(" "), mediaId: item.primary_media_id == null ? null : String(item.primary_media_id) }));
   const categoryOptions: { value: string; label: string }[] = [...categories.map((category) => ({ value: category, label: categoryEmoji[category] + " " + t(categoryMessageKey(category)!) }))];
   for (const value of storedCategories) if (!categoryKeyForStoredValue(value)) categoryOptions.push({ value, label: value });
-  return <main className="app-shell"><AppSidebar active="collections" collectionCount={collections.length} locale={locale}/>
+  return <main className="app-shell"><AppSidebar active="collections" locale={locale}/>
     <section className="main-content"><AppHeader/>
       <div className="content-wrap">
         <div className="heading-row collection-detail-heading"><div><h1>{collection.icon && !(collection.coverType === "emoji" && collection.coverIcon === collection.icon) ? <span aria-hidden="true">{collection.icon} </span> : null}{String(collection.name)}</h1><p className="subtitle">{formatItemCount(locale, Number(collection.itemCount))}</p></div>

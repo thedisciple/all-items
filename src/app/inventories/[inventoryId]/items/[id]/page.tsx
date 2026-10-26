@@ -9,7 +9,7 @@ import { PhotoReplacement } from "@/app/components/photo-replacement";
 import { DestructiveConfirmation } from "@/app/components/destructive-confirmation";
 import { removeItem, removePhoto } from "@/app/actions";
 import { listCollections, listItemCollections } from "@/items/collections";
-import { getItem, listItems } from "@/items/service";
+import { getItem } from "@/items/service";
 import { getPrimaryPhoto } from "@/media/service";
 import { getLocale } from "@/i18n/server";
 import { translate } from "@/i18n/messages";
@@ -26,9 +26,9 @@ export default async function ItemPage({ params, searchParams }: Props) {
   if (!parsedId.success) notFound();
   const item = await getItem(context, parsedId.data);
   if (!item) notFound();
-  const [locale, photo, collections, memberships, allItems] = await Promise.all([
+  const [locale, photo, collections, memberships] = await Promise.all([
     getLocale(),
-    getPrimaryPhoto(context, id), listCollections(context), listItemCollections(context, id), listItems(context),
+    getPrimaryPhoto(context, id), listCollections(context), listItemCollections(context, id),
   ]);
   const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
   const draft = {
@@ -41,7 +41,7 @@ export default async function ItemPage({ params, searchParams }: Props) {
   const fromCollection = z.uuid().safeParse(query.from ?? "");
   const returnTo = fromCollection.success ? `${base}/collections/${fromCollection.data}` : base;
   return <main className="app-shell">
-    <AppSidebar active="items" itemCount={allItems.length} collectionCount={collections.length} locale={locale}/>
+    <AppSidebar active="items" locale={locale}/>
     <section className="main-content"><AppHeader/>
       <div className="content-wrap detail-wrap">
         <div className="item-hero"><h1>{item.name}</h1><span className="item-number-badge">{item.inventory_number}</span></div>

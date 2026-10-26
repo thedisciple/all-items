@@ -21,7 +21,7 @@ test("consistent controls, dismissible categories and unobscured collection crea
     await add.getByLabel("Название").fill(`M33 controls ${width}`);
     const inputHeight = (await add.getByLabel("Название").boundingBox())!.height;
     expect((await add.getByLabel("Тип учёта").boundingBox())!.height).toBe(inputHeight);
-    expect((await add.locator(".category-trigger").boundingBox())!.height).toBe(inputHeight);
+    expect((await add.locator(".category-field-box").boundingBox())!.height).toBe(inputHeight);
     await add.locator(".category-trigger").click();
     await add.locator(".category-options input").first().check();
     expect((await add.locator(".category-options input").first().boundingBox())!.width).toBeLessThan(22);

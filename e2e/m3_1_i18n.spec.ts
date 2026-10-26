@@ -35,7 +35,7 @@ test("five local languages render on inventory, details, collections, and photo 
     await expect(page.locator("html")).toHaveAttribute("lang", entry.locale);
 
     await page.goto("/inventories/00000000-0000-4000-8000-000000000001");
-    await expect(page.getByRole("heading", { name: entry.title, level: 1 })).toBeVisible();
+    await expect(page.locator(".nav-link.active")).toContainText(entry.title);
     await page.goto("/inventories/00000000-0000-4000-8000-000000000001/collections");
     await expect(page.getByRole("heading", { name: entry.collection, level: 1 })).toBeVisible();
     await page.goto("/inventories/00000000-0000-4000-8000-000000000001/data");

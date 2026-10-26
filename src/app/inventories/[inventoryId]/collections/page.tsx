@@ -19,7 +19,7 @@ export default async function CollectionsPage({params}: {params:Promise<{invento
   const [locale, collections] = await Promise.all([getLocale(), listCollections(context)]);
   const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
   return <main className="app-shell">
-    <AppSidebar active="collections" collectionCount={collections.length} locale={locale}/>
+    <AppSidebar active="collections" locale={locale}/>
     <section className="main-content">
       <AppHeader/>
       <div className="content-wrap"><div className="heading-row"><h1>{t("collections")}</h1><span className="total-count">{formatCollectionCount(locale, collections.length)}</span></div>

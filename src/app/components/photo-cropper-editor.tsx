@@ -2,7 +2,7 @@
 
 import Cropper from "react-cropper";
 import type CropperJS from "cropperjs";
-import { RotateCcw, RotateCw, Undo2, X } from "lucide-react";
+import { RefreshCcw, RotateCcw, RotateCw, X } from "lucide-react";
 import { Component, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { aspectRatioForPreset, getCropperImageMetrics, isValidCropCoordinates, safeZoomTarget } from "@/media/cropper-state";
 import { useI18n } from "@/i18n/provider";
@@ -299,10 +299,10 @@ export default function PhotoCropperEditor(props: Props) {
         {error ? <div className="crop-recovery" role="alert"><p>{error === "unavailable" ? props.unavailableLabel : error === "small" ? props.smallLabel : props.errorLabel}</p><button type="button" className="text-button" disabled={busy} onClick={props.onUseOriginal}>{props.originalLabel}</button></div> : null}
         <div className="crop-toolbar" aria-label={props.title}>
           <div className="crop-tool-group" aria-label={props.rotateLabel}>
-            <button type="button" className="icon-button crop-tool-button" aria-label={props.rotateLabel} data-tooltip={props.rotateLabel} disabled={!instanceReady || busy} onClick={() => rotate(1)}><RotateCw size={17} aria-hidden="true"/></button>
-            <button type="button" className="icon-button crop-tool-button" aria-label={props.rotateCounterclockwiseLabel} data-tooltip={props.rotateCounterclockwiseLabel} disabled={!instanceReady || busy} onClick={() => rotate(-1)}><RotateCcw size={17} aria-hidden="true"/></button>
+            <button type="button" className="icon-button crop-tool-button" aria-label={props.rotateLabel} title={props.rotateLabel} disabled={!instanceReady || busy} onClick={() => rotate(1)}><RotateCw size={17} aria-hidden="true"/></button>
+            <button type="button" className="icon-button crop-tool-button" aria-label={props.rotateCounterclockwiseLabel} title={props.rotateCounterclockwiseLabel} disabled={!instanceReady || busy} onClick={() => rotate(-1)}><RotateCcw size={17} aria-hidden="true"/></button>
           </div>
-          <button type="button" className="icon-button crop-tool-button crop-reset-button" aria-label={props.resetLabel} data-tooltip={props.resetLabel} disabled={!instanceReady || busy} onClick={reset}><Undo2 size={17} aria-hidden="true"/></button>
+          <button type="button" className="quiet-button crop-tool-button crop-reset-button" aria-label={props.resetLabel} title={props.resetLabel} disabled={!instanceReady || busy} onClick={reset}><RefreshCcw size={17} aria-hidden="true"/><span>{props.resetLabel}</span></button>
         </div>
         </div>
         <div className="dialog-actions crop-actions">

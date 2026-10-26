@@ -53,7 +53,7 @@ export function InventorySwitcher() {
   },[open]);
   const duplicates=(name:string)=>inventories.filter(entry=>entry.name.trim().toLocaleLowerCase()===name.trim().toLocaleLowerCase()).length>1;
   return <div className="inventory-switcher" ref={root}>
-    <button ref={trigger} className="inventory-menu-trigger" type="button" aria-label={`${t("inventoryCurrent")}: ${inventory.name}`} aria-haspopup="menu" aria-expanded={open} onClick={()=>setOpen(value=>!value)} onKeyDown={event=>{if(event.key==="ArrowDown"&&!open){event.preventDefault();keyboardOpen.current=true;setOpen(true);}}}><span>{inventory.name}</span><ChevronDown size={16} aria-hidden="true"/></button>
+    <button ref={trigger} className="inventory-menu-trigger" type="button" aria-label={`${t("inventoryCurrent")}: ${inventory.name}`} aria-haspopup="menu" aria-expanded={open} onClick={()=>setOpen(value=>!value)} onKeyDown={event=>{if(event.key==="ArrowDown"){event.preventDefault();if(open)menu.current?.querySelector<HTMLButtonElement>('[role="menuitemradio"][aria-checked="true"]')?.focus();else{keyboardOpen.current=true;setOpen(true);}}}}><span>{inventory.name}</span><ChevronDown size={16} aria-hidden="true"/></button>
     <Link className="icon-button inventory-settings-link" href={`${base}/settings`} aria-label={t("inventoryManage")} title={t("inventoryManage")}><Settings size={17} aria-hidden="true"/></Link>
     {open?<div ref={menu} className="inventory-menu" role="menu" aria-label={t("inventoryCurrent")} onKeyDown={event=>{
       if(event.key==="Escape"){event.preventDefault();event.stopPropagation();setOpen(false);trigger.current?.focus();return;}

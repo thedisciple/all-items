@@ -621,6 +621,11 @@ button svg,a.quiet-button svg { flex-shrink: 0; }
 
 .private-field-label { display: inline-flex; align-items: center; gap: 6px; }
 
+/* A grid's automatic minimum can otherwise make a portrait image taller than
+   its fixed preview frame, hiding the lower part behind the overflow clip. */
+.media-preview { grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr); }
+.private-image-frame.media-preview > img { min-width: 0; min-height: 0; max-width: 100%; max-height: 100%; object-fit: contain; }
+
 /* M3.3B: keep inventory context and its actions together in the header. */
 .topbar { min-height: 68px; height: auto; gap: 12px; padding-block: 10px; }
 .header-location { min-width: 0; display: flex; align-items: center; gap: 8px; }
@@ -638,7 +643,8 @@ button svg,a.quiet-button svg { flex-shrink: 0; }
 .settings-back + h1 { margin-bottom: 22px; }
 .detail-panel .form-action-row { margin-top: 16px; }
 .item-grid-row { position: relative; display: grid; grid-template-columns: 56px minmax(140px,1.4fr) minmax(110px,1fr) minmax(90px,.7fr) auto; gap: 12px; align-items: center; }
-.item-grid-row .item-row-link { position: absolute; inset: 0; z-index: 1; border-radius: inherit; }
+.item-grid-row .item-row-link { display: inline-block; position: static; border-radius: inherit; }
+.item-grid-row .item-row-link::after { content: ""; position: absolute; inset: 0; z-index: 1; border-radius: inherit; }
 .item-identity,.item-categories,.item-stock { min-width: 0; }
 .item-identity h3 { margin: 0; overflow-wrap: anywhere; }
 .item-identity-meta { display: flex; flex-wrap: wrap; gap: 5px 8px; margin-top: 5px; color: #aeb3a7; font-size: 12px; }
@@ -663,3 +669,13 @@ button svg,a.quiet-button svg { flex-shrink: 0; }
   .item-categories,.item-stock,.item-grid-row .item-index { grid-column: 2; }
   .item-grid-row .item-index { max-width: none; text-align: left; }
 }
+
+.category-field-box { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; min-height: var(--control-height); padding: 3px 5px; border: 1px solid var(--control-border); border-radius: var(--control-radius); background: var(--control-bg); }
+.category-field-box:focus-within { outline: 2px solid var(--green); outline-offset: 2px; }
+.category-field-box .category-selection { display: flex; flex-wrap: wrap; gap: 4px; }
+.category-field-box .category-trigger { flex: 1 0 40px; width: auto; min-width: 40px; min-height: 36px; height: 36px; padding: 0 7px; border: 0; outline: 0; background: transparent; gap: 8px; }
+.category-field-box .category-trigger:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
+.category-popover { z-index: 80; overscroll-behavior: contain; }
+.category-popover .custom-category-row { margin-bottom: 10px; }
+.category-popover .custom-category-row input { min-width: 0; height: var(--control-height); padding: 0 10px; border: 1px solid var(--control-border); border-radius: var(--control-radius); background: var(--control-bg); color: var(--text); }
+.crop-reset-button { display: inline-flex; width: auto; gap: 8px; }
