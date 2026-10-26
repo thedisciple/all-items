@@ -679,3 +679,20 @@ button svg,a.quiet-button svg { flex-shrink: 0; }
 .category-popover .custom-category-row { margin-bottom: 10px; }
 .category-popover .custom-category-row input { min-width: 0; height: var(--control-height); padding: 0 10px; border: 1px solid var(--control-border); border-radius: var(--control-radius); background: var(--control-bg); color: var(--text); }
 .crop-reset-button { display: inline-flex; width: auto; gap: 8px; }
+
+/* Collection creation is an action tile; existing collections remain links. */
+.collection-create-tile { min-width: 0; min-height: 212px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 18px; border: 1px dashed #596748; border-radius: 10px; background: #171916; color: #dce5cf; cursor: pointer; font: inherit; font-weight: 600; }
+.collection-create-tile:hover { background: #20251c; border-color: var(--green); }
+.collection-create-tile:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
+.collection-rename-dialog { width: min(100%, 540px); }
+.collection-rename-form { padding: 0; border: 0; background: transparent; }
+.collection-item-choice-text { text-align: left; justify-items: start; }
+.collection-item-choice-text .category-tags { justify-content: flex-start; }
+.cover-choice-preview { display: grid; place-items: center; min-height: 90px; border: 1px solid #3c4434; border-radius: 7px; background: #11130f; color: #9bb76c; font-size: 40px; }
+.collection-cover-viewer .photo-viewer-image { margin-inline: auto; }
+.collection-cover-viewer .private-image-frame > img { object-position: center; }
+.cover-viewer-actions { left: 0; right: 0; display: flex; justify-content: center; z-index: 2; }
+.category-field-box .category-trigger:focus-visible { outline: none; }
+@media (max-width: 560px) { .collection-create-tile { min-height: 170px; } }
+
+.collection-cover-preview .media-preview { height: 210px; }

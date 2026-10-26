@@ -181,6 +181,14 @@ async function mediaHashes(directory:string) {
 }
 
 describe("non-destructive imports",()=>{
+  it("rejects a duplicate name without modifying existing inventories or media",async()=>{
+    const existing=(await destination.client.execute("SELECT name FROM workspaces ORDER BY id LIMIT 1")).rows[0]!.name as string;
+    const before=(await destination.client.execute("SELECT * FROM workspaces ORDER BY id")).rows;
+    const media=await mediaHashes(destination.directory);
+    await expect(importArchiveAsNew(destination,validArchive,` ${existing.toLocaleUpperCase("ru-RU")} `,destination)).rejects.toThrow("Inventory name already exists");
+    expect((await destination.client.execute("SELECT * FROM workspaces ORDER BY id")).rows).toEqual(before);
+    expect(await mediaHashes(destination.directory)).toEqual(media);
+  },20_000);
   it("imports the same archive twice into populated storage with fresh identities and unchanged original records and media",async()=>{
     const before=readInventoryArchive(await createInventoryArchive(destination,destination));
     const beforeMedia=await mediaHashes(destination.directory);

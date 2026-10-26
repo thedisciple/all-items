@@ -23,7 +23,7 @@ test("downloads a complete archive and imports it twice as new inventories while
   await expect(page).toHaveURL(/added=/);
 
   await page.goto("/inventories/00000000-0000-4000-8000-000000000001/collections");
-  await page.getByRole("button", { name: "Создать коллекцию" }).click();
+  await page.locator(".collection-create-trigger").click();
   const create = page.getByRole("dialog", { name: "Создать коллекцию" });
   await create.getByLabel("Название коллекции").fill("Portable DIY");
   await create.getByRole("button", { name: "Создать коллекцию" }).click();
@@ -65,6 +65,7 @@ test("downloads a complete archive and imports it twice as new inventories while
     expect((await request).headers()["x-all-items-import"]).toBe("1");
     await expect(page.locator(".import-summary")).toContainText("\u0412\u0435\u0449\u0435\u0439: 1");
     await expect(page.locator(".import-summary")).toContainText("\u041a\u043e\u043b\u043b\u0435\u043a\u0446\u0438\u0439: 1");
+    await expect(page.getByLabel("\u041d\u0430\u0437\u0432\u0430\u043d\u0438\u0435 \u043d\u043e\u0432\u043e\u0433\u043e \u0438\u043d\u0432\u0435\u043d\u0442\u0430\u0440\u044f")).toHaveValue("Inventory (2)");
     await page.getByLabel("\u041d\u0430\u0437\u0432\u0430\u043d\u0438\u0435 \u043d\u043e\u0432\u043e\u0433\u043e \u0438\u043d\u0432\u0435\u043d\u0442\u0430\u0440\u044f").fill(name);
     await page.getByRole("button",{name:"\u0418\u043c\u043f\u043e\u0440\u0442\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u043a\u0430\u043a \u043d\u043e\u0432\u044b\u0439 \u0438\u043d\u0432\u0435\u043d\u0442\u0430\u0440\u044c",exact:true}).click();
     await expect(page).toHaveURL(/:3103\/inventories\/[0-9a-f-]{36}$/);

@@ -7,7 +7,7 @@ import { z } from "zod";
 import { deleteInventory,InventoryDeletionError } from "@/items/inventory-deletion";
 import { InventoryBusyError } from "@/items/operation-lock";
 import { preferredInventory } from "@/app/inventory-routing";
-import { createInventory, renameInventory, resolveInventory } from "@/items/inventories";
+import { createInventory, InventoryNameConflict, renameInventory, resolveInventory } from "@/items/inventories";
 import { inventoryPath } from "@/items/inventory-context";
 import type { MessageKey } from "@/i18n/messages";
 
@@ -24,7 +24,7 @@ export async function createInventoryAction(_previous: InventoryFeedback, data: 
     await rememberInventoryAction(inventory.workspaceId);
     revalidatePath("/", "layout");
     return { status: "success", inventoryId: inventory.workspaceId };
-  } catch { return { status: "error", code: "inventoryCreateFailed" }; }
+  } catch(error) { return { status: "error", code: error instanceof InventoryNameConflict ? "inventoryNameExists" : "inventoryCreateFailed" }; }
 }
 
 export async function renameInventoryAction(_previous: InventoryFeedback, data: FormData): Promise<InventoryFeedback> {
@@ -33,7 +33,7 @@ export async function renameInventoryAction(_previous: InventoryFeedback, data: 
     await renameInventory(context, data.get("name"));
     revalidatePath(inventoryPath(context), "layout");
     return { status: "success" };
-  } catch { return { status: "error", code: "inventoryRenameFailed" }; }
+  } catch(error) { return { status: "error", code: error instanceof InventoryNameConflict ? "inventoryNameExists" : "inventoryRenameFailed" }; }
 }
 
 export async function deleteInventoryAction(_previous:InventoryFeedback,data:FormData):Promise<InventoryFeedback> {

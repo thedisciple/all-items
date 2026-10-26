@@ -73,7 +73,7 @@ export async function createCollection(context: InventoryContext, input: unknown
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
   try {
-    await db.$client.execute({ sql: "INSERT INTO collections (id, workspace_id, name, normalized_name, created_at, updated_at, icon, cover_type, cover_icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", args: [id, workspaceId, name, normalizedName(name), now, now, icon ?? null, icon ? "emoji" : null, icon ?? null] });
+    await db.$client.execute({ sql: "INSERT INTO collections (id, workspace_id, name, normalized_name, created_at, updated_at, icon, cover_type, cover_icon) VALUES (?, ?, ?, ?, ?, ?, ?, 'default', NULL)", args: [id, workspaceId, name, normalizedName(name), now, now, icon ?? null] });
   } catch (error) {
     if (isUniqueViolation(error)) throw new Error("Такая коллекция уже есть.");
     throw error;
@@ -88,7 +88,7 @@ export async function renameCollection(context: InventoryContext, idValue: unkno
   const { db, workspaceId } = await inventoryDatabase(context);
   try {
     const result = iconProvided
-      ? await db.$client.execute({ sql: "UPDATE collections SET name = ?, normalized_name = ?, icon = ?, cover_icon = CASE WHEN cover_type = 'emoji' THEN ? ELSE cover_icon END, updated_at = ? WHERE id = ? AND workspace_id = ?", args: [name, normalizedName(name), icon ?? null, icon ?? null, new Date().toISOString(), id, workspaceId] })
+      ? await db.$client.execute({ sql: "UPDATE collections SET name = ?, normalized_name = ?, icon = ?, updated_at = ? WHERE id = ? AND workspace_id = ?", args: [name, normalizedName(name), icon ?? null, new Date().toISOString(), id, workspaceId] })
       : await db.$client.execute({ sql: "UPDATE collections SET name = ?, normalized_name = ?, updated_at = ? WHERE id = ? AND workspace_id = ?", args: [name, normalizedName(name), new Date().toISOString(), id, workspaceId] });
     if (!result.rowsAffected) throw new Error("Коллекция не найдена.");
   } catch (error) {
@@ -196,7 +196,7 @@ export async function setCollectionCover(context: InventoryContext, collectionId
       const valid = await tx.execute({ sql: `SELECT m.id FROM item_collection_memberships cm JOIN items i ON i.id = cm.item_id JOIN media_assets m ON m.item_id = i.id AND m.id = ? AND m.is_primary = 1 WHERE cm.collection_id = ? AND cm.item_id = ? AND i.workspace_id = ?`, args: [selection.mediaId, collectionId, selection.itemId, workspaceId] });
       if (!valid.rows.length) throw new Error("Фото для обложки не найдено.");
     }
-    await tx.execute({ sql: `UPDATE collections SET cover_type = ?, cover_icon = ?, icon = CASE WHEN ? = 'emoji' THEN ? ELSE icon END, cover_item_id = ?, cover_media_id = ?, cover_upload_id = NULL, updated_at = ? WHERE id = ? AND workspace_id = ?`, args: [selection.type, selection.type === "emoji" ? selection.icon : null, selection.type, selection.type === "emoji" ? selection.icon : null, selection.type === "item_photo" ? selection.itemId : null, selection.type === "item_photo" ? selection.mediaId : null, new Date().toISOString(), collectionId, workspaceId] });
+    await tx.execute({ sql: `UPDATE collections SET cover_type = ?, cover_icon = ?, cover_item_id = ?, cover_media_id = ?, cover_upload_id = NULL, updated_at = ? WHERE id = ? AND workspace_id = ?`, args: [selection.type, selection.type === "emoji" ? selection.icon : null, selection.type === "item_photo" ? selection.itemId : null, selection.type === "item_photo" ? selection.mediaId : null, new Date().toISOString(), collectionId, workspaceId] });
     await tx.commit();
   } catch (error) { await tx.rollback(); throw error; }
   if (oldUpload) {

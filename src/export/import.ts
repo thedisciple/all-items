@@ -1,6 +1,6 @@
 import { assertPrivatePath } from "@/media/private-paths";
 import { withInventoryOperation } from "@/items/operation-lock";
-import { inventoryName } from "@/items/inventories";
+import { assertUniqueInventoryName, inventoryName } from "@/items/inventories";
 import type { InventoryContext } from "@/items/inventory-context";
 import { type Client, type InValue } from "@libsql/client";
 import { createHash, randomUUID } from "node:crypto";
@@ -394,6 +394,7 @@ export async function importArchiveAsNew(context:InventoryContext,input:Uint8Arr
           if(fault==="promote")throw new ImportError("Simulated promotion failure.","failed");
           if(fault==="interrupt") {interrupted=true;throw new ImportError("Simulated interruption.","failed");}
         }
+        await assertUniqueInventoryName(tx,targetName);
         await persistInventoryInTransaction(tx,plan.inventory);
         await tx.execute({sql:"INSERT INTO inventory_import_operations(id,workspace_id,created_at) VALUES(?,?,?)",args:[operationId,targetInventoryId,new Date().toISOString()]});
         if(fault==="transaction")throw new ImportError("Simulated transaction failure.","failed");

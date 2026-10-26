@@ -247,7 +247,7 @@ test("category and text filters update automatically and preserve browser histor
   await expect.poll(async () => (await page.locator(".item-row h3").allTextContents()).filter((name) => /Alpha Legacy|Middle Custom|Zulu Stable/.test(name))[0]).toBe("Zulu Stable");
 
   await page.goto("/inventories/00000000-0000-4000-8000-000000000001/collections");
-  await page.getByRole("button", { name: "Создать коллекцию" }).click();
+  await page.locator(".collection-create-trigger").click();
   const dialog = page.getByRole("dialog", { name: "Создать коллекцию" });
   await dialog.getByLabel("Название коллекции").fill("Filter collection");
   await dialog.getByRole("button", { name: "Создать коллекцию" }).click();
@@ -272,7 +272,7 @@ test("collection name, icon, cover and deletion are contextual and immediately v
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect(page.getByRole("button", { name: "Language" })).toContainText("English");
-  await page.getByRole("button", { name: "Create collection" }).click();
+  await page.locator(".collection-create-trigger").click();
   const createDialog = page.getByRole("dialog", { name: "Create collection" });
   await createDialog.getByLabel("Collection name").fill("Legacy collection");
   await createDialog.getByRole("button", { name: "Create collection" }).click();
@@ -288,16 +288,16 @@ test("collection name, icon, cover and deletion are contextual and immediately v
   await page.getByRole("button", { name: /(?:Change|Add) cover/ }).click();
   const coverDialog = page.getByRole("dialog", { name: "Collection cover" });
   await coverDialog.getByLabel("Collection cover").selectOption("emoji");
-  await coverDialog.getByRole("textbox", { name: "Collection icon" }).fill("🔧");
+  await coverDialog.getByRole("textbox", { name: "Cover emoji" }).fill("🔧");
   await coverDialog.getByRole("button", { name: "Save cover" }).click();
   await expect(page.locator(".collection-detail-cover-placeholder")).toContainText("🔧");
-  await page.getByRole("link", { name: "Collections", exact: true }).click();
+  await page.getByRole("link", { name: /^Collections\s+\d+$/ }).click();
   const emojiCard = page.locator(".collection-card").filter({ hasText: "Renamed collection" });
   await expect(emojiCard.locator(".collection-card-placeholder")).toContainText("🔧");
-  await expect(emojiCard.locator(".collection-title-icon")).toHaveCount(0);
+  await expect(emojiCard.locator(".collection-title-icon")).toContainText("📷");
   await emojiCard.click();
   await expect(page.locator(".collection-detail-cover-placeholder")).toContainText("🔧");
-  await expect(page.locator(".collection-detail-heading h1")).toHaveText("Renamed collection");
+  await expect(page.locator(".collection-detail-heading h1")).toHaveText("📷 Renamed collection");
   await page.getByRole("button", { name: /(?:Change|Add) cover/ }).click();
   const photoCoverDialog = page.getByRole("dialog", { name: "Collection cover" });
   await photoCoverDialog.getByLabel("Collection cover").selectOption("upload");
@@ -307,7 +307,7 @@ test("collection name, icon, cover and deletion are contextual and immediately v
   await expect(page.locator(".collection-detail-cover")).toBeVisible();
   await expect(page.locator(".collection-detail-cover")).toHaveAttribute("src", /media\/collections/);
   await expect.poll(() => page.locator(".collection-detail-cover").evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
-  await page.getByRole("link", { name: "Collections", exact: true }).click();
+  await page.getByRole("link", { name: /^Collections\s+\d+$/ }).click();
   const renamedCard = page.locator(".collection-card").filter({ hasText: "Renamed collection" });
   await expect(renamedCard).toHaveCount(1);
   await expect(renamedCard.locator(".collection-card-image")).toBeVisible();

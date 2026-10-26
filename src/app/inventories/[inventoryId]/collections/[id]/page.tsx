@@ -38,7 +38,7 @@ export default async function CollectionPage({ params, searchParams }: Props) {
   const t = (key: Parameters<typeof translate>[1], values?: Record<string, string | number>) => translate(locale, key, values);
   const statuses: Record<string, string> = { unknown: t("itemStatusUnknown"), user_confirmed: t("itemStatusConfirmed"), source_verified: t("itemStatusVerified") };
   const hasActiveFilter = Boolean(query.q || query.category || query.status);
-  const selectableItems = inventory.map((item) => ({ id: String(item.id), name: String(item.name), model: item.model == null ? null : String(item.model), category: item.categories.join(" "), mediaId: item.primary_media_id == null ? null : String(item.primary_media_id) }));
+  const selectableItems = inventory.map((item) => ({ id: String(item.id), name: String(item.name), model: item.model == null ? null : String(item.model), categories: item.categories, mediaId: item.primary_media_id == null ? null : String(item.primary_media_id) }));
   const categoryOptions: { value: string; label: string }[] = [...categories.map((category) => ({ value: category, label: categoryEmoji[category] + " " + t(categoryMessageKey(category)!) }))];
   for (const value of storedCategories) if (!categoryKeyForStoredValue(value)) categoryOptions.push({ value, label: value });
   return <main className="app-shell"><AppSidebar active="collections" locale={locale}/>

@@ -152,7 +152,7 @@ describe("collections", () => {
     expect(await addItemsToCollection(inventory, collection.id, [first.id, second.id])).toEqual({ added: 2 });
     expect(await addItemsToCollection(inventory, collection.id, [first.id, second.id])).toEqual({ added: 0 });
     expect(await listCollectionCoverOptions(inventory, collection.id)).toEqual([{ itemId: first.id, name: "Batch camera", model: null, mediaId: (await getPrimaryPhoto(inventory, first.id))!.id }]);
-    expect((await listCollections(inventory)).find((row) => row.id === collection.id)).toMatchObject({ coverType: "emoji", coverIcon: "🤖", coverMediaId: null });
+    expect((await listCollections(inventory)).find((row) => row.id === collection.id)).toMatchObject({ icon: "🤖", coverType: "default", coverIcon: null, coverMediaId: null });
 
     const photo = await getPrimaryPhoto(inventory, first.id);
     await setCollectionCover(inventory, collection.id, { type: "item_photo", itemId: first.id, mediaId: photo!.id });
@@ -161,9 +161,11 @@ describe("collections", () => {
     expect((await listCollections(inventory)).find((row) => row.id === collection.id)?.coverType).toBe("default");
     await expect(setCollectionCover(inventory, collection.id, { type: "item_photo", itemId: second.id, mediaId: photo!.id })).rejects.toThrow();
     await setCollectionCover(inventory, collection.id, { type: "emoji", icon: "📷" });
-    expect((await getCollection(inventory, collection.id))?.coverIcon).toBe("📷");
+    expect(await getCollection(inventory, collection.id)).toMatchObject({icon:"🤖",coverIcon:"📷"});
+    await renameCollection(inventory,collection.id,{name:"Batch collection",icon:"🏠"});
+    expect(await getCollection(inventory, collection.id)).toMatchObject({icon:"🏠",coverIcon:"📷"});
     await setCollectionCover(inventory, collection.id, { type: "default" });
-    expect((await getCollection(inventory, collection.id))?.coverType).toBe("default");
+    expect(await getCollection(inventory, collection.id)).toMatchObject({icon:"🏠",coverType:"default"});
     expect(await getItem(inventory, second.id)).not.toBeNull();
   });
 

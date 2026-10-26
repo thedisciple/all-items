@@ -23,7 +23,7 @@ export function CollectionCoverVisual({ base, collection, variant }: { base: str
     return <PrivateImage variant={detail ? "cover" : "card"} className={imageClass} src={`${base}/media/collections/${collection.id}/${collection.coverUploadId}?variant=${detail ? "image" : "thumbnail"}`} alt="" {...size}/>;
   }
 
-  const emoji = collection.coverType === "emoji" ? collection.coverIcon : collection.icon;
+  const emoji = collection.coverType === "emoji" ? collection.coverIcon : null;
   return <div className={detail ? "collection-detail-cover collection-detail-cover-placeholder" : "collection-card-placeholder"} aria-hidden="true">
     {emoji ? <span>{emoji}</span> : <LibraryBig size={detail ? 32 : 25}/>}
   </div>;

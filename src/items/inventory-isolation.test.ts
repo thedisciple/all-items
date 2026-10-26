@@ -14,6 +14,7 @@ import { createItemWithPhoto, deleteItemWithMedia, getNormalizedPhotoForAnalysis
 import { readCollectionCover, removeCollectionCoverAssetFiles, replaceCollectionCoverUpload } from "@/media/collection-covers";
 import { createInventoryArchive, createInventoryCsv, readInventoryArchive } from "@/export/archive";
 import { deleteInventory, recoverInventoryDeletions } from "./inventory-deletion";
+import { normalizedInventoryName } from "./inventory-names";
 
 let home: Inventory, workshop: Inventory;
 let homeItems: string[], workshopItems: string[], homeCollection: string, workshopCollection: string, workshopMedia: string, workshopCover: string;
@@ -104,6 +105,21 @@ it("rejects foreign identifiers across reads, mutations, media, covers and clean
   expect(await rows()).toBe(before);
   expect(await readPrimaryPhoto(workshop,workshopItems[0]!,workshopMedia,"image")).toEqual(photo);
   expect(await readCollectionCover(workshop,workshopCollection,workshopCover,false)).toEqual(cover);
+},20_000);
+
+it("preserves legacy duplicate names and prevents new normalized duplicates in concurrent writes",async()=>{
+  const client=(await getDatabase()).$client;
+  const first=crypto.randomUUID(),second=crypto.randomUUID(),now=new Date().toISOString();
+  for(const [id,name] of [[first,"Existing duplicate"],[second,"EXISTING DUPLICATE"]]) await client.execute({sql:"INSERT INTO workspaces(id,name,created_at,next_inventory_number) VALUES(?,?,?,1)",args:[id!,name!,now]});
+  await expect(createInventory(" existing DUPLICATE ")).rejects.toThrow("Inventory name already exists");
+  const original=await client.execute({sql:"SELECT id,name FROM workspaces WHERE id IN (?,?) ORDER BY id",args:[first,second]});
+  expect(original.rows).toHaveLength(2);
+  await renameInventory({workspaceId:second},"Distinct renamed inventory");
+  expect((await client.execute({sql:"SELECT name FROM workspaces WHERE id=?",args:[first]})).rows[0]!.name).toBe("Existing duplicate");
+  const attempts=await Promise.allSettled([createInventory("Concurrent name"),createInventory(" concurrent NAME ")]);
+  expect(attempts.filter(result=>result.status==="fulfilled")).toHaveLength(1);
+  const rows=(await client.execute("SELECT name FROM workspaces")).rows;
+  expect(rows.filter(row=>normalizedInventoryName(String(row.name))==="concurrent name")).toHaveLength(1);
 },20_000);
 
 it("deletes only the confirmed inventory after a verified backup and recovers interrupted cleanup",async()=>{

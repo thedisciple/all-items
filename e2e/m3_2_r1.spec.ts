@@ -11,7 +11,7 @@ async function createPhotoItem(page: Page, name: string) {
   await dialog.getByLabel("Название").fill(name);
   await dialog.getByRole("button", { name: "Добавить вещь" }).click();
   await expect(page).toHaveURL(/added=/);
-  return page.getByRole("link", { name: new RegExp(name) });
+  return page.getByRole("link", { name: new RegExp(name) }).locator("xpath=../..");
 }
 
 test("private media keeps geometry and alt semantics through HTTP failure and one reconnect retry", async ({ page }) => {
@@ -35,7 +35,7 @@ test("private media keeps geometry and alt semantics through HTTP failure and on
   await page.unroute("**/media/**?variant=thumbnail");
   await page.evaluate(() => window.dispatchEvent(new Event("online")));
   await expect(row.locator(".private-image-frame")).toHaveAttribute("data-image-state", "loaded");
-  await row.click();
+  await row.locator(".item-row-link").click();
   await expect(page.locator("img.detail-photo")).toHaveAttribute("alt", /R1 media failure/);
   const detail = page.locator(".media-detail");
   await expect(detail).toHaveAttribute("data-image-state", "loaded");
@@ -50,16 +50,16 @@ test("delayed and interrupted thumbnails remain clickable during navigation and 
   const gate = new Promise<void>(resolve => { release = resolve; });
   await page.route("**/media/**?variant=thumbnail", async route => { await gate; await route.continue().catch(() => {}); });
   await page.reload({ waitUntil: "domcontentloaded" });
-  const row = page.getByRole("link", { name: /R1 delayed media/ });
+  const row = page.getByRole("link", { name: /R1 delayed media/ }).locator("xpath=../..");
   await expect(row.locator(".private-image-frame")).toHaveAttribute("data-image-state", "loading");
-  await row.click();
+  await row.locator(".item-row-link").click();
   await expect(page).toHaveURL(/\/items\//);
   release();
   await page.unroute("**/media/**?variant=thumbnail");
   await page.route("**/media/**?variant=thumbnail", route => route.abort("internetdisconnected"));
   await page.goto("/inventories/00000000-0000-4000-8000-000000000001");
   await expect(row.locator(".private-image-frame")).toHaveAttribute("data-image-state", "error");
-  await row.click();
+  await row.locator(".item-row-link").click();
   await expect(page).toHaveURL(/\/items\//);
   await page.unroute("**/media/**?variant=thumbnail");
   await page.goto("/inventories/00000000-0000-4000-8000-000000000001");
@@ -133,7 +133,7 @@ test("collection filters keep uploaded cover geometry and a predictable scroll a
     await add.getByRole("button", { name: "Добавить вещь", exact: true }).click();
     await expect(page).toHaveURL(/added=/);
   }
-  await page.goto("/inventories/00000000-0000-4000-8000-000000000001/collections"); await page.getByRole("button", { name: "Создать коллекцию" }).click();
+  await page.goto("/inventories/00000000-0000-4000-8000-000000000001/collections"); await page.locator(".collection-create-trigger").click();
   const create = page.getByRole("dialog", { name: "Создать коллекцию" });
   await create.getByLabel("Название коллекции").fill("R1 stable header");
   await create.getByRole("button", { name: "Создать коллекцию" }).click();

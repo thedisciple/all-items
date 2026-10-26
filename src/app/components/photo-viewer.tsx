@@ -13,7 +13,7 @@ export function PhotoViewer({ src, alt, cover = false, action }: { src: string; 
   const openedOnce = useRef(false);
 
   function trapDialogFocus(event: ReactKeyboardEvent<HTMLDivElement>) {
-    if (!open || event.key !== "Tab") return;
+    if (!open || event.defaultPrevented || event.key !== "Tab" || (event.target instanceof HTMLElement && event.target.closest('[role="dialog"]') !== event.currentTarget)) return;
     const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLElement>("button:not([disabled]),input:not([disabled]),select:not([disabled]),a[href]"));
     const first = buttons[0];
     const last = buttons.at(-1);

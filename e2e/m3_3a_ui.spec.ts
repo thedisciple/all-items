@@ -35,7 +35,7 @@ test("consistent controls, dismissible categories and unobscured collection crea
     await add.getByRole("button", { name: "Добавить вещь", exact: true }).click();
     await expect(page).toHaveURL(/added=/);
     await page.goto("/inventories/00000000-0000-4000-8000-000000000001/collections");
-    await page.getByRole("button", { name: "Создать коллекцию", exact: true }).click();
+    await page.locator(".collection-create-trigger").click();
     const create = page.getByRole("dialog", { name: "Создать коллекцию" });
     const name = create.getByLabel("Название коллекции");
     await expect(name).toBeFocused();
@@ -45,8 +45,8 @@ test("consistent controls, dismissible categories and unobscured collection crea
     const field = (await name.boundingBox())!;
     expect(palette.y).toBeGreaterThan(field.y + field.height);
     const save = (await create.getByRole("button", { name: "Создать коллекцию", exact: true }).boundingBox())!;
-    const cancel = (await create.getByRole("button", { name: "Отмена", exact: true }).boundingBox())!;
-    expect(save.y).toBe(cancel.y); expect(save.height).toBe(cancel.height);
+    expect(save.height).toBe(inputHeight);
+    await expect(create.getByRole("button", { name: "Отмена", exact: true })).toHaveCount(0);
     await page.screenshot({ path: path.join(os.tmpdir(), `allitems-m33a-create-${width}.png`) });
     await create.getByRole("button", { name: "Создать коллекцию", exact: true }).click();
     await expect(page).toHaveURL(/\/collections\//);
@@ -56,7 +56,7 @@ test("consistent controls, dismissible categories and unobscured collection crea
 
 test("collection cover opens the whole image and offers contextual change; crop dialog grows with controls", async ({ page }) => {
   await page.goto("/inventories/00000000-0000-4000-8000-000000000001/collections");
-  await page.getByRole("button", { name: "Создать коллекцию", exact: true }).click();
+  await page.locator(".collection-create-trigger").click();
   const create = page.getByRole("dialog", { name: "Создать коллекцию" });
   await create.getByLabel("Название коллекции").fill("M33 cover portrait");
   await create.getByRole("button", { name: "Создать коллекцию", exact: true }).click();
@@ -73,7 +73,7 @@ test("collection cover opens the whole image and offers contextual change; crop 
   expect(await viewer.locator("img").evaluate(el => getComputedStyle(el).objectFit)).toBe("contain");
   await viewer.getByRole("button", { name: /(?:Изменить|Добавить) обложку/ }).click();
   await expect(manager).toBeVisible();
-  await manager.getByRole("button", { name: "Отмена" }).click();
+  await manager.getByRole("button", { name: "Закрыть" }).click();
   await viewer.getByRole("button", { name: "Закрыть" }).press("Escape");
   await expect(viewer).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Увеличить фото" })).toBeFocused();

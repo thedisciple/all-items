@@ -1,4 +1,7 @@
 const ru = {
+  inventoryNameExists: "Инвентарь с таким названием уже существует.",
+  inventoryNameSuggestion: "Такое название уже есть. Предложили свободное название.",
+  collectionCoverEmojiLabel: "Эмодзи обложки",
   inventoryChanged: "Инвентарь изменился. Проверьте данные и повторите.",
   operationFailed: "Не удалось выполнить действие. Попробуйте ещё раз.",
   unidentifiedItemName: "Неизвестный предмет",
@@ -271,6 +274,9 @@ const ru = {
 } as const;
 
 const en: Record<MessageKey, string> = {
+  inventoryNameExists: "An inventory with this name already exists.",
+  inventoryNameSuggestion: "That name is already in use. We suggested an available name.",
+  collectionCoverEmojiLabel: "Cover emoji",
   inventoryChanged: "Inventory changed. Review the data and try again.",
   operationFailed: "Could not complete the action. Please try again.",
   unidentifiedItemName: "Unidentified item",
@@ -376,6 +382,9 @@ const en: Record<MessageKey, string> = {
 };
 
 const uk: Record<MessageKey, string> = {
+  inventoryNameExists: "Інвентар із такою назвою вже існує.",
+  inventoryNameSuggestion: "Така назва вже є. Запропоновано вільну назву.",
+  collectionCoverEmojiLabel: "Емодзі обкладинки",
   inventoryChanged: "Інвентар змінився. Перевірте дані та повторіть.",
   operationFailed: "Не вдалося виконати дію. Спробуйте ще раз.",
   unidentifiedItemName: "Невідомий предмет",
@@ -420,6 +429,9 @@ const uk: Record<MessageKey, string> = {
 };
 
 const srLatn: Record<MessageKey, string> = {
+  inventoryNameExists: "Inventar sa ovim nazivom već postoji.",
+  inventoryNameSuggestion: "Taj naziv je već zauzet. Predložen je slobodan naziv.",
+  collectionCoverEmojiLabel: "Emoji naslovnice",
   inventoryChanged: "Inventar je promenjen. Proverite podatke i pokušajte ponovo.",
   operationFailed: "Radnja nije uspela. Pokušajte ponovo.",
   unidentifiedItemName: "Nepoznat predmet",
@@ -464,6 +476,9 @@ const srLatn: Record<MessageKey, string> = {
 };
 
 const zhHans: Record<MessageKey, string> = {
+  inventoryNameExists: "已存在同名库存。",
+  inventoryNameSuggestion: "名称已被使用，已建议一个可用名称。",
+  collectionCoverEmojiLabel: "封面表情",
   inventoryChanged: "库存已更改。请检查数据后重试。",
   operationFailed: "操作失败。请重试。",
   unidentifiedItemName: "未识别物品",

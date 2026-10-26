@@ -5,13 +5,13 @@ test("recoverable collection feedback and drafts re-render through all five lang
   test.setTimeout(120_000);
   await page.goto("/inventories/00000000-0000-4000-8000-000000000001/collections");
   const name="M33 localized duplicate";
-  await page.getByRole("button",{name:translate("ru","collectionCreateOpen"),exact:true}).click();
+  await page.getByRole("button",{name:translate("ru","collectionNew"),exact:true}).click();
   let dialog=page.getByRole("dialog");
   await dialog.getByLabel(translate("ru","collectionName")).fill(name);
   await dialog.getByRole("button",{name:translate("ru","collectionCreate"),exact:true}).click();
   await expect(page).toHaveURL(/\/collections\//);
-  await page.getByRole("link",{name:translate("ru","collections"),exact:true}).click();
-  await page.getByRole("button",{name:translate("ru","collectionCreateOpen"),exact:true}).click();
+  await page.getByRole("link",{name:new RegExp(`^${translate("ru","collections")}\\s+\\d+$`)}).click();
+  await page.getByRole("button",{name:translate("ru","collectionNew"),exact:true}).click();
   dialog=page.getByRole("dialog");
   await dialog.getByLabel(translate("ru","collectionName")).fill(name);
   await dialog.locator(".collection-emoji-choice").last().click();
@@ -27,7 +27,7 @@ test("recoverable collection feedback and drafts re-render through all five lang
     await page.locator(".language-switcher").click();
     await page.getByRole("menuitemradio",{name:label,exact:true}).click();
     await expect(page.locator("html")).toHaveAttribute("lang",next);
-    await page.getByRole("button",{name:translate(next,"collectionCreateOpen"),exact:true}).click();
+    await page.getByRole("button",{name:translate(next,"collectionNew"),exact:true}).click();
     dialog=page.getByRole("dialog");
     await expect(dialog.getByRole("alert")).toHaveText(translate(next,"collectionAlreadyExists"));
     await expect(dialog.getByLabel(translate(next,"collectionName"))).toHaveValue(name);

@@ -1,4 +1,4 @@
-import { resolveInventory } from "@/items/inventories";
+import { InventoryNameConflict, resolveInventory } from "@/items/inventories";
 import { getDatabase,dataDirectory } from "@/db/client";
 import { ArchiveError } from "@/export/archive";
 import { ImportError, importArchiveAsNew } from "@/export/import";
@@ -18,9 +18,9 @@ export async function POST(request: Request,{params}:{params:Promise<{inventoryI
     await rememberInventoryAction(result.inventoryId);
     return Response.json(result, { headers: { "Cache-Control": "no-store, private" } });
   } catch (error) {
-    const key = error instanceof InventoryBusyError ? "inventoryBusy" : error instanceof ImportError && error.code === "occupied" ? "importOccupied"
+    const key = error instanceof InventoryNameConflict ? "inventoryNameExists" : error instanceof InventoryBusyError ? "inventoryBusy" : error instanceof ImportError && error.code === "occupied" ? "importOccupied"
       : error instanceof ArchiveError && error.message.startsWith("Unsupported archive format") ? "importUnsupported"
       : error instanceof ArchiveError || error instanceof ImportError && error.code === "invalid" ? "importInvalid" : "importFailed";
-    return Response.json({ error: key }, { status: key === "importOccupied" ? 409 : key === "importFailed" ? 500 : 422, headers: { "Cache-Control": "no-store, private" } });
+    return Response.json({ error: key }, { status: key === "importOccupied" || key === "inventoryNameExists" ? 409 : key === "importFailed" ? 500 : 422, headers: { "Cache-Control": "no-store, private" } });
   }
 }

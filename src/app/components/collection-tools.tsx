@@ -2,7 +2,7 @@
 
 import { ActionForm } from "./action-form";
 
-import { Plus, Image as ImageIcon, Trash2, X } from "lucide-react";
+import { Plus, Image as ImageIcon, LibraryBig, Trash2, X } from "lucide-react";
 import { PrivateImage } from "./private-image";
 import { useActionState, useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
@@ -11,9 +11,10 @@ import { FormSubmitButton } from "./form-submit-button";
 import { useInventory } from "./inventory-provider";
 import { useI18n } from "@/i18n/provider";
 import { CollectionEmojiField } from "./collection-emoji-field";
+import { CategoryTags } from "./category-tag";
 
 const idle: ActionFeedback = { status: "idle", message: "" };
-type SelectableItem = { id: string; name: string; model: string | null; category: string | null; mediaId: string | null };
+type SelectableItem = { id: string; name: string; model: string | null; categories: string[]; mediaId: string | null };
 type CoverPhoto = { itemId: string; name: string; model: string | null; mediaId: string };
 
 function handleDialogKeys(event: KeyboardEvent<HTMLElement>, close: () => void) {
@@ -26,7 +27,7 @@ function handleDialogKeys(event: KeyboardEvent<HTMLElement>, close: () => void) 
 }
 
 export function CollectionAddItems({ collectionId, items, existingIds }: { collectionId: string; items: SelectableItem[]; existingIds: string[] }) {
-  const { t } = useI18n();
+  const { locale,t } = useI18n();
   const { base } = useInventory();
   const [feedback, action, actionPending] = useActionState(addItemsToCollectionAction, idle);
   const [open, setOpen] = useState(false);
@@ -37,15 +38,16 @@ export function CollectionAddItems({ collectionId, items, existingIds }: { colle
   const wasOpen = useRef(false);
   const router = useRouter();
   const existing = useMemo(() => new Set(existingIds), [existingIds]);
-  const available = useMemo(() => items.filter((item) => !existing.has(item.id) && `${item.name} ${item.model ?? ""} ${item.category ?? ""}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())), [items, existing, query]);
+  const available = useMemo(() => items.filter((item) => !existing.has(item.id) && `${item.name} ${item.model ?? ""} ${item.categories.join(" ")}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())), [items, existing, query]);
+  const close=()=>{if(!actionPending){setOpen(false);setSelected([]);setQuery("");}};
   useEffect(() => { if (open) { wasOpen.current = true; dialogRef.current?.querySelector<HTMLElement>("input")?.focus(); } else if (wasOpen.current) { wasOpen.current = false; triggerRef.current?.focus(); } }, [open]);
   useEffect(() => {
     if (feedback.status === "success") { setOpen(false); setSelected([]); setQuery(""); router.refresh(); }
   }, [feedback, router]);
   return <>
     <button ref={triggerRef} type="button" className="add-button" onClick={() => setOpen(true)}><Plus size={16} aria-hidden="true"/>{t("collectionAddItems")}</button>
-    {open ? <div className="photo-source-overlay add-dialog-overlay" role="presentation"><section ref={dialogRef} className="photo-source-dialog collection-items-dialog" role="dialog" aria-modal="true" aria-labelledby="collection-items-title" onKeyDown={(event) => handleDialogKeys(event, () => setOpen(false))}>
-      <div className="dialog-heading"><h3 id="collection-items-title">{t("collectionAddItems")}</h3><button type="button" className="icon-button" aria-label={t("close")} onClick={() => setOpen(false)}><X size={18} aria-hidden="true"/></button></div>
+    {open ? <div className="photo-source-overlay add-dialog-overlay" role="presentation"><section ref={dialogRef} className="photo-source-dialog collection-items-dialog" role="dialog" aria-modal="true" aria-labelledby="collection-items-title" onKeyDown={(event) => handleDialogKeys(event, close)}>
+      <div className="dialog-heading"><h3 id="collection-items-title">{t("collectionAddItems")}</h3><button type="button" className="icon-button" aria-label={t("close")} disabled={actionPending} onClick={close}><X size={18} aria-hidden="true"/></button></div>
       {items.length ? <ActionForm action={action} pending={actionPending}>
         <input type="hidden" name="collectionId" value={collectionId}/>
         {selected.map((id) => <input key={id} type="hidden" name="itemId" value={id}/>)}
@@ -54,12 +56,12 @@ export function CollectionAddItems({ collectionId, items, existingIds }: { colle
           {available.length ? available.map((item) => <label className="collection-item-option" key={item.id}>
             <input type="checkbox" checked={selected.includes(item.id)} onChange={(event) => setSelected((value) => event.target.checked ? [...value, item.id] : value.filter((id) => id !== item.id))}/>
             {item.mediaId ? <PrivateImage variant="thumbnail" src={`${base}/media/${item.id}/${item.mediaId}?variant=thumbnail`} alt="" width={52} height={52}/> : <span className="item-thumb" aria-hidden="true">{t("photoMissing")}</span>}
-            <span className="collection-item-choice-text"><strong>{item.name}</strong>{item.model ? <small>{item.model}</small> : null}{item.category ? <small>{item.category}</small> : null}</span>
+            <span className="collection-item-choice-text"><strong>{item.name}</strong>{item.model ? <small>{item.model}</small> : null}<CategoryTags values={item.categories} locale={locale}/></span>
           </label>) : <p className="collection-items-no-results">{t(existing.size ? "noMatches" : "collectionNoInventory")}</p>}
         </div>
         {feedback.status === "error" && feedback.message ? <p className="inline-status error-status" role="alert">{feedback.message ? t(feedback.message, feedback.values) : ""}</p> : null}
-        <div className="dialog-actions"><FormSubmitButton className="add-button" disabled={!selected.length} pendingLabel={t("adding")}>{t("collectionAddItems")}{selected.length ? ` ${selected.length}` : ""}</FormSubmitButton><button type="button" className="quiet-button" onClick={() => setOpen(false)}>{t("cancel")}</button></div>
-      </ActionForm> : <div className="empty-state collection-picker-empty"><h3>{t("collectionNoInventory")}</h3><a className="quiet-button link-button" href={base}>{t("addItem")}</a><button type="button" className="quiet-button" onClick={() => setOpen(false)}>{t("cancel")}</button></div>}
+        <div className="dialog-actions"><FormSubmitButton className="add-button" disabled={!selected.length} pendingLabel={t("adding")}>{t("collectionAddItems")}{selected.length ? ` (${selected.length})` : ""}</FormSubmitButton></div>
+      </ActionForm> : <div className="empty-state collection-picker-empty"><h3>{t("collectionNoInventory")}</h3><a className="quiet-button link-button" href={base}>{t("addItem")}</a></div>}
     </section></div> : null}
     {feedback.status === "success" && feedback.message ? <p className="visually-hidden" role="status">{feedback.message ? t(feedback.message, feedback.values) : ""}</p> : null}
   </>;
@@ -67,6 +69,7 @@ export function CollectionAddItems({ collectionId, items, existingIds }: { colle
 
 export function CollectionCoverManager({ collectionId, options, add = false }: { collectionId: string; options: CoverPhoto[]; add?: boolean }) {
   const { t } = useI18n();
+  const { base } = useInventory();
   const [feedback, action, actionPending] = useActionState(setCollectionCoverAction, idle);
   const [open, setOpen] = useState(false);
   const [coverType, setCoverType] = useState("default");
@@ -78,21 +81,24 @@ export function CollectionCoverManager({ collectionId, options, add = false }: {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
   const router = useRouter();
+  const close=()=>{if(!actionPending){setOpen(false);setCoverType("default");setSelectedPhoto("");setIcon("🤖");}};
   useEffect(() => () => { if (coverPreview) URL.revokeObjectURL(coverPreview); }, [coverPreview]);
   useEffect(() => { if (!open && coverPreview) setCoverPreview(""); }, [open, coverPreview]);
   useEffect(() => { if (open) { wasOpen.current = true; dialogRef.current?.querySelector<HTMLElement>("select")?.focus(); } else if (wasOpen.current) { wasOpen.current = false; triggerRef.current?.focus(); } }, [open]);
   useEffect(() => { if (feedback.status === "success") { setOpen(false); router.refresh(); } }, [feedback, router]);
   return <>
     <button ref={triggerRef} type="button" className="quiet-button" onClick={() => setOpen(true)}><ImageIcon size={16} aria-hidden="true"/>{t(add ? "collectionAddCover" : "collectionChangeCover")}</button>
-    {open ? <div className="photo-source-overlay collection-cover-overlay" role="presentation"><section ref={dialogRef} className="photo-source-dialog collection-cover-dialog" role="dialog" aria-modal="true" aria-labelledby="collection-cover-title" onKeyDown={(event) => handleDialogKeys(event, () => setOpen(false))}>
-      <div className="dialog-heading"><h3 id="collection-cover-title">{t("collectionCover")}</h3><button type="button" className="icon-button" aria-label={t("close")} onClick={() => setOpen(false)}><X size={18} aria-hidden="true"/></button></div>
+    {open ? <div className="photo-source-overlay collection-cover-overlay" role="presentation"><section ref={dialogRef} className="photo-source-dialog collection-cover-dialog" role="dialog" aria-modal="true" aria-labelledby="collection-cover-title" onKeyDown={(event) => handleDialogKeys(event, close)}>
+      <div className="dialog-heading"><h3 id="collection-cover-title">{t("collectionCover")}</h3><button type="button" className="icon-button" aria-label={t("close")} disabled={actionPending} onClick={close}><X size={18} aria-hidden="true"/></button></div>
       <ActionForm action={action} pending={actionPending} className="collection-cover-form"><input type="hidden" name="collectionId" value={collectionId}/>
         <label className="field"><span>{t("collectionCover")}</span><select name="coverType" value={coverType} onChange={(event) => setCoverType(event.target.value)}><option value="default">{t("collectionCoverDefault")}</option><option value="item_photo" disabled={!options.length}>{t("collectionCoverItem")}</option><option value="upload">{t("collectionCoverUpload")}</option><option value="emoji">{t("collectionCoverEmoji")}</option></select></label>
         {coverType === "item_photo" ? <label className="field"><span>{t("collectionCoverPickItem")}</span><select name="selectedPhoto" value={selectedPhoto} required onChange={(event) => setSelectedPhoto(event.target.value)}><option value="">{t("selectCategory")}</option>{options.map((option) => <option key={option.itemId} value={`${option.itemId}:${option.mediaId}`}>{option.name}{option.model ? ` ${option.model}` : ""}</option>)}</select></label> : null}
         {coverType === "upload" ? <><input ref={coverFile} className="visually-hidden" tabIndex={-1} aria-hidden="true" type="file" name="coverFile" accept="image/jpeg,image/png,image/webp" required onChange={(event: ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; setCoverPreview(file ? URL.createObjectURL(file) : ""); }}/><button type="button" className="photo-source-button collection-cover-pick" onClick={() => coverFile.current?.click()}>{t("collectionCoverUpload")}</button>{coverPreview ? <div className="collection-cover-preview"><PrivateImage variant="preview" src={coverPreview} alt={t("collectionCoverPreview")} width={480} height={240}/></div> : null}</> : null}
-        {coverType === "emoji" ? <CollectionEmojiField label={t("collectionIcon")} value={icon} onChange={setIcon} required/> : null}
+        {coverType === "default" ? <div className="cover-choice-preview" aria-hidden="true"><LibraryBig size={30}/></div> : null}
+        {coverType === "item_photo" && selectedPhoto ? <div className="collection-cover-preview"><PrivateImage variant="preview" src={`${base}/media/${selectedPhoto.replace(":", "/")}?variant=image`} alt={t("collectionCoverPreview")}/></div> : null}
+        {coverType === "emoji" ? <><div className="cover-choice-preview" aria-hidden="true">{icon}</div><CollectionEmojiField label={t("collectionCoverEmojiLabel")} value={icon} onChange={setIcon} required/></> : null}
         {feedback.status === "error" && feedback.message ? <p className="inline-status error-status" role="alert">{feedback.message ? t(feedback.message, feedback.values) : ""}</p> : null}
-        <div className="dialog-actions"><FormSubmitButton className="add-button" pendingLabel={t("savingChanges")}>{t("collectionCoverSave")}</FormSubmitButton><button type="button" className="quiet-button" onClick={() => setOpen(false)}>{t("cancel")}</button></div>
+        <div className="dialog-actions"><FormSubmitButton className="add-button" pendingLabel={t("savingChanges")}>{t("collectionCoverSave")}</FormSubmitButton></div>
       </ActionForm>
     </section></div> : null}
     {feedback.status === "success" && feedback.message ? <p className="visually-hidden" role="status">{feedback.message ? t(feedback.message, feedback.values) : ""}</p> : null}
