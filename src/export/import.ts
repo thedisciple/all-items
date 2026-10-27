@@ -9,6 +9,7 @@ import path from "node:path";
 import sharp, { type Metadata } from "sharp";
 import { z } from "zod";
 import { canonicalCategories } from "@/items/categories";
+import { portablePreferences, categoryPresentations } from "@/items/inventory-presentation";
 import { cropDataSchema } from "@/media/crop-data";
 import { readInventoryArchive } from "./archive";
 
@@ -33,7 +34,7 @@ const collectionSchema = z.object({
   cover_item_id: id.nullable(), cover_media_id: id.nullable(), cover_upload_id: id.nullable(), itemIds: z.array(id), uploadCover: coverSchema.nullable(),
 });
 const membershipSchema = z.object({ id, item_id: id, collection_id: id, created_at: timestamp });
-const inventorySchema = z.object({ workspace: z.object({ id: id, name: z.string(), created_at: timestamp, next_inventory_number: z.number().int().positive() }), locations: z.array(locationSchema), items: z.array(itemSchema), collections: z.array(collectionSchema), memberships: z.array(membershipSchema) });
+const inventorySchema = z.object({ workspace: z.object({ id: id, name: z.string(), created_at: timestamp, next_inventory_number: z.number().int().positive() }), preferences: portablePreferences, customCategories: categoryPresentations, locations: z.array(locationSchema), items: z.array(itemSchema), collections: z.array(collectionSchema), memberships: z.array(membershipSchema) });
 export type PortableInventory = z.infer<typeof inventorySchema>;
 type Promotion = { archivePath: string; relativePath: string };
 type Executor = Pick<Client, "execute">;
@@ -267,6 +268,10 @@ async function persistInventoryInTransaction(client: Executor, inventory: Portab
   const workspace = await client.execute({ sql: "SELECT id FROM workspaces WHERE id = ?", args: [workspaceId] });
   if (!workspace.rows.length) await insertRow(client, "workspaces", ["id", "name", "created_at", "next_inventory_number"], inventory.workspace);
   else await client.execute({ sql: "UPDATE workspaces SET name = ?, created_at = ?, next_inventory_number = ? WHERE id = ?", args: [inventory.workspace.name, inventory.workspace.created_at, inventory.workspace.next_inventory_number, workspaceId] });
+  await client.execute({sql:"DELETE FROM inventory_preferences WHERE workspace_id=?",args:[workspaceId]});
+  await client.execute({sql:"DELETE FROM custom_category_presentation WHERE workspace_id=?",args:[workspaceId]});
+  if (inventory.preferences.sort !== "date") await client.execute({sql:"INSERT INTO inventory_preferences(workspace_id,version,sort) VALUES(?,1,?)",args:[workspaceId,inventory.preferences.sort]});
+  for (const category of inventory.customCategories) await client.execute({sql:"INSERT INTO custom_category_presentation(workspace_id,category,emoji) VALUES(?,?,?)",args:[workspaceId,category.category,category.emoji]});
   for (const location of inventory.locations) await insertRow(client, "locations", ["id", "workspace_id", "name", "created_at"], location);
   for (const item of inventory.items) {
     await insertRow(client, "items", ["id", "workspace_id", "name", "model", "inventory_number", "brand", "category", "original_marking", "notes", "description", "identification_status", "tracking_mode", "sale_intent", "asking_price_minor", "asking_currency", "created_at", "updated_at"], item);

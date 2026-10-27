@@ -63,7 +63,7 @@ async function createNoPhotoItem(page: Page, name: string, category: string) {
   await dialog.getByLabel("Название").fill(name);
   await dialog.locator(".category-trigger").click();
   if (category === "custom") {
-    await dialog.locator(".custom-category-row input").fill("Electronics");
+    await dialog.getByLabel("Своя категория").fill("Electronics");
     await dialog.locator(".custom-category-row button").click();
   } else await dialog.locator(".category-options input").nth(category === "electronics" ? 0 : 10).check();
   await dialog.getByRole("button", { name: "Добавить вещь" }).click();
@@ -188,10 +188,11 @@ test("deletes a saved photo immediately and allows a replacement without a reloa
   await expect(page.locator(".compact-photo-placeholder")).toBeVisible();
   await expect(page.locator(".photo-viewer-image img.detail-photo")).toHaveCount(0);
   await page.goto("/inventories/00000000-0000-4000-8000-000000000001");
-  const photoLessRow = page.getByRole("link", { name: /M2D-R2 delete and re-upload/ });
+  const photoLessLink = page.getByRole("link", { name: /M2D-R2 delete and re-upload/ });
+  const photoLessRow = photoLessLink.locator("xpath=../..");
   await expect(photoLessRow.locator(".item-photo")).toHaveCount(0);
   await expect(photoLessRow.locator(".item-thumb")).toBeVisible();
-  await photoLessRow.click();
+  await photoLessLink.click();
   await page.getByRole("button", { name: "Добавить фото" }).click();
   await page.locator('input[name="photo"]').setInputFiles({ name: "replacement.png", mimeType: "image/png", buffer: await syntheticPhoto() });
   const editor = page.getByRole("dialog", { name: "Редактировать фото" });

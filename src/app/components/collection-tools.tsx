@@ -28,7 +28,8 @@ function handleDialogKeys(event: KeyboardEvent<HTMLElement>, close: () => void) 
 
 export function CollectionAddItems({ collectionId, items, existingIds }: { collectionId: string; items: SelectableItem[]; existingIds: string[] }) {
   const { locale,t } = useI18n();
-  const { base } = useInventory();
+  const { base, presentation } = useInventory();
+  const customEmoji = Object.fromEntries(presentation.categories.map(value => [value.category, value.emoji]));
   const [feedback, action, actionPending] = useActionState(addItemsToCollectionAction, idle);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -56,7 +57,7 @@ export function CollectionAddItems({ collectionId, items, existingIds }: { colle
           {available.length ? available.map((item) => <label className="collection-item-option" key={item.id}>
             <input type="checkbox" checked={selected.includes(item.id)} onChange={(event) => setSelected((value) => event.target.checked ? [...value, item.id] : value.filter((id) => id !== item.id))}/>
             {item.mediaId ? <PrivateImage variant="thumbnail" src={`${base}/media/${item.id}/${item.mediaId}?variant=thumbnail`} alt="" width={52} height={52}/> : <span className="item-thumb" aria-hidden="true">{t("photoMissing")}</span>}
-            <span className="collection-item-choice-text"><strong>{item.name}</strong>{item.model ? <small>{item.model}</small> : null}<CategoryTags values={item.categories} locale={locale}/></span>
+            <span className="collection-item-choice-text"><strong>{item.name}</strong>{item.model ? <small>{item.model}</small> : null}<CategoryTags values={item.categories} locale={locale} customEmoji={customEmoji}/></span>
           </label>) : <p className="collection-items-no-results">{t(existing.size ? "noMatches" : "collectionNoInventory")}</p>}
         </div>
         {feedback.status === "error" && feedback.message ? <p className="inline-status error-status" role="alert">{feedback.message ? t(feedback.message, feedback.values) : ""}</p> : null}

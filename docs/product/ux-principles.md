@@ -46,7 +46,7 @@ Equivalent native fields, selection triggers and actions share control geometry.
 
 ## Independent inventories and truthful recovery
 
-An explicit route identifies the current organizational space. Switching clears unrelated collection filters. Each inventory has its own immutable display-number sequence; deletion leaves gaps. Import creates a separately named space after preview and verified completion, preserving existing inventories. A populated-inventory deletion names its target, shows actual counts and requires the exact name. Keep a verified private backup and journal cleanup. The last deletion leads to Create Inventory, including after restart. Never imply account isolation or crash/reload draft recovery. Translate semantic errors at render time and preserve selected File/input state on recoverable failures.
+An explicit route identifies the current organizational space. Switching clears unrelated collection filters. Each inventory has its own immutable display-number sequence; deletion leaves gaps. Import creates a separately named space after preview and verified completion, preserving existing inventories. A populated-inventory deletion names its target, shows actual counts and requires the exact name. Keep a verified private backup and journal cleanup. The last deletion leads to Create Inventory, including after restart. Do not imply account isolation. Offer explicit recovery for a committed browser-local draft and explain storage failures; never promise that an interrupted write was committed. Translate semantic errors at render time and preserve selected File/input state on recoverable failures.
 
 
 ## Navigation and row actions

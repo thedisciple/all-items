@@ -3,18 +3,24 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, X } from "lucide-react";
-import { canonicalCategories, categories, categoryEmoji, categoryMessageKey } from "@/items/categories";
+import { canonicalCategories, categories, categoryEmoji, categoryKeyForStoredValue, categoryMessageKey } from "@/items/categories";
 import { useI18n } from "@/i18n/provider";
+import { useInventory } from "./inventory-provider";
+import type { Presentation } from "@/items/inventory-presentation";
 
-export function CategoryField({ values, onValueChange }: { values: string[]; onValueChange: (values: string[]) => void }) {
+export function CategoryField({ values, onValueChange, presentations, onPresentationChange }: { values: string[]; onValueChange: (values: string[]) => void; presentations: Presentation[]; onPresentationChange: (values: Presentation[]) => void }) {
   const { t }=useI18n();
+  const { presentation } = useInventory();
+  const emojiMap = Object.fromEntries([...presentation.categories, ...presentations].map(entry => [entry.category, entry.emoji]));
   const [custom,setCustom]=useState("");
+  const [emoji,setEmoji]=useState("");
   const [open,setOpen]=useState(false);
   const [host,setHost]=useState<HTMLElement|null>(null);
   const [position,setPosition]=useState({left:0,top:0,width:0,maxHeight:0});
   const root=useRef<HTMLDivElement>(null),box=useRef<HTMLDivElement>(null),trigger=useRef<HTMLButtonElement>(null),popup=useRef<HTMLDivElement>(null);
   const keyboardOpen=useRef(false);
   const popupId=useId();
+  const systemMatch = categoryKeyForStoredValue(custom.trim());
   const label=(value:string)=>{const key=categoryMessageKey(value);return key?t(key):value;};
   const matches=categories.filter(value=>`${label(value)} ${value}`.toLocaleLowerCase().includes(custom.trim().toLocaleLowerCase()));
 
@@ -43,7 +49,10 @@ export function CategoryField({ values, onValueChange }: { values: string[]; onV
 
   function addCustom(){
     if(!custom.trim()||values.length>=20)return;
-    onValueChange(canonicalCategories([...values,custom.trim()]));setCustom("");
+    if (emoji.trim() && systemMatch) return;
+    const category=custom.trim();
+    if (emoji.trim() && !categoryKeyForStoredValue(category)) onPresentationChange([...presentations.filter(entry => entry.category !== category), { category, emoji: emoji.trim() }]);
+    onValueChange(canonicalCategories([...values,category]));setCustom("");setEmoji("");
   }
   function handleKeys(event:React.KeyboardEvent){
     if(event.key==="Escape"&&open){event.preventDefault();event.stopPropagation();setOpen(false);trigger.current?.focus();return;}
@@ -58,14 +67,15 @@ export function CategoryField({ values, onValueChange }: { values: string[]; onV
   }
 
   const panel=open&&host?createPortal(<div ref={popup} id={popupId} className="category-picker category-popover" role="group" aria-label={t("itemCategories")} style={{position:"fixed",...position}}>
-    <div className="custom-category-row"><input aria-label={t("customCategory")} maxLength={80} value={custom} placeholder={t("customCategoryPlaceholder")} onChange={event=>setCustom(event.target.value)} onKeyDown={event=>{if(event.key==="Enter"){event.preventDefault();addCustom();}}}/><button className="quiet-button" type="button" disabled={!custom.trim()||values.length>=20} onClick={addCustom}>{t("addCategory")}</button></div>
+    <div className="custom-category-row"><input aria-label={t("customCategory")} maxLength={80} value={custom} placeholder={t("customCategoryPlaceholder")} onChange={event=>setCustom(event.target.value)} onKeyDown={event=>{if(event.key==="Enter"){event.preventDefault();if (!emoji || /\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(emoji)) addCustom();}}}/><input aria-label={t("customCategoryEmoji")} maxLength={32} value={emoji} onChange={event=>setEmoji(event.target.value)} placeholder="😀"/><button className="quiet-button" type="button" disabled={!custom.trim()||values.length>=20||Boolean(emoji && (!/\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(emoji)||systemMatch))} onClick={addCustom}>{t("addCategory")}</button></div>
+    {systemMatch ? <p className="category-emoji-hint">{t("categoryMatchesSystem")}</p> : emoji ? <p className="category-emoji-hint">{t("customEmojiScope")}</p> : null}
     <div className="category-options" role="group" aria-label={t("itemCategories")}>{matches.map(value=><label key={value}><input type="checkbox" checked={values.includes(value)} disabled={!values.includes(value)&&values.length>=20} onChange={event=>onValueChange(event.target.checked?[...values,value]:values.filter(entry=>entry!==value))}/><span aria-hidden="true">{categoryEmoji[value]}</span>{label(value)}</label>)}</div>
   </div>,host):null;
 
   return <div ref={root} className="field category-field" onKeyDown={handleKeys}>
     <span>{t("itemCategories")}</span>
     <div ref={box} className="category-field-box">
-      <div className="category-selection">{values.map(value=><span className="category-chip" key={value}>{label(value)}<button type="button" className="icon-button" aria-label={t("removeCategory",{category:label(value)})} onClick={()=>onValueChange(values.filter(entry=>entry!==value))}><X size={13} aria-hidden="true"/></button><input type="hidden" name="categories" value={value}/></span>)}</div>
+      <div className="category-selection">{values.map(value=>{const key=categoryKeyForStoredValue(value), icon=key ? categoryEmoji[key] : emojiMap[value];return <span className="category-chip" key={value}>{icon ? <span aria-hidden="true">{icon}</span> : null}{label(value)}<button type="button" className="icon-button" aria-label={t("removeCategory",{category:label(value)})} onClick={()=>onValueChange(values.filter(entry=>entry!==value))}><X size={13} aria-hidden="true"/></button><input type="hidden" name="categories" value={value}/></span>;})}<input type="hidden" name="categoryPresentation" value={JSON.stringify(presentations.filter(entry=>values.includes(entry.category)))}/></div>
       <button ref={trigger} className="category-trigger" type="button" aria-label={t("selectCategories")} aria-expanded={open} aria-controls={open?popupId:undefined} onClick={()=>setOpen(value=>!value)} onKeyDown={event=>{if(event.key==="ArrowDown"&&!open){event.preventDefault();keyboardOpen.current=true;setOpen(true);}}}><span className={values.length?"visually-hidden":undefined}>{t("selectCategories")}</span><ChevronDown size={16} aria-hidden="true"/></button>
     </div>
     {panel}

@@ -10,8 +10,18 @@ import { preferredInventory } from "@/app/inventory-routing";
 import { createInventory, InventoryNameConflict, renameInventory, resolveInventory } from "@/items/inventories";
 import { inventoryPath } from "@/items/inventory-context";
 import type { MessageKey } from "@/i18n/messages";
+import { setInventorySort } from "@/items/inventory-presentation";
 
 export type InventoryFeedback = { status: "idle" | "success" | "error"; code?: MessageKey; inventoryId?: string };
+
+export async function saveInventorySortAction(_previous: InventoryFeedback, data: FormData): Promise<InventoryFeedback> {
+  try {
+    const context = await resolveInventory(data.get("inventoryId"));
+    await setInventorySort(context, data.get("sort"));
+    revalidatePath(inventoryPath(context), "layout");
+    return { status: "success", code: "preferencesSaved" };
+  } catch { return { status: "error", code: "preferencesFailed" }; }
+}
 
 export async function rememberInventoryAction(id: string) {
   const context = await resolveInventory(id);

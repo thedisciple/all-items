@@ -5,10 +5,11 @@ import { unzipSync, zipSync } from "fflate";
 import { z } from "zod";
 import type { Client } from "@libsql/client";
 import { canonicalCategories, canonicalCategory } from "@/items/categories";
+import { portablePreferences, categoryPresentations } from "@/items/inventory-presentation";
 import { getDatabase, dataDirectory } from "@/db/client";
 
 export const ARCHIVE_FORMAT = "all-items-portable-inventory";
-export const ARCHIVE_VERSION = 4;
+export const ARCHIVE_VERSION = 5;
 export const MAX_ARCHIVE_BYTES = 128 * 1024 * 1024;
 export const MAX_ENTRY_BYTES = 32 * 1024 * 1024;
 export const MAX_ARCHIVE_ENTRIES = 20_000;
@@ -75,7 +76,7 @@ function canonicalizeInventory(inventory: Record<string, unknown>, assets: Recor
   return { inventory: copy, assets: mapped };
 }
 const manifestSchema = z.object({
-  format: z.literal(ARCHIVE_FORMAT), version: z.union([z.literal(2), z.literal(3), z.literal(ARCHIVE_VERSION)]), exportedAt: z.string().datetime(), applicationVersion: z.string(),
+  format: z.literal(ARCHIVE_FORMAT), version: z.union([z.literal(2), z.literal(3), z.literal(4), z.literal(ARCHIVE_VERSION)]), exportedAt: z.string().datetime(), applicationVersion: z.string(),
   entries: z.array(z.object({ path: z.string(), size: z.number().int().nonnegative(), sha256: z.string().regex(/^[0-9a-f]{64}$/) })).max(MAX_ARCHIVE_ENTRIES),
 });
 const portableInventorySchema = z.object({
@@ -109,7 +110,7 @@ export function readInventoryArchive(input: Uint8Array) {
   let rawManifest: unknown;
   try { rawManifest = JSON.parse(Buffer.from(manifestBytes).toString("utf8")); }
   catch { throw new ArchiveError("The archive manifest is invalid."); }
-  if (typeof rawManifest !== "object" || rawManifest === null || (rawManifest as Record<string, unknown>).format !== ARCHIVE_FORMAT || ![2, 3, ARCHIVE_VERSION].includes(Number((rawManifest as Record<string, unknown>).version))) throw new ArchiveError("Unsupported archive format. Regenerate the archive from the current All Items installation.");
+  if (typeof rawManifest !== "object" || rawManifest === null || (rawManifest as Record<string, unknown>).format !== ARCHIVE_FORMAT || ![2, 3, 4, ARCHIVE_VERSION].includes(Number((rawManifest as Record<string, unknown>).version))) throw new ArchiveError("Unsupported archive format. Regenerate the archive from the current All Items installation.");
   try { manifest = manifestSchema.parse(rawManifest); inventory = portableInventorySchema.parse(JSON.parse(Buffer.from(inventoryBytes).toString("utf8"))); }
   catch { throw new ArchiveError("The archive metadata is invalid."); }
   const expected = new Map<string, { size: number; sha256: string }>();
@@ -131,10 +132,13 @@ export function readInventoryArchive(input: Uint8Array) {
     if (!match || !safePath(match[2]!) || checksumPaths.has(match[2]!) || expected.get(match[2]!)?.sha256 !== match[1]) throw new ArchiveError("The checksum list is invalid.");
     checksumPaths.add(match[2]!);
   }
-  if (manifest.version === 3) for (const item of inventory.items as Array<Record<string, unknown>>) {
+  if (manifest.version >= 3) for (const item of inventory.items as Array<Record<string, unknown>>) {
     const parsed = z.array(z.string().min(1).max(80)).max(20).safeParse(item.categories);
     if (!parsed.success || new Set(parsed.data).size !== parsed.data.length || parsed.data.some(value => !value.trim() || canonicalCategory(value) !== value)) throw new ArchiveError("An item has invalid category assignments.");
   }
+  if (manifest.version === 5) {
+    if (!portablePreferences.safeParse(inventory.preferences).success || !categoryPresentations.safeParse(inventory.customCategories).success) throw new ArchiveError("The archive has invalid inventory preferences or category presentation.");
+  } else { inventory.preferences = { version: 1, sort: "date" }; inventory.customCategories = []; }
   validateReferences(inventory, files);
   return { manifest, inventory, files };
 }
@@ -255,7 +259,8 @@ function validateReferences(inventory: Record<string, unknown>, files: Record<st
 
 export function buildInventoryArchive(inventory: Record<string, unknown>, assets: Record<string, Uint8Array> = {}) {
   const entries: Record<string, Uint8Array> = {};
-  const canonical = canonicalizeInventory(inventory, assets);
+  const canonical = canonicalizeInventory({ preferences: { version: 1, sort: "date" }, customCategories: [], ...inventory }, assets);
+  if (!portablePreferences.safeParse(canonical.inventory.preferences).success || !categoryPresentations.safeParse(canonical.inventory.customCategories).success) throw new ArchiveError("Inventory preferences or category presentation are invalid.");
   let totalSize = 0;
   for (const [name, bytes] of Object.entries(canonical.assets)) {
     if (!safePath(name) || (!name.startsWith("Items/") && !name.startsWith("Collections/")) || bytes.byteLength > MAX_ENTRY_BYTES) throw new ArchiveError("An archive asset has an invalid path or size.");
@@ -309,13 +314,15 @@ export async function createInventoryArchive(inventory: InventoryContext, contex
     const items = await tx.execute({ sql: "SELECT * FROM items WHERE workspace_id = ? ORDER BY inventory_number", args: [workspaceId] });
     const locations = await tx.execute({ sql: "SELECT * FROM locations WHERE workspace_id = ? ORDER BY name", args: [workspaceId] });
     const categoryAssignments = await tx.execute({sql:"SELECT ic.* FROM item_categories ic JOIN items i ON i.id=ic.item_id WHERE i.workspace_id=? ORDER BY ic.item_id,ic.category",args:[workspaceId]});
+    const preferences = await tx.execute({sql:"SELECT version,sort FROM inventory_preferences WHERE workspace_id=?",args:[workspaceId]});
+    const customCategories = await tx.execute({sql:"SELECT category,emoji FROM custom_category_presentation WHERE workspace_id=? ORDER BY category",args:[workspaceId]});
     const stock = await tx.execute({sql:"SELECT s.* FROM stock_entries s JOIN items p ON p.id=s.item_id WHERE p.workspace_id=? ORDER BY s.item_id,s.created_at,s.id",args:[workspaceId]});
     const media = await tx.execute({sql:"SELECT m.* FROM media_assets m JOIN items p ON p.id=m.item_id WHERE p.workspace_id=? ORDER BY m.item_id,m.created_at,m.id",args:[workspaceId]});
     const collections = await tx.execute({ sql: "SELECT * FROM collections WHERE workspace_id = ? ORDER BY created_at, id", args: [workspaceId] });
     const memberships = await tx.execute({sql:"SELECT cm.* FROM item_collection_memberships cm JOIN collections p ON p.id=cm.collection_id WHERE p.workspace_id=? ORDER BY cm.collection_id,cm.item_id",args:[workspaceId]});
     const covers = await tx.execute({ sql: `SELECT ca.* FROM collection_cover_assets ca JOIN collections c ON c.id = ca.collection_id
       WHERE c.workspace_id = ? AND c.cover_type = 'upload' AND c.cover_upload_id = ca.id ORDER BY ca.collection_id, ca.id`, args: [workspaceId] });
-    snapshot = { categoryAssignments: categoryAssignments.rows as unknown as Array<Record<string, unknown>>, workspaces: workspace.rows as unknown as Array<Record<string, unknown>>, items: items.rows as unknown as Array<Record<string, unknown>>, locations: locations.rows as unknown as Array<Record<string, unknown>>, stock: stock.rows as unknown as Array<Record<string, unknown>>, media: media.rows as unknown as Array<Record<string, unknown>>, collections: collections.rows as unknown as Array<Record<string, unknown>>, memberships: memberships.rows as unknown as Array<Record<string, unknown>>, covers: covers.rows as unknown as Array<Record<string, unknown>> };
+    snapshot = { preferences: preferences.rows as unknown as Array<Record<string, unknown>>, customCategories: customCategories.rows as unknown as Array<Record<string, unknown>>, categoryAssignments: categoryAssignments.rows as unknown as Array<Record<string, unknown>>, workspaces: workspace.rows as unknown as Array<Record<string, unknown>>, items: items.rows as unknown as Array<Record<string, unknown>>, locations: locations.rows as unknown as Array<Record<string, unknown>>, stock: stock.rows as unknown as Array<Record<string, unknown>>, media: media.rows as unknown as Array<Record<string, unknown>>, collections: collections.rows as unknown as Array<Record<string, unknown>>, memberships: memberships.rows as unknown as Array<Record<string, unknown>>, covers: covers.rows as unknown as Array<Record<string, unknown>> };
     await tx.commit();
   } catch (error) { await tx.rollback(); throw error; }
   for (const asset of snapshot.media) {
@@ -331,6 +338,8 @@ export async function createInventoryArchive(inventory: InventoryContext, contex
   const mediaRoot = path.join(context?.directory ?? dataDirectory(), "media");
   const payload: Record<string, unknown> = {
     workspace: snapshot.workspaces[0] ?? null,
+    preferences: snapshot.preferences[0] ?? { version: 1, sort: "date" },
+    customCategories: snapshot.customCategories,
     locations: snapshot.locations,
     items: snapshot.items.map((item) => ({ ...item, categories: snapshot.categoryAssignments.filter(row => row.item_id === item.id).map(row => row.category), stock: snapshot.stock.filter((row) => row.item_id === item.id), collectionIds: snapshot.memberships.filter((row) => row.item_id === item.id).map((row) => row.collection_id), mediaAssets: snapshot.media.filter((row) => row.item_id === item.id).map((asset) => ({ id: asset.id, isPrimary: Boolean(asset.is_primary), displayOrder: null, originalFilename: asset.original_filename, mimeType: asset.mime_type, width: asset.width, height: asset.height, cropData: asset.crop_data, createdAt: asset.created_at, imagePath: `media/items/${asset.storage_path}`, thumbnailPath: `media/items/${asset.thumbnail_path}`, sourcePath: asset.source_storage_path ? `media/items/${asset.source_storage_path}` : null })) })),
     collections: snapshot.collections.map((collection) => { const cover = snapshot.covers.find((asset) => asset.collection_id === collection.id); return { ...collection, itemIds: snapshot.memberships.filter((row) => row.collection_id === collection.id).map((row) => row.item_id), uploadCover: cover ? { id: cover.id, width: cover.width, height: cover.height, createdAt: cover.created_at, path: `media/${collectionCoverPath(String(cover.storage_path))}`, thumbnailPath: `media/${collectionCoverPath(String(cover.thumbnail_path))}` } : null }; }),

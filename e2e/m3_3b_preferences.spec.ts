@@ -1,0 +1,32 @@
+import { expect, test } from "@playwright/test";
+
+test("custom category emoji and default sort persist in the current inventory", async ({ page }) => {
+  test.setTimeout(100_000);
+  const base = "/inventories/00000000-0000-4000-8000-000000000001";
+  await page.goto(base); await page.locator(".add-dialog-trigger").click();
+  const dialog = page.getByRole("dialog", { name: "Добавить вещь" });
+  await dialog.getByLabel("Название").fill("Zulu synthetic");
+  await dialog.locator(".category-trigger").click();
+  await dialog.getByLabel("Своя категория").fill("Synthetic category");
+  await dialog.getByLabel("Эмодзи категории").fill("🧰");
+  await dialog.getByRole("button", { name: "Добавить", exact: true }).click();
+  await expect(dialog.locator(".category-selection")).toContainText("🧰");
+  await dialog.getByRole("button", { name: "Добавить вещь", exact: true }).click();
+  await expect(page).toHaveURL(/added=/);
+  await expect(page.locator(".item-row").filter({ hasText: "Zulu synthetic" }).locator(".item-category-filter")).toContainText("🧰");
+  await page.locator(".add-dialog-trigger").click();
+  await dialog.getByLabel("Название").fill("Alpha synthetic");
+  await dialog.getByRole("button", { name: "Добавить вещь", exact: true }).click();
+  await expect(page).toHaveURL(/added=/);
+  await page.goto(`${base}/settings`);
+  await page.getByLabel("Сортировка по умолчанию").selectOption("name");
+  const preference = page.locator("form").filter({ has: page.getByLabel("Сортировка по умолчанию") });
+  await preference.getByRole("button", { name: "Сохранить изменения" }).click();
+  await expect(preference.getByRole("status")).toHaveText("Настройка сохранена");
+  await page.goto(base);
+  await expect(page.getByLabel("Сортировка")).toHaveValue("name");
+  const names = await page.locator(".item-row h3").allTextContents();
+  expect(names.indexOf("Alpha synthetic")).toBeGreaterThanOrEqual(0);
+  expect(names.indexOf("Zulu synthetic")).toBeGreaterThan(names.indexOf("Alpha synthetic"));
+  await expect(page.locator(".item-row").filter({ hasText: "Zulu synthetic" }).locator(".item-category-filter")).toContainText("🧰");
+});

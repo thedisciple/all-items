@@ -48,7 +48,7 @@ test("downloads a complete archive and imports it twice as new inventories while
   const archivePath = await download.path();
   if (!archivePath) throw new Error("The test archive was not downloaded.");
   const archive = new Uint8Array(await readFile(archivePath));
-  expect(verifyInventoryArchive(archive).version).toBe(4);
+  expect(verifyInventoryArchive(archive).version).toBe(5);
   expect((await previewInventoryArchive(archive)).items).toBe(1);
 
   const targetOriginal="http://127.0.0.1:3103/inventories/00000000-0000-4000-8000-000000000001";

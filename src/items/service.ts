@@ -2,6 +2,8 @@ import { z } from "zod";
 import { inventoryDatabase } from "@/items/inventories";
 import type { InventoryContext } from "@/items/inventory-context";
 import { canonicalCategories, categoryKeyForStoredValue } from "./categories";
+import { categoryPresentations, saveCategoryPresentations } from "./inventory-presentation";
+import type { Client } from "@libsql/client";
 
 const optionalText = (max: number) => z.string().trim().max(max).optional().transform((value) => value || null);
 export const itemFields = z.object({
@@ -10,6 +12,7 @@ export const itemFields = z.object({
   brand: optionalText(120),
   category: optionalText(80),
   categories: z.array(z.string().min(1).max(80)).max(20).optional(),
+  categoryPresentation: categoryPresentations.optional(),
   originalMarking: optionalText(160),
   notes: optionalText(2000),
   description: optionalText(4000),
@@ -92,7 +95,7 @@ async function beginWriteTransaction(db: Awaited<ReturnType<typeof inventoryData
   }
 }
 
-export async function createItem(context: InventoryContext, input: ItemFields, stock?: unknown) {
+export async function createItem(context: InventoryContext, input: ItemFields, stock?: unknown, attach?: (tx: Pick<Client, "execute">, id: string) => Promise<void>) {
   return serializeLocalWrite(async () => {
   const parsed = itemFields.parse(input);
   const rows = normalizedStock(stock ?? [{ location: "", quantity: parsed.trackingMode === "unique" ? 1 : 0 }], parsed.trackingMode);
@@ -113,7 +116,9 @@ export async function createItem(context: InventoryContext, input: ItemFields, s
         parsed.askingPrice === null ? null : Math.round(parsed.askingPrice * 100), parsed.askingPrice !== null ? parsed.askingCurrency : null, now, now],
     });
     await replaceCategories(tx, id, parsed.categories ?? (parsed.category ? [parsed.category] : []));
+    if (parsed.categoryPresentation) await saveCategoryPresentations(tx, workspaceId, parsed.categoryPresentation, canonicalCategories(parsed.categories ?? (parsed.category ? [parsed.category] : [])));
     await replaceStock(tx, id, workspaceId, rows, now);
+    if (attach) await attach(tx, id);
     await tx.commit();
     return { id, inventoryNumber: `INV-${String(sequence).padStart(6, "0")}` };
   } catch (error) {
@@ -276,6 +281,7 @@ export async function updateItem(context: InventoryContext, id: string, input: I
         args: [parsed.name,parsed.model,parsed.brand,parsed.originalMarking,parsed.notes,parsed.description,parsed.identificationStatus,parsed.trackingMode,parsed.saleIntent,parsed.askingPrice === null ? null : Math.round(parsed.askingPrice*100),parsed.askingPrice !== null ? parsed.askingCurrency : null,now,id,workspaceId],
       });
       if (parsed.categories !== undefined || input.category !== undefined) await replaceCategories(tx,id,parsed.categories ?? (parsed.category ? [parsed.category] : []));
+      if (parsed.categoryPresentation) await saveCategoryPresentations(tx, workspaceId, parsed.categoryPresentation, canonicalCategories(parsed.categories ?? (parsed.category ? [parsed.category] : [])));
       if (stock !== undefined) await replaceStock(tx,id,workspaceId,rows,now);
       await tx.commit();
     } catch (error) { await tx.rollback(); throw error; }

@@ -4,7 +4,7 @@ import { useActionState, useEffect, useRef, useState, startTransition, type Keyb
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Check, ChevronDown, Plus, Settings, Trash2, X } from "lucide-react";
-import { createInventoryAction, deleteInventoryAction, renameInventoryAction, type InventoryFeedback } from "@/app/inventory-actions";
+import { createInventoryAction, deleteInventoryAction, renameInventoryAction, saveInventorySortAction, type InventoryFeedback } from "@/app/inventory-actions";
 import { useInventory, InventoryField } from "./inventory-provider";
 import { useI18n } from "@/i18n/provider";
 
@@ -73,6 +73,19 @@ export function RenameInventoryControl() {
   const { inventory }=useInventory(); const {t}=useI18n();
   const [name,setName]=useState(inventory.name); const [feedback,action,pending]=useActionState(renameInventoryAction,idle);
   return <form className="detail-panel" aria-busy={pending} onSubmit={event=>{event.preventDefault();const data=new FormData(event.currentTarget);startTransition(()=>action(data));}}><InventoryField/><label className="field"><span>{t("inventoryName")}</span><input name="name" required maxLength={120} value={name} onChange={event=>setName(event.target.value)}/></label><div className="form-action-row"><button className="add-button" disabled={pending || !name.trim() || name===inventory.name}>{pending?t("savingChanges"):t("saveChanges")}</button></div>{feedback.code?<p className="inline-status error-status" role="alert">{t(feedback.code)}</p>:null}</form>;
+}
+
+export function InventorySortControl() {
+  const { presentation } = useInventory(); const { t } = useI18n();
+  const [sort, setSort] = useState(presentation.preferences.sort);
+  const [feedback, action, pending] = useActionState(saveInventorySortAction, idle);
+  const router = useRouter();
+  useEffect(() => { if (feedback.status === "success") router.refresh(); }, [feedback, router]);
+  return <form className="detail-panel" aria-busy={pending} onSubmit={event => { event.preventDefault(); const data = new FormData(event.currentTarget); startTransition(() => action(data)); }}><InventoryField/>
+    <label className="field"><span>{t("defaultSort")}</span><select name="sort" value={sort} onChange={event => setSort(event.target.value as typeof sort)}><option value="date">{t("sortNewest")}</option><option value="name">{t("sortName")}</option><option value="quantity">{t("sortQuantity")}</option></select></label>
+    <div className="form-action-row"><button className="add-button" disabled={pending || sort === presentation.preferences.sort}>{pending ? t("savingChanges") : t("saveChanges")}</button></div>
+    {feedback.code ? <p className={feedback.status === "error" ? "inline-status error-status" : "inline-status"} role={feedback.status === "error" ? "alert" : "status"}>{t(feedback.code)}</p> : null}
+  </form>;
 }
 
 export function DeleteInventoryControl({counts}:{counts:{items:number;collections:number}}) {

@@ -33,7 +33,7 @@ test("production restart preserves selection, media ownership, scoped deletion a
     if(renamed){
       const other=await page.context().newPage();await other.goto(`${base(id)}/settings`);
       await other.getByLabel("Название инвентаря",{exact:true}).fill(renamed);
-      await other.getByRole("button",{name:"Сохранить изменения",exact:true}).click();
+      await other.locator("form").filter({has:other.getByLabel("Название инвентаря",{exact:true})}).getByRole("button",{name:"Сохранить изменения",exact:true}).click();
       await expect(other.locator(".inventory-menu-trigger")).toContainText(renamed);await other.close();
       await confirm.click();
       await expect(dialog.getByRole("alert")).toBeVisible();

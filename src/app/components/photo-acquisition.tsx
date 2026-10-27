@@ -13,6 +13,7 @@ import { useI18n } from "@/i18n/provider";
 const maxBytes = 10 * 1024 * 1024;
 const acceptedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 type CropData = CropperJS.Data;
+export type PhotoDraft = { selected: File | null; source: File | null; pending: File | null; crop: CropData | null };
 
 type Props = {
   name?: string;
@@ -25,6 +26,8 @@ type Props = {
   onPreviewChange?: (url: string | null) => void;
   onDraftChange?: (dirty: boolean) => void;
   resetToken?: number;
+  recovery?: { token: number; photo: PhotoDraft } | null;
+  onRecoveryChange?: (photo: PhotoDraft | null) => void;
 };
 
 function cameraErrorKey(error: unknown) {
@@ -36,7 +39,7 @@ function cameraErrorKey(error: unknown) {
   return "cameraUnavailable";
 }
 
-export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoSubmit = false, savedToken, resultToken, retryReady = false, externalPreview = false, onPreviewChange, onDraftChange, resetToken }: Props) {
+export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoSubmit = false, savedToken, resultToken, retryReady = false, externalPreview = false, onPreviewChange, onDraftChange, resetToken, recovery, onRecoveryChange }: Props) {
   const { locale, t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const sourceInputRef = useRef<HTMLInputElement>(null);
@@ -77,6 +80,16 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
   }, [savedToken, resultToken, onPreviewChange]);
 
   useEffect(() => { if (resetToken) clearSelection(); }, [resetToken]);
+
+  useEffect(() => {
+    if (!recovery) return;
+    const { selected, source, pending: pendingCrop, crop } = recovery.photo;
+    setSelectedFile(selected); setSourceFile(source); setCropData(crop); setCropFile(pendingCrop);
+    if (selected) { setInputFile(inputRef, selected); setPreviewUrl(URL.createObjectURL(selected)); }
+    if (source) setInputFile(sourceInputRef, source);
+    onDraftChange?.(Boolean(selected || pendingCrop));
+  // A token represents one explicit restore, not subsequent parent renders.
+  }, [recovery?.token]);
 
   useEffect(() => {
     if (!stream || !videoRef.current) return;
@@ -133,6 +146,7 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
     setSelectionError("");
     closeSources();
     setCropFile(file);
+    onRecoveryChange?.({ selected: selectedFile, source: sourceFile, pending: file, crop: cropData });
   }
 
   function acceptSelection(file: File, data: CropData | null) {
@@ -145,6 +159,7 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
     setSelectedFile(file);
     setCropData(data);
     onDraftChange?.(true);
+    onRecoveryChange?.({ selected: file, source: original, pending: null, crop: data });
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
     onPreviewChange?.(url);
@@ -228,6 +243,7 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
     setSelectionError("");
     onPreviewChange?.(null);
     onDraftChange?.(false);
+    onRecoveryChange?.(null);
     submittingRef.current = false;
     if (inputRef.current) inputRef.current.value = "";
     if (sourceInputRef.current) sourceInputRef.current.value = "";
@@ -235,6 +251,7 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
 
   function cancelCrop() {
     setCropFile(null);
+    onRecoveryChange?.(selectedFile ? { selected: selectedFile, source: sourceFile, pending: null, crop: cropData } : null);
     if (selectedFile) setInputFile(inputRef, selectedFile);
     else if (inputRef.current) inputRef.current.value = "";
     triggerRef.current?.focus();

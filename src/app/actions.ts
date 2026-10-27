@@ -40,7 +40,7 @@ function errorMessage(error: unknown, fallback: MessageKey) {
 function formValues(formData: FormData) {
   return {
     name: String(formData.get("name") ?? ""), model: String(formData.get("model") ?? ""), brand: String(formData.get("brand") ?? ""),
-    categories: formData.getAll("categories"), originalMarking: String(formData.get("originalMarking") ?? ""),
+    categories: formData.getAll("categories"), categoryPresentation: JSON.parse(String(formData.get("categoryPresentation") ?? "[]")), originalMarking: String(formData.get("originalMarking") ?? ""),
     notes: String(formData.get("notes") ?? ""), description: String(formData.get("description") ?? ""),
     identificationStatus: String(formData.get("identificationStatus") ?? "unknown"), trackingMode: String(formData.get("trackingMode") ?? "unique"),
     saleIntent: String(formData.get("saleIntent") ?? "not_for_sale"), askingPrice: String(formData.get("askingPrice") ?? ""),
@@ -56,11 +56,10 @@ export async function addItemAction(_previous: ActionFeedback, formData: FormDat
   const sourceInput = formData.get("photoSource");
   const sourceFile = sourceInput instanceof File && sourceInput.size > 0 ? sourceInput : file;
   const cropValue = String(formData.get("crop") ?? "");
-  const values = photoFirstItemValues(formValues(formData) as ItemFields, file !== null, translate(await getLocale(), "unidentifiedItemName"));
-  const name = values.name.trim();
-  if (!name && !file) return { status: "error", message: "invalidItem" };
   let item: { id: string };
   try {
+    const values = photoFirstItemValues(formValues(formData) as ItemFields, file !== null, translate(await getLocale(), "unidentifiedItemName"));
+    if (!values.name.trim() && !file) return { status: "error", message: "invalidItem" };
     item = file
       ? await createItemWithPhoto(context, values as ItemFields, file, sourceFile ?? file, cropValue, JSON.parse(String(formData.get("stock") ?? "[]")))
       : await createItem(context, values as ItemFields, JSON.parse(String(formData.get("stock") ?? "[]")));

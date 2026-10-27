@@ -28,6 +28,8 @@ async function ownedRows(client:Executor,id:string) {
     item_collection_memberships:"SELECT m.* FROM item_collection_memberships m JOIN collections c ON c.id=m.collection_id WHERE c.workspace_id=? ORDER BY m.id",
     collection_cover_assets:"SELECT a.* FROM collection_cover_assets a JOIN collections c ON c.id=a.collection_id WHERE c.workspace_id=? ORDER BY a.id",
     inventory_import_operations:"SELECT * FROM inventory_import_operations WHERE workspace_id=? ORDER BY id",
+    inventory_preferences:"SELECT * FROM inventory_preferences WHERE workspace_id=? ORDER BY workspace_id",
+    custom_category_presentation:"SELECT * FROM custom_category_presentation WHERE workspace_id=? ORDER BY category",
   };
   const rows:Record<string,Array<Record<string,unknown>>>={};
   for(const[table,sql]of Object.entries(queries))rows[table]=(await client.execute({sql,args:[id]})).rows as unknown as Array<Record<string,unknown>>;

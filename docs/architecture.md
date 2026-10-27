@@ -1,5 +1,11 @@
 # Architecture
 
+## M3.3B local recovery and presentation
+
+The Add Item workflow stores versioned, inventory-scoped drafts in browser IndexedDB. Records contain only form fields, stock, selected and source photo Blobs, crop state and pending crop input. Reads require an explicit Restore or Discard choice. Each read-write transaction compares a revision so a second tab cannot silently overwrite a newer record. Drafts expire after 30 days, have bounded photo sizes and entry counts, and storage failures leave the in-memory form available. IndexedDB commit is asynchronous: a crash before a write commits can lose the latest changes. Draft Blobs may temporarily contain the original file's metadata; they never enter portable archives or leave the device.
+
+Migration `0010` adds workspace-local default sorting and custom-category emoji without altering existing items or assignments. ZIP revision 5 carries only that allowlisted presentation and sorting state; revisions 2–4 restore with defaults. Locale and the last selected inventory remain browser preferences. New photo-first item fields, category presentation, stock and the media database reference commit together after private files are staged; rollback removes staged files when possible. SQLite and the filesystem are not an atomic unit, so an abrupt process interruption may leave unreferenced staged files.
+
 ## M3.3A inventory boundaries
 
 The current implementation uses explicit InventoryContext values throughout item, stock, collection, media, category, CSV and ZIP services. Canonical pages and controlled media/API routes live under `/inventories/<UUID>`. Forms carry the route inventory ID; a cookie only chooses the landing preference. Legacy detail and media routes deliberately target the original inventory and never infer an edit target from the preference. New installations seed the original workspace once in migration 0008; reads and startup after an explicit final deletion do not recreate it. Installation-wide create/list operations remain separate from inventory-scoped domain services.

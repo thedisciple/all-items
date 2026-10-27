@@ -123,16 +123,17 @@ Validated with 38 unit tests, typecheck, lint, production build, the 13-scenario
 
 Follow [the architecture decision](docs/architecture/adr-multiple-inventories.md). Future accounts remain a separate authorization boundary. The primary import workflow creates an independent inventory; existing inventories are never merged or replaced. See [validation](docs/architecture/m3-3a-validation.md).
 
-### M3.3B Recovery and preferences - IN PROGRESS
+### M3.3B Recovery and preferences
 
 - [x] Header inventory switching, scoped navigation counts, independent category filters and responsive row layout
-- [ ] Crash/reload recovery for drafts and photo Blobs
-- [ ] Portable local preferences that are explicitly implemented by the application
+- [x] Browser-local Add Item draft recovery for committed text, stock and photo Blob writes, with restore/discard and cross-tab conflict handling
+- [x] Portable default sorting and custom-category presentation; revision 5 archives retain revision 2–4 import support
+- [x] Verify migration preservation, unit/build checks, Edge flows and production import/restart on isolated fixtures; GitHub CI verifies pushed commits
 
 ## M3 — Remaining personal organization
 
 - [ ] Optional encrypted archive export as a future security enhancement
-- [ ] Automated backup and populated-workspace merge/replacement with verified recovery; IndexedDB crash/reload recovery for drafts and photo Blobs (M2D only preserves drafts within the active app session)
+- [ ] Automated backup and populated-workspace merge/replacement with verified recovery; extend crash/reload recovery to additional workflows where useful
 - [ ] Styled XLSX spreadsheet export separate from the full-fidelity ZIP archive
 - [ ] Flexible item attributes and portable image paths
 - [ ] Favorites, pinned collections, recently used items, preferred view, and quick actions

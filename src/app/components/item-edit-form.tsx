@@ -9,6 +9,7 @@ import { FormSubmitButton } from "./form-submit-button";
 import { InventoryStockFields, validStockDraft, stockDraftSignature, type StockDraft } from "./inventory-stock-fields";
 import { CategoryField } from "./category-field";
 import { useI18n } from "@/i18n/provider";
+import type { Presentation } from "@/items/inventory-presentation";
 
 const idle: ActionFeedback = { status: "idle", message: "" };
 type Draft = {
@@ -20,9 +21,10 @@ type Draft = {
 export function ItemEditForm({ itemId, initial, initialRows, returnTo }: { itemId: string; initial: Draft; initialRows: { location: string | null; quantity: number }[]; returnTo: string }) {
   const { t } = useI18n();
   const [draft, setDraft] = useState(initial);
+  const [categoryDraft, setCategoryDraft] = useState<Presentation[]>([]);
   const initialStock = initialRows.length ? initialRows.map(row => ({ location: row.location ?? "", quantity: String(row.quantity) })) : [{ location: "", quantity: initial.trackingMode === "unique" ? "1" : "0" }];
   const [rows, setRows] = useState<StockDraft[]>(initialStock);
-  const dirty = JSON.stringify(draft) !== JSON.stringify(initial) || stockDraftSignature(rows) !== stockDraftSignature(initialStock);
+  const dirty = JSON.stringify(draft) !== JSON.stringify(initial) || categoryDraft.some(entry => draft.categories.includes(entry.category)) || stockDraftSignature(rows) !== stockDraftSignature(initialStock);
   const [feedback, action, pending] = useActionState(updateItemAction, idle);
   const router = useRouter();
   useEffect(() => { if (feedback.status === "success") router.push(returnTo); }, [feedback, returnTo, router]);
@@ -35,7 +37,7 @@ export function ItemEditForm({ itemId, initial, initialRows, returnTo }: { itemI
       <label className="field"><span>{t("itemName")} *</span><input required maxLength={160} name="name" value={draft.name} onChange={field("name")}/></label>
       <label className="field"><span>{t("itemModel")}</span><input maxLength={160} name="model" value={draft.model} onChange={field("model")}/></label>
       <label className="field"><span>{t("itemBrand")}</span><input maxLength={120} name="brand" value={draft.brand} onChange={field("brand")}/></label>
-      <CategoryField values={draft.categories} onValueChange={(categories) => setDraft((value) => ({ ...value, categories }))}/>
+      <CategoryField values={draft.categories} onValueChange={(categories) => setDraft((value) => ({ ...value, categories }))} presentations={categoryDraft} onPresentationChange={setCategoryDraft}/>
     </div>
     <InventoryStockFields mode={draft.trackingMode} rows={rows} onModeChange={trackingMode => setDraft(value => ({ ...value, trackingMode }))} onRowsChange={setRows}/>
     <details id="item-details" className="advanced-fields"><summary>{t("additionalDetails")}</summary><div className="detail-grid advanced-item-fields">

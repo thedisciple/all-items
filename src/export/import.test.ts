@@ -40,6 +40,8 @@ async function photo(width: number, height: number) {
 async function seed() {
   const c = source.client;
   await c.execute({ sql: "INSERT INTO workspaces (id,name,created_at,next_inventory_number) VALUES (?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,created_at=excluded.created_at,next_inventory_number=excluded.next_inventory_number", args: [workspaceId, "My tools", date, 9] });
+  await c.execute({ sql: "INSERT INTO inventory_preferences(workspace_id,version,sort) VALUES(?,1,'name')", args: [workspaceId] });
+  await c.execute({ sql: "INSERT INTO custom_category_presentation(workspace_id,category,emoji) VALUES(?,?,?)", args: [workspaceId, "Custom category", "🧰"] });
   for (const [id, name] of [[locationA, "Shelf A"], [locationB, "箱子"]]) await c.execute({ sql: "INSERT INTO locations (id,workspace_id,name,created_at) VALUES (?,?,?,?)", args: [id, workspaceId, name, date] });
   for (const [id, name, number, mode, category, sale] of [
     [itemA, "FT232RL module", "INV-000001", "unique", "electronics", "considering"],
@@ -100,6 +102,10 @@ describe("current and transitional archive restore", () => {
     await expect(previewInventoryArchive(broken)).rejects.toThrow();
     const badMode = modifiedArchive((files) => { const inventory = JSON.parse(Buffer.from(files["inventory.json"]!).toString("utf8")) as { items: Array<{ tracking_mode: string }> }; inventory.items[0]!.tracking_mode = "wrong"; files["inventory.json"] = Buffer.from(JSON.stringify(inventory)); });
     await expect(previewInventoryArchive(badMode)).rejects.toThrow();
+    const badPreferences = modifiedArchive(files => { const inventory = JSON.parse(Buffer.from(files["inventory.json"]!).toString("utf8")); inventory.preferences.sort = "unexpected"; files["inventory.json"] = Buffer.from(JSON.stringify(inventory)); });
+    await expect(previewInventoryArchive(badPreferences)).rejects.toThrow();
+    const badEmoji = modifiedArchive(files => { const inventory = JSON.parse(Buffer.from(files["inventory.json"]!).toString("utf8")); inventory.customCategories[0].emoji = "not an emoji"; files["inventory.json"] = Buffer.from(JSON.stringify(inventory)); });
+    await expect(previewInventoryArchive(badEmoji)).rejects.toThrow();
     await emptyDestination();
   });
 
@@ -125,10 +131,28 @@ describe("current and transitional archive restore", () => {
       await restoreInventoryArchive(revision2,target);
       expect((await target.client.execute("SELECT category FROM item_categories ORDER BY category")).rows.map(row => row.category)).toEqual(expect.arrayContaining(["electronics"]));
       expect((await target.client.execute("SELECT COUNT(*) AS n FROM items")).rows[0]!.n).toBe(2);
+      expect((await target.client.execute("SELECT COUNT(*) AS n FROM inventory_preferences")).rows[0]!.n).toBe(0);
+      expect((await target.client.execute("SELECT COUNT(*) AS n FROM custom_category_presentation")).rows[0]!.n).toBe(0);
       const exported=readInventoryArchive(await createInventoryArchive(target,target));
-      expect(exported.manifest.version).toBe(4);
+      expect(exported.manifest.version).toBe(5);
       expect((exported.inventory.items as Array<{categories: string[]}>)[0]!.categories).toContain("electronics");
     } finally { target.client.close(); }
+  });
+
+  it("accepts revision 4 archives with default presentation", async () => {
+    const revision4 = modifiedArchive(files => {
+      const manifest = JSON.parse(Buffer.from(files["manifest.json"]!).toString("utf8"));
+      manifest.version = 4; files["manifest.json"] = Buffer.from(JSON.stringify(manifest));
+      const inventory = JSON.parse(Buffer.from(files["inventory.json"]!).toString("utf8"));
+      delete inventory.preferences; delete inventory.customCategories;
+      files["inventory.json"] = Buffer.from(JSON.stringify(inventory));
+    });
+    const parsed = readInventoryArchive(revision4);
+    expect(parsed.inventory.preferences).toEqual({ version: 1, sort: "date" });
+    expect(parsed.inventory.customCategories).toEqual([]);
+    const target = await installation(path.join(root, "revision4"));
+    try { await restoreInventoryArchive(revision4, target); expect((await target.client.execute("SELECT COUNT(*) AS n FROM items")).rows[0]!.n).toBe(2); }
+    finally { target.client.close(); }
   });
 
   it("rolls back failures while staging, preparing and promoting files", async () => {
@@ -149,6 +173,8 @@ describe("current and transitional archive restore", () => {
     const preview = await previewInventoryArchive(validArchive);
     expect(preview).toMatchObject({ items: 2, collections: 2, photos: 1 });
     await restoreInventoryArchive(validArchive, destination);
+    expect((await destination.client.execute("SELECT version,sort FROM inventory_preferences")).rows[0]).toMatchObject({version:1,sort:"name"});
+    expect((await destination.client.execute("SELECT category,emoji FROM custom_category_presentation")).rows[0]).toMatchObject({category:"Custom category",emoji:"🧰"});
     for (const table of ["workspaces", "items", "locations", "stock_entries", "media_assets", "collections", "collection_cover_assets", "item_collection_memberships", "item_categories"]) {
       const original = await source.client.execute(`SELECT * FROM ${table} ORDER BY ${table === "item_categories" ? "item_id,category" : "id"}`);
       const restored = await destination.client.execute(`SELECT * FROM ${table} ORDER BY ${table === "item_categories" ? "item_id,category" : "id"}`);
@@ -206,6 +232,8 @@ describe("non-destructive imports",()=>{
       collect(sourceInventory);
       for(const old of oldIds)expect(JSON.stringify(inventory)).not.toContain(old);
       expect(inventory.workspace).toMatchObject({id:result.inventoryId,name:result.name,next_inventory_number:9,created_at:date});
+      expect(inventory.preferences).toEqual(sourceInventory.preferences);
+      expect(inventory.customCategories).toEqual(sourceInventory.customCategories);
       for(const table of ["items","locations","collections","memberships"] as const) {
         const imported=inventory[table] as Array<{id:string}>;
         expect(imported).toHaveLength((sourceInventory[table] as unknown[]).length);

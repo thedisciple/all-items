@@ -1,12 +1,12 @@
 import { categoryEmoji, categoryKeyForStoredValue, categoryMessageKey } from "@/items/categories";
 import { translate, type Locale } from "@/i18n/messages";
 
-export function CategoryTag({ value, locale }: { value: string; locale: Locale }) {
+export function CategoryTag({ value, locale, customEmoji = {} }: { value: string; locale: Locale; customEmoji?: Record<string, string> }) {
   const key = categoryKeyForStoredValue(value);
   const label = key ? translate(locale, categoryMessageKey(key)!) : value;
-  return <span className="category-chip">{key ? <span aria-hidden="true">{categoryEmoji[key]}</span> : null}{label}</span>;
+  return <span className="category-chip">{key || customEmoji[value] ? <span aria-hidden="true">{key ? categoryEmoji[key] : customEmoji[value]}</span> : null}{label}</span>;
 }
 
-export function CategoryTags({ values, locale }: { values: string[]; locale: Locale }) {
-  return <span className="category-tags">{values.map(value => <CategoryTag key={value} value={value} locale={locale}/>)}</span>;
+export function CategoryTags({ values, locale, customEmoji = {} }: { values: string[]; locale: Locale; customEmoji?: Record<string, string> }) {
+  return <span className="category-tags">{values.map(value => <CategoryTag key={value} value={value} locale={locale} customEmoji={customEmoji}/>)}</span>;
 }

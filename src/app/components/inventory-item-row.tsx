@@ -6,7 +6,7 @@ import { translate, type Locale } from "@/i18n/messages";
 type Item = Record<string, unknown> & { categories: string[] };
 type Query = { q?: string; category?: string; status?: string; sort?: string };
 
-export function InventoryItemRow({ item, base, locale, query, collectionId, highlighted }: { item: Item; base: string; locale: Locale; query: Query; collectionId?: string; highlighted?: boolean }) {
+export function InventoryItemRow({ item, base, locale, query, customEmoji = {}, collectionId, highlighted }: { item: Item; base: string; locale: Locale; query: Query; customEmoji?: Record<string, string>; collectionId?: string; highlighted?: boolean }) {
   const t=(key:Parameters<typeof translate>[1])=>translate(locale,key);
   const path=collectionId?`${base}/collections/${collectionId}`:base;
   const itemPath=`${base}/items/${item.id}${collectionId?`?from=${collectionId}`:""}`;
@@ -19,7 +19,7 @@ export function InventoryItemRow({ item, base, locale, query, collectionId, high
       const key=categoryKeyForStoredValue(value), label=key?translate(locale,categoryMessageKey(key)!):value;
       const params=new URLSearchParams();for(const [name,entry] of Object.entries(query))if(entry&&["q","status","sort"].includes(name))params.set(name,entry);
       params.set("category",key ?? value);
-      return <Link key={value} href={`${path}?${params}`} scroll={false} className="category-chip item-category-filter">{key?<span aria-hidden="true">{categoryEmoji[key]}</span>:null}{label}</Link>;
+      return <Link key={value} href={`${path}?${params}`} scroll={false} className="category-chip item-category-filter">{key || customEmoji[value] ? <span aria-hidden="true">{key ? categoryEmoji[key] : customEmoji[value]}</span> : null}{label}</Link>;
     })}</div>
     <div className="item-stock"><span>{t("quantity")}: {new Intl.NumberFormat(locale).format(Number(item.quantity))}</span>{item.locations?<span>{String(item.locations)}</span>:null}</div>
     {statusKey?<span className="item-index">{t(statusKey)}</span>:null}

@@ -678,6 +678,8 @@ button svg,a.quiet-button svg { flex-shrink: 0; }
 .category-popover { z-index: 80; overscroll-behavior: contain; }
 .category-popover .custom-category-row { margin-bottom: 10px; }
 .category-popover .custom-category-row input { min-width: 0; height: var(--control-height); padding: 0 10px; border: 1px solid var(--control-border); border-radius: var(--control-radius); background: var(--control-bg); color: var(--text); }
+.category-popover .custom-category-row input[aria-label] + input { flex: 0 0 56px; width: 56px; }
+.category-emoji-hint { margin: 0 0 10px; color: var(--muted); font-size: 12px; }
 .crop-reset-button { display: inline-flex; width: auto; gap: 8px; }
 
 /* Collection creation is an action tile; existing collections remain links. */

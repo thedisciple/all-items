@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Search, X } from "lucide-react";
 import { useI18n } from "@/i18n/provider";
+import { useInventory } from "./inventory-provider";
 
 type Props = {
   categories: { value: string; label: string }[];
@@ -15,6 +16,7 @@ const filterKeys = ["q", "category", "status", "sort"] as const;
 
 export function ItemFilters({ categories, statuses, searchPlaceholder }: Props) {
   const { t } = useI18n();
+  const { presentation } = useInventory();
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -80,7 +82,7 @@ export function ItemFilters({ categories, statuses, searchPlaceholder }: Props) 
     <select aria-label={t("statusAny")} title={statuses.find(option=>option.value===params.get("status"))?.label ?? t("statusAny")} value={params.get("status") ?? ""} onChange={(event) => navigate("status", event.target.value)}>
       <option value="">{t("statusAny")}</option>{statuses.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
     </select>
-    <select aria-label={t("sortLabel")} value={params.get("sort") ?? "date"} onChange={(event) => navigate("sort", event.target.value)}>
+    <select aria-label={t("sortLabel")} value={params.get("sort") ?? presentation.preferences.sort} onChange={(event) => navigate("sort", event.target.value)}>
       <option value="date">{t("sortNewest")}</option><option value="name">{t("sortName")}</option><option value="quantity">{t("sortQuantity")}</option>
     </select>
     {<button type="button" className="quiet-button clear-filters-button" disabled={!activeFilters} onClick={clear}><X size={15} aria-hidden="true"/>{t("clearFilters")}</button>}

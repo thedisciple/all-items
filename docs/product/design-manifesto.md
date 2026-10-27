@@ -59,3 +59,5 @@ Keep the current inventory selector and its settings together at the start of th
 ## M3.3B compact category and photo editing
 
 Chosen categories live inside one token field. Opening its bounded, viewport-aware panel must not move adjacent fields; Escape and outside activation dismiss it without saving the item. Item rows keep their item and category links independently actionable. Show the complete selected crop in a bounded contained preview, including unusual aspect ratios. A photo source dialog uses one Close control, and closing the crop editor preserves a previously selected photo. Rotate directions and Reset have distinct labels; avoid clipped custom tooltip bubbles.
+
+Recovery must be explicit and non-destructive: show Restore and Discard for a locally committed draft, retain the current form when storage fails, and never replace a newer draft from another tab. A portable setting must correspond to a working control and clearly belong to one inventory.

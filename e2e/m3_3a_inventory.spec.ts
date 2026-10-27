@@ -47,7 +47,7 @@ test("explicit inventory routes isolate switching, stale editors, rename, prefer
   expect(foreign.status()).toBe(404);
   await page.goto(`${home}/settings`);
   await page.getByLabel("Название инвентаря").fill("Home renamed M33");
-  await page.getByRole("button",{name:"Сохранить изменения",exact:true}).click();
+  await page.locator("form").filter({has:page.getByLabel("Название инвентаря")}).getByRole("button",{name:"Сохранить изменения",exact:true}).click();
   await expect(page.locator(".inventory-menu-trigger")).toContainText("Home renamed M33");
   await page.locator(".inventory-menu-trigger").click();
   await page.getByRole("menuitemradio",{name:"Workshop M33"}).click();

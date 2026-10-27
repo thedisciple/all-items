@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { createClient } from "@libsql/client";
-import { access, copyFile, mkdtemp, mkdir } from "node:fs/promises";
+import { access, copyFile, mkdtemp, mkdir, readdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -31,6 +31,28 @@ beforeAll(async () => {
 });
 
 describe("M1 inventory", () => {
+  it("rolls back item and category presentation if attaching media fails", async () => {
+    await client.execute({sql:"INSERT INTO custom_category_presentation(workspace_id,category,emoji) VALUES(?,?,?)",args:[inventory.workspaceId,"Synthetic rollback category","🧰"]});
+    const before = await client.execute({sql:"SELECT next_inventory_number FROM workspaces WHERE id=?",args:[inventory.workspaceId]});
+    await expect(createItem(inventory, {name:"Synthetic failed attachment", categories:["Synthetic rollback category"], categoryPresentation:[{category:"Synthetic rollback category",emoji:"📷"}]}, undefined, async () => { throw new Error("Synthetic attach failure"); })).rejects.toThrow("Synthetic attach failure");
+    expect((await client.execute({sql:"SELECT emoji FROM custom_category_presentation WHERE workspace_id=? AND category=?",args:[inventory.workspaceId,"Synthetic rollback category"]})).rows[0]!.emoji).toBe("🧰");
+    expect((await client.execute({sql:"SELECT next_inventory_number FROM workspaces WHERE id=?",args:[inventory.workspaceId]})).rows).toEqual(before.rows);
+    expect((await client.execute({sql:"SELECT id FROM items WHERE workspace_id=? AND name=?",args:[inventory.workspaceId,"Synthetic failed attachment"]})).rows).toHaveLength(0);
+  });
+
+  it("removes staged image files when photo-first database insertion fails", async () => {
+    const root = path.join(directory, "media", "items");
+    const countFiles = async () => (await readdir(root, { recursive: true, withFileTypes: true }).catch(() => [])).filter(entry => entry.isFile()).length;
+    const before = await countFiles();
+    const image = await sharp({ create: { width: 80, height: 60, channels: 3, background: "#43725a" } }).png().toBuffer();
+    await client.execute("CREATE TRIGGER synthetic_media_failure BEFORE INSERT ON media_assets WHEN NEW.original_filename='synthetic-failure.png' BEGIN SELECT RAISE(ABORT,'synthetic failure'); END");
+    try {
+      await expect(createItemWithPhoto(inventory, { name: "Synthetic staged failure", categories: ["Synthetic rollback category"], categoryPresentation: [{category:"Synthetic rollback category",emoji:"📷"}] }, new File([new Uint8Array(image)], "synthetic-failure.png", {type:"image/png"}))).rejects.toThrow();
+      expect(await countFiles()).toBe(before);
+      expect((await client.execute({sql:"SELECT id FROM items WHERE name=?",args:["Synthetic staged failure"]})).rows).toHaveLength(0);
+      expect((await client.execute({sql:"SELECT emoji FROM custom_category_presentation WHERE workspace_id=? AND category=?",args:[inventory.workspaceId,"Synthetic rollback category"]})).rows[0]!.emoji).toBe("🧰");
+    } finally { await client.execute("DROP TRIGGER synthetic_media_failure"); }
+  });
   it("validates item fields and trims user input", () => {
     expect(itemFields.parse({ name: "  Вольтметр  " }).name).toBe("Вольтметр");
     expect(photoFirstItemValues({ name: "", model: " HC-12 " }, true, "Неизвестный предмет")).toMatchObject({ name: "Неизвестный предмет", model: " HC-12 ", identificationStatus: "unknown" });
@@ -137,7 +159,7 @@ describe("M1 inventory", () => {
   it("applies migrations repeatedly without duplicating schema", async () => {
     await applyMigrations(client, migrations);
     const names = await client.execute("SELECT name FROM _all_items_migrations ORDER BY name");
-    expect(names.rows.map((row) => row.name)).toEqual(["0001_foundation", "0002_inventory_management", "0003_private_media", "0004_collections", "0005_editable_media_source", "0006_collection_covers", "0007_item_categories", "0008_inventory_boundaries", "0009_inventory_import_operations"]);
+    expect(names.rows.map((row) => row.name)).toEqual(["0001_foundation", "0002_inventory_management", "0003_private_media", "0004_collections", "0005_editable_media_source", "0006_collection_covers", "0007_item_categories", "0008_inventory_boundaries", "0009_inventory_import_operations", "0010_inventory_presentation"]);
   });
 });
 

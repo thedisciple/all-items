@@ -6,7 +6,7 @@ import { z } from "zod";
 import { dataDirectory } from "@/db/client";
 import { inventoryDatabase } from "@/items/inventories";
 import type { InventoryContext } from "@/items/inventory-context";
-import { createItem, deleteItem, type ItemFields } from "@/items/service";
+import { createItem, type ItemFields } from "@/items/service";
 import { cropDataSchema } from "@/media/crop-data";
 
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -180,13 +180,30 @@ async function setPrimaryPhoto(context: InventoryContext, itemId: string, image:
 
 export async function createItemWithPhoto(context: InventoryContext, input: ItemFields, file: File, sourceFile: File = file, cropValue = "", stock?: unknown) {
   const image = await processImage(file, sourceFile, cropValue);
-  const item = await createItem(context, input, stock);
+  const mediaId = crypto.randomUUID();
+  let staged: Awaited<ReturnType<typeof writeAssetFiles>> | null = null;
   try {
-    await setPrimaryPhoto(context, item.id, image);
-    return item;
+    return await createItem(context, input, stock, async (tx, itemId) => {
+      const paths = await writeAssetFiles(itemId, mediaId, image);
+      staged = paths;
+      await tx.execute({
+        sql: `INSERT INTO media_assets (id, item_id, storage_path, thumbnail_path, source_storage_path, crop_data, original_filename, mime_type, width, height, created_at, is_primary)
+              VALUES (?, ?, ?, ?, ?, ?, ?, 'image/webp', ?, ?, ?, 1)`,
+        args: [mediaId, itemId, paths.relativeFull, paths.relativeThumbnail, paths.relativeSource, image.cropData, image.originalFilename, image.width, image.height, new Date().toISOString()],
+      });
+    });
   } catch (error) {
-    try { await deleteItem(context, item.id); }
-    catch (cleanupError) { console.error("Unable to compensate for failed photo-first item creation", cleanupError); }
+    const paths = staged as Awaited<ReturnType<typeof writeAssetFiles>> | null;
+    if (paths) {
+      try {
+        // A commit may have succeeded even if its acknowledgement failed. Never
+        // remove a staged file when a live record refers to the new media ID.
+        const { db } = await inventoryDatabase(context);
+        const referenced = await db.$client.execute({ sql: "SELECT 1 FROM media_assets WHERE id=? LIMIT 1", args: [mediaId] });
+        if (!referenced.rows.length) await Promise.all([rm(paths.full, { force: true }), rm(paths.thumbnail, { force: true }), rm(paths.source, { force: true })]);
+      }
+      catch (cleanupError) { console.error("Unable to remove staged private image files", cleanupError); }
+    }
     throw error;
   }
 }

@@ -1,5 +1,15 @@
 # Changelog
 
+## M3.3B - Local draft recovery and UX reliability
+
+- Moved inventory switching and scoped counts into the shared navigation; separated item navigation from category filtering and kept long filter values legible.
+- Corrected portrait crop preview clipping, retained the prior selection during replacement, and consolidated category tokens and collection editing.
+- Made collection icons independent of default, emoji, member-photo and uploaded covers; kept Change cover available inside the full-image viewer. New inventory names are checked transactionally; existing duplicates remain intact.
+- Added browser-local, inventory-scoped Add Item draft recovery with selected/source/pending photo Blobs, explicit restore/discard, bounded storage, revision checks across tabs and visible storage failures.
+- Added inventory-local default sorting and custom-category emoji. Experimental ZIP revision 5 carries these presentation values; revisions 2–4 remain supported and restore defaults.
+- Added migration `0010_inventory_presentation.sql`; photo-first item creation now commits the item, category presentation, stock and media reference together after private media staging.
+- Cross-inventory projects remain an architecture proposal only. AI, accounts, hosting, public access and marketplace features remain future work.
+
 ## M3.3A - Multiple inventories and non-destructive import
 
 - Unified controls, stable filters, compact dismissible categories, visible collection-name entry and aligned emoji/actions; focused item editor and quieter private labels.
