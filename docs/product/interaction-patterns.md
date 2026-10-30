@@ -48,7 +48,7 @@ Lead with item name, inventory number, compact contained photo, total quantity, 
 
 ## M2D item creation and photo editing
 
-The Add Item dialog stays mounted while closed, so text fields, category/advanced values, a selected File, and cropped preview survive same-session close/reopen. The backdrop does not dismiss it. Close preserves work; Discard Draft confirms only when work exists. A save error keeps its fields and File available for retry. Full reload/crash recovery is not implemented.
+The Add Item dialog stays mounted while closed, so text fields, category/advanced values, a selected File, and cropped preview survive same-session close/reopen. The backdrop does not dismiss it. Close preserves work; Discard Draft confirms only when work exists. A save error keeps its fields and File available for retry. Committed browser-local Add Item drafts can be restored or discarded after reload; interrupted uncommitted writes, denied storage and browser eviction remain explicit limits.
 
 One Add submission creates the item and returns to inventory with confirmation and highlight. An edit returns to inventory or the validated collection it came from; cancel uses the same internal route. Model is the identified designation; Marking on device is the literal visible text and remains optional in Advanced Details.
 
@@ -60,7 +60,7 @@ Future annotation operations should refer to normalized source coordinates and r
 
 ## Future only
 
-Local drafts, recently used items, favorites, saved searches, tags, batch upload queue, listing conversion, local achievements, and sharing are proposals, not current interactions. Shared-element card-to-detail transitions may be explored after task-based mobile testing; they must respect reduced-motion preferences and preserve a clear fallback. Do not add complex view-transition infrastructure without reliable browser support and accessibility behavior.
+Additional draft workflows, recently used items, favorites, saved searches, tags, batch upload queue, listing conversion, local achievements and sharing are proposals; Add Item recovery is implemented. Shared-element card-to-detail transitions may be explored after task-based mobile testing; they must respect reduced-motion preferences and preserve a clear fallback. Do not add complex view-transition infrastructure without reliable browser support and accessibility behavior.
 
 Storage status must distinguish local storage, synchronized storage, offline availability, synchronization state, and backup state. Until those capabilities exist, avoid a status light or text that implies sync, offline guarantees, or backup protection.
 
@@ -99,3 +99,13 @@ The selected crop uses a bounded grid with zero minimum track sizes and `contain
 Collection selection is staged: closing discards unchecked changes, while Add commits the selected memberships together. Collection icon and cover are independent. Default is neutral; emoji, member photo and uploaded image are explicit cover choices. A cover viewer must keep its Change cover action and any nested dialog within the viewport. Inventory creation, rename and import reject newly conflicting names; pre-existing duplicates keep their identities and are distinguished in the menu.
 
 After a reload, show an explicit choice to restore or discard a meaningful Add Item draft before showing the empty form. An inaccessible, full or conflicting local store must not erase the current form: explain the problem and preserve the entered data in memory. Saving the item clears its own committed draft; do not remove another tab's newer revision.
+
+## M3.4 gallery, filters and currency
+
+One selected contained photo is accompanied by ordered thumbnails. Choosing a thumbnail changes the viewed photo; Make primary changes the list thumbnail explicitly. Earlier/later controls reorder without changing primary. Per-photo crop/replacement retains siblings and only replaces after persistence; deletion confirms its cover consequence and deterministically promotes a survivor. Persisted gallery changes own accessible success announcements, so a remounted image editor cannot remove them. Add one photo at a time through the existing camera/file/crop flow.
+
+Crop validation errors leave correction controls ready. Correcting a small selection re-enables Done; output errors allow retry. Accepted unsaved crops reopen their preserved source and restore the accepted selection; Cancel retains that derivative and draft. A new unnamed photo item stores no translated title and uses a visible, accessible, searchable localized fallback. Save item is distinct from the Add item launcher.
+
+Search stays visible; selected-label filter widths wrap intrinsically while clear-control space remains reserved. Chips never split words. Collapsed desktop navigation retains names/tooltips and a brand mark; a server-seeded browser preference avoids a width flash, and only user toggles animate. Mobile navigation keeps labels, reduced motion minimizes transitions, and scrollable dialog bodies stay inside rounded outer frames.
+
+Locale supplies an overridable initial currency suggestion. Once a price or manual choice fixes a currency, language changes do not convert it. Blank prices persist no arbitrary code; exact stored exponent travels through edit, CSV and ZIP. Existing price meanings remain unchanged. There is no last-used currency preference or AI ranking.

@@ -1,4 +1,5 @@
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test } from "./helpers/browser-reliability";
+import type { Locator } from "@playwright/test";
 import sharp from "sharp";
 import { messages, locales } from "../src/i18n/messages";
 

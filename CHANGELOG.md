@@ -1,5 +1,15 @@
 # Changelog
 
+## M3.4 - Private photo galleries and continuous UX reliability
+
+- Added ordered per-item photo galleries, independent crop/replacement, explicit primary selection, deterministic promotion after deletion and safe collection-cover reference transitions. Migration 0011 preserves existing media IDs, paths and bytes.
+- Fixed recoverable crop validation/output failures and accepted-photo re-editing from the original source, including browser draft recovery. New unnamed photo items use a localized render/search fallback without persisting a translation; old literal names stay unchanged.
+- Added experimental ZIP revision 6 with ordered media, primary identity and stored price exponent; retained tested revision 2–5 import adapters, full source/display/thumbnail fidelity and non-destructive import-as-new.
+- Reworked intrinsic filters, one-line categories, neutral photo fallbacks, keyboard-accessible sidebar preference, restrained feedback, dialog scrolling and centered bounded collection covers.
+- Centralized 13 currency choices and exact decimal parsing. Migration 0012 pins historical prices to hundredths; new amounts carry explicit ISO minor-unit precision, including HUF 2, JPY 0 and KWD 3. No exchange-rate conversion or last-used/AI currency ranking is implemented.
+- Extended synthetic unit/Edge coverage, production import/restart checks and preservation verification. See [validation](docs/architecture/m3-4-validation.md). Physical camera/touch testing remains separate.
+- Shared/family/team access, category management, favorites, release-note UI, themes, AI and external integrations remain documented proposals.
+
 ## M3.3B - Local draft recovery and UX reliability
 
 - Moved inventory switching and scoped counts into the shared navigation; separated item navigation from category filtering and kept long filter values legible.

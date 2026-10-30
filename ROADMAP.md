@@ -130,6 +130,15 @@ Follow [the architecture decision](docs/architecture/adr-multiple-inventories.md
 - [x] Portable default sorting and custom-category presentation; revision 5 archives retain revision 2–4 import support
 - [x] Verify migration preservation, unit/build checks, Edge flows and production import/restart on isolated fixtures; GitHub CI verifies pushed commits
 
+## M3.4 — Multi-photo inventory and UX reliability
+
+- [x] Ordered private galleries with one primary, independent photo lifecycle, cover transitions and additive media preservation
+- [x] Recoverable crop validation/output, repeated unsaved recropping and localized unnamed display/search
+- [x] Revision 6 full-fidelity galleries/price precision and tested revision 2–5 adapters; import always creates a new inventory
+- [x] Intrinsic filters, consistent unbroken category chips, local sidebar preference, restrained feedback and inner dialog scrolling
+- [x] Shared currency choices, exact integer parsing, historical exponent preservation and centered contained covers
+- [x] Synthetic unit/browser acceptance and explicit preservation safeguards; final delivery evidence is in [validation](docs/architecture/m3-4-validation.md)
+
 ## M3 — Remaining personal organization
 
 - [ ] Optional encrypted archive export as a future security enhancement
@@ -174,9 +183,9 @@ Follow [the architecture decision](docs/architecture/adr-multiple-inventories.md
 
 ## Future advanced media and recovery
 
-- [ ] **M3 media foundation:** additive `display_order` migration preserving existing media IDs and primaries; multiple media assets per item; exactly one primary when any exist; transactional next-primary promotion on primary deletion; retain per-image private editable source, crop, derivatives, and collection-cover reference integrity
-- [ ] **M3 media UI:** primary photograph plus secondary thumbnail gallery, add/reorder/choose-primary/edit/delete individual images, and full-screen viewer with file/camera acquisition
-- [ ] Batch acquisition, multiple-object extraction, and portable archive media-list import/export
+- [x] **M3.4 media foundation:** additive `display_order` migration preserving existing media IDs and primaries; multiple media assets per item; exactly one primary when any exist; transactional next-primary promotion on primary deletion; retain per-image private editable source, crop, derivatives, and collection-cover reference integrity
+- [x] **M3.4 media UI:** primary photograph plus secondary thumbnail gallery, add/reorder/choose-primary/edit/delete individual images, and full-screen viewer with file/camera acquisition
+- [ ] Batch acquisition and multiple-object extraction (ordered archive media lists are implemented in M3.4)
 - [ ] Upload queue with cancel/retry, client-side compression, large-image handling, and resumable uploads where justified
 - [ ] Efficient local thumbnails/caching and portable image bundles
 - [ ] Non-destructive photo annotations: pencil/brush, arrows, rectangles, circles, text, blur/redaction, hardware highlights, undo/redo, and normalized coordinate operations

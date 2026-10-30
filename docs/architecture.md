@@ -1,5 +1,14 @@
 # Architecture
 
+## M3.4 ordered media and exact prices
+
+Migration 0011 adds deterministic contiguous photo order and a unique (item, order) index without changing valid legacy IDs, paths or primary choices. Gallery writes verify explicit inventory/item ownership and exactly one primary for non-empty lists inside the write transaction. Reordering never deletes assets. Replacement stages a new media UUID, transfers the target position/primary and explicit cover references transactionally, then cleans the old unreferenced files. Deletion promotes the first surviving ordered photo and deliberately resets covers referencing the removed UUID. Controlled routes now serve any owned gallery media ID, including its stripped editable source, with generated-path and private-path checks. Legacy sources remain optional.
+
+Migration 0012 adds asking_price_exponent default 2, preserving the meaning of every historical amount/code. New amounts use a pinned, verified ISO table rather than runtime Intl display defaults. Exact decimal-string arithmetic avoids binary rounding; unchanged currencies retain their stored exponent when editing. ZIP revision 6 includes ordered arrays, primary UUID and price exponent. Tested revision 2–5 adapters preserve their old precision and presentation policy. Browser sidebar/locale/draft preferences remain excluded from archives.
+
+New photo-only unnamed records store an empty name; rendering and localized fallback search are separate from stored literal titles. The sidebar preference is a first-party browser cookie used in server rendering, not an inventory setting or authorization. See [design decisions](product/m3-4-design.md) and [validation](architecture/m3-4-validation.md).
+
+
 ## M3.3B local recovery and presentation
 
 The Add Item workflow stores versioned, inventory-scoped drafts in browser IndexedDB. Records contain only form fields, stock, selected and source photo Blobs, crop state and pending crop input. Reads require an explicit Restore or Discard choice. Each read-write transaction compares a revision so a second tab cannot silently overwrite a newer record. Drafts expire after 30 days, have bounded photo sizes and entry counts, and storage failures leave the in-memory form available. IndexedDB commit is asynchronous: a crash before a write commits can lose the latest changes. Draft Blobs may temporarily contain the original file's metadata; they never enter portable archives or leave the device.
@@ -37,7 +46,7 @@ M3.2 provides a local Data page for full-fidelity revision 3 ZIP export, empty-w
 
 Import validates revision, ZIP structure, resource bounds, paths, checksums, typed JSON, relationships, and decoded WebP media before preview. Confirmed import revalidates, stages media in the configured data directory, checks staged hashes, promotes media to generated identifier paths while a SQLite write transaction is open, inserts records, checks foreign keys, and commits. Failure rolls back visible rows and removes promoted files; a staging journal supports cleanup on a later attempt after interruption. The target must have no inventory data, so there is no merge or replacement. SQLite and filesystem operations are not jointly atomic: a sudden power loss or damaged disk may require recovery from the retained source archive. Revision 2 remains importable through a tested single-category adapter; revision 1 is unsupported.
 
-See the implementation-ready [multiple-inventory ADR](architecture/adr-multiple-inventories.md) for M3.3A scoping, ID remapping, isolation and recovery requirements; those features are not implemented.
+The [multiple-inventory ADR](architecture/adr-multiple-inventories.md) governs the implemented M3.3A scoping, ID remapping, isolation and recovery boundaries; account authorization remains future work.
 
 ## Planned portability and integration boundaries
 
@@ -47,10 +56,6 @@ Keep future integrations behind narrow interfaces: archive export/import, media/
 
 For a possible M3.5 pilot of 5–10 invited testers, access across the network requires production-mode hosting, authenticated HTTPS, secure sessions, explicit workspace authorization in every domain and media route, CSRF/origin protections, rate limits, upload limits, security headers, and tested backup/recovery. Owner data migration must be staged and recoverable. Keep dev endpoints private. Optional Telegram Login/OIDC can map an external identity to an All Items account only; it does not authorize Telegram chats or file access. Do not request MTProto session credentials. Telegram's [Bot Developer Terms](https://telegram.org/tos/bot-developers) restrict standalone cloud-storage use and do not guarantee cloud-storage data availability or integrity, so Bot Platform storage is not an archive or backup foundation. Login integration should follow Telegram's [Login documentation](https://core.telegram.org/bots/telegram-login). A public or multi-user deployment is not implemented by this milestone.
 
-## Future multi-photo migration path (planned; not implemented)
+## Remaining advanced media work
 
-`media_assets` already gives each photo a stable UUID, an owning `item_id`, private source and derivative paths, crop metadata, and `is_primary`. A partial unique index currently permits at most one primary photo per item. The present service and media route deliberately expose the primary image only; do not infer that multiple-photo UI is supported.
-
-Plan the next media milestone as an additive migration: add a non-negative `display_order` to each media row, backfill deterministic per-item ordering using current creation time and media UUID, retain every existing ID and private path, and leave the current primary row unchanged. Keep the partial unique primary index. The media service must transactionally maintain one primary whenever an item has media; SQL uniqueness can enforce at most one, while the service transaction ensures at least one. Deleting a primary should promote the next ordered image in the same transaction, with a user-selected replacement supported by the same operation. Reordering changes only order values.
-
-Build a gallery against media IDs, never path values from clients. Every image keeps its own normalized editable source, crop operation, display derivative, and thumbnail. Item list cards continue to use the primary. Collection covers that reference item media must continue to validate membership and a live media ID; deleting the referenced image should resolve to a safe default or an explicit replacement policy without deleting the item. Archive manifests must encode `mediaAssets: []` per item, each record carrying stable ID, primary flag, display order, crop data, and relative asset references with checksums. Import maps these lists and references together. Validate this plan with migration tests on isolated copies and backup/restore before touching configured user data.
+Ordered private galleries, primary promotion, per-image edits and revision 6 media-list restoration are implemented in M3.4. Batch intake/queues, annotations, undo history, AI-assisted selection, public sharing and cloud storage remain future work. SQLite/filesystem transactions still cannot be jointly atomic; abrupt interruption may leave unreferenced staged photo files. Import/deletion retain their existing journals and verified recovery sources.

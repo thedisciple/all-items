@@ -61,3 +61,11 @@ Keep the current inventory selector and its settings together at the start of th
 Chosen categories live inside one token field. Opening its bounded, viewport-aware panel must not move adjacent fields; Escape and outside activation dismiss it without saving the item. Item rows keep their item and category links independently actionable. Show the complete selected crop in a bounded contained preview, including unusual aspect ratios. A photo source dialog uses one Close control, and closing the crop editor preserves a previously selected photo. Rotate directions and Reset have distinct labels; avoid clipped custom tooltip bubbles.
 
 Recovery must be explicit and non-destructive: show Restore and Discard for a locally committed draft, retain the current form when storage fails, and never replace a newer draft from another tab. A portable setting must correspond to a working control and clearly belong to one inventory.
+
+## M3.4 media and reliable controls
+
+A gallery belongs to one item. Keep primary selection independent from order and preserve sibling images during edits. Cover transitions and deletion consequences are explicit. The persisted gallery owns success feedback, and failed processing retains prior media and retry data. An invalid crop must remain correctable. Never persist a translation as a new automatic item name.
+
+Let filter widths follow the selected label and available space. Keep category words intact, long names discoverable and item/category actions independent. Sidebar collapse retains accessible destinations and the app mark; use a local preference without implying an account. Motion changes appearance without moving click targets and yields to reduced motion. Dialog scrolling must respect rounded frames and keep actions reachable. Contain and center collection images inside a bounded stable frame.
+
+A suggested currency is not inferred residence. Keep manual choices, original amounts and stored precision authoritative; runtime formatter data cannot reinterpret money. Shared access, themes, favorites and release-note UI stay proposals until their own workflows and safeguards exist.

@@ -92,3 +92,15 @@ describe("CSV export", () => {
     expect(csv).toContain("\uFEFF");
   });
 });
+
+
+it("CSV preserves stored currency exponents instead of assuming hundredths", () => {
+  const csv = formatInventoryCsv([
+    {asking_price_minor:1234,asking_currency:"JPY",asking_price_exponent:2},
+    {asking_price_minor:1234,asking_currency:"JPY",asking_price_exponent:0},
+    {asking_price_minor:1234,asking_currency:"KWD",asking_price_exponent:3},
+  ]).toString("utf8");
+  expect(csv).toContain('"12.34","JPY"');
+  expect(csv).toContain('"1234","JPY"');
+  expect(csv).toContain('"1.234","KWD"');
+});

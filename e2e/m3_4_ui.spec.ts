@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./helpers/browser-reliability";
 import { messages, locales } from "../src/i18n/messages";
 import { suggestedCurrency } from "../src/items/currencies";
 import { readInventoryArchive, verifyInventoryArchive } from "../src/export/archive";

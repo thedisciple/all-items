@@ -50,3 +50,9 @@ Implement the selected change in the existing product. Walk through the task wit
 ## Source basis and limits
 
 This workflow is informed by the transparent single-product case study [How we design UI and UX with AI agents](https://getsweat.ai/blog/from-mobbin-to-a-working-dashboard/), Mobbin's [MCP feature list](https://docs.mobbin.com/mcp/features) and [privacy documentation](https://docs.mobbin.com/mcp/privacy-and-data), Apple's [Designing Fluid Interfaces (WWDC 2018)](https://developer.apple.com/videos/play/wwdc2018/803/), and Emil Kowalski's MIT-licensed [apple-design skill](https://github.com/emilkowalski/skills/tree/main/skills/apple-design). The case study is a practical example, not a controlled usability study: it reports synthetic mockup content, an unrecorded image-generation model/version, and an implementation still under review and unreleased at publication. It reports no comparative usability measurements. The reusable value is the explicit chain from task, to sourced references, to human-reviewed alternatives, to implemented and inspected behavior.
+
+## M3.4 implementation lessons
+
+For a concrete layout defect, inspect competing CSS rules and the actual image box before attributing a screenshot to object-fit alone. Use bounded zero-minimum grid tracks and measure both outer and rendered image geometry. Intrinsic native-control sizing needs allowance for borders and arrow rendering; test complete selected labels, not only container bounds. Treat visual and accessibility feedback as observable states across component remounts.
+
+Keep display conventions separate from storage contracts. M3.4 found a real ISO/Intl HUF precision mismatch; pinned units and an additive historical exponent preserve data. See the [task-specific decisions and sources](m3-4-design.md). No generated concept was needed to resolve these specific constraints; synthetic implemented screenshots and task checks supplied the evidence.

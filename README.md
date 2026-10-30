@@ -4,11 +4,13 @@ All Items is a local-first, self-hosted inventory for the physical things people
 
 ## Current status
 
-M3.3A adds independent inventories in one local SQLite installation, explicit inventory-scoped navigation, create/rename/confirmed delete, and non-destructive archive import as a new inventory. Each inventory owns its items, stock, locations, categories, collections, covers and numbering sequence. Existing original identities and data are preserved. The complete local interface supports Russian, English, Ukrainian, Serbian Latin and Simplified Chinese, including errors translated at render time.
+M3.4 adds ordered private photo galleries: add, view, independently crop/replace, reorder, choose a primary thumbnail and delete individual images. Existing photo identities/files survive migration. Replacing a selected collection-cover photo moves its reference; deleting it deliberately restores the default cover. Compact contained viewers keep the whole image available.
 
-Shared controls, stable filters, compact category selection, unobscured collection creation, focused item editing, content-sized photo editing and full collection-cover viewing follow [the design manifesto](docs/product/design-manifesto.md). Add Item keeps meaningful drafts locally in the browser, scoped to the inventory. After a reload, choose Restore or Discard. Text, category choices, stock and selected photo/source Blobs are included; storage can be denied or full, and a write interrupted by a sudden crash may not have committed. Multi-photo galleries remain future work.
+The cropper recovers after an invalid selection or output error, and accepted Add Item photos can be edited again from their preserved source. New automatically unnamed photo items store an empty name and display/search a localized fallback; historical literal titles remain unchanged. The interface supports Russian, English, Ukrainian, Serbian Latin and Simplified Chinese.
 
-See [ROADMAP.md](ROADMAP.md), [the inventory ADR](docs/architecture/adr-multiple-inventories.md) and [M3.3A validation](docs/architecture/m3-3a-validation.md). AI assists development; no AI integration is present in the application.
+Intrinsic wrapping filters, one-line category chips, a locally remembered collapsible sidebar, restrained feedback and padded dialog scrolling follow [the design decisions](docs/product/m3-4-design.md). Currency choices have explicit locale suggestions and exact stored minor-unit precision, preserving historical amounts. Add Item keeps inventory-scoped browser drafts with Restore/Discard, photo/source Blobs and storage/revision checks; a write interrupted before IndexedDB commit can still be lost.
+
+See [ROADMAP.md](ROADMAP.md), [M3.4 validation](docs/architecture/m3-4-validation.md) and [the inventory ADR](docs/architecture/adr-multiple-inventories.md). AI, authenticated hosting, shared accounts and marketplace features are future work.
 
 ## Run on Windows 11
 
@@ -29,7 +31,7 @@ The interface supports Русский, English, Українська, Srpski, an
 
 Use the inventory selector to create or switch spaces. Settings allows rename and deletion of the explicit selected inventory, with actual counts and typed-name confirmation for populated inventories. Deletion first creates a verified private SQLite/media backup; it never clears other inventories. Removing the final inventory shows Create Inventory, including after restart. Display numbers are immutable within their inventory and deleted numbers are never automatically reused.
 
-Open **Data** to download that inventory's portable ZIP, import an archive as a separate inventory, or download CSV. Revision 5 adds the inventory's default sorting preference and custom-category emoji; revision 4 and tested revision 2/3 recovery adapters remain supported. Revision 1 and unknown revisions are unsupported. Preview validates the selected archive; confirmation revalidates it, assigns fresh UUIDs to every identity/reference, preserves display numbers, the next sequence, metadata and media, and switches only after commit. Importing the same ZIP twice creates independent spaces. No merge or replacement shortcut is provided.
+Open **Data** to download that inventory's portable ZIP, import an archive as a separate inventory, or download CSV. Revision 6 preserves ordered photos, explicit primary identity, stored price precision, default sorting and custom-category emoji. Tested revision 2–5 recovery adapters remain supported. Revision 1 and unknown revisions are unsupported. Preview validates the selected archive; confirmation revalidates it, assigns fresh UUIDs to every identity/reference, preserves display numbers, the next sequence, metadata and media, and switches only after commit. Importing the same ZIP twice creates independent spaces. No merge or replacement shortcut is provided.
 
 ZIPs contain readable paths, stable versioned JSON, private photos and sources, cover uploads and SHA-256 checksums. Archives are capped at 128 MiB; limits and failure states are explicit. Import stages private files and records interruption recovery; keep the original ZIP until restoration is checked. Failed-operation archives/journals remain in private recovery storage. See [the archive format](docs/architecture/archive-format.md). CSV is a separate lossy spreadsheet export with formula protection; it cannot restore an inventory and contains no photographs. Downloads stay on this device.
 
@@ -50,3 +52,5 @@ npm run build
 ```
 
 See [docs/architecture.md](docs/architecture.md), [docs/product/category-research.md](docs/product/category-research.md), and the architecture decisions. Contributions are welcome under [CONTRIBUTING.md](CONTRIBUTING.md). This application is licensed under GNU GPLv3 only; see [LICENSE](LICENSE).
+
+Microsoft Edge browser checks use isolated temporary inventories and media: `npx playwright test`. Production import/restart checks require `npm run build`, then `npx playwright test --config playwright.import.config.ts` and `npx playwright test --config playwright.restart.config.ts`. These fixtures do not migrate configured owner data. Physical camera/touch-device acceptance remains separate.

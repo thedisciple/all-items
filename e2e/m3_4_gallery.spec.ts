@@ -1,4 +1,5 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test } from "./helpers/browser-reliability";
+import type { Locator, Page } from "@playwright/test";
 import sharp from "sharp";
 
 const base = "/inventories/00000000-0000-4000-8000-000000000001";
@@ -11,7 +12,6 @@ async function upload(page: Page, form: Locator, color: string) {
 
 test("three-photo gallery updates primary, order and one crop, then promotes a survivor", async ({ page }) => {
   test.setTimeout(180_000);
-  const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
   await page.goto(base); await page.locator(".add-dialog-trigger").click();
   const add = page.getByRole("dialog", { name: "Добавить вещь" });
   await add.getByLabel("Название", { exact: true }).fill("M3.4 three photos");
@@ -56,5 +56,4 @@ test("three-photo gallery updates primary, order and one crop, then promotes a s
   await expect(page.getByRole("alertdialog")).toHaveCount(0);
   expect(await page.locator(".gallery-thumbnail img").first().getAttribute("src")).toBe(first);
   await expect(page.getByRole("button", { name: "Фото 1 — Основное фото", exact: true })).toBeVisible();
-  expect(errors).toEqual([]);
 });
