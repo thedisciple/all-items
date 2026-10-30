@@ -10,7 +10,8 @@ import { useI18n } from "@/i18n/provider";
 
 type FormAction = (formData: FormData) => void | ActionFeedback | Promise<void | ActionFeedback>;
 
-export function DestructiveConfirmation({ action, label, description, fields, children }: {
+export function DestructiveConfirmation({ action, label, description, fields, children, iconOnly = false }: {
+  iconOnly?: boolean;
   action: FormAction;
   label: string;
   description: string;
@@ -20,7 +21,7 @@ export function DestructiveConfirmation({ action, label, description, fields, ch
   const { t } = useI18n();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [feedback, submit, pending] = useActionState(async (_previous:ActionFeedback,data:FormData):Promise<ActionFeedback> => await action(data) ?? {status:"idle",message:""}, {status:"idle",message:""});
+  const [feedback, submit, pending] = useActionState(async (_previous:ActionFeedback,data:FormData):Promise<ActionFeedback> => {try{return await action(data) ?? {status:"idle",message:""};}catch{return {status:"error",message:"operationFailed"};}}, {status:"idle",message:""});
   useEffect(() => { if (feedback.status === "success") { setOpen(false); router.refresh(); } }, [feedback, router]);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
@@ -46,7 +47,7 @@ export function DestructiveConfirmation({ action, label, description, fields, ch
   }
 
   return <>
-    <button ref={triggerRef} type="button" className="delete-button" onClick={() => setOpen(true)}><Trash2 size={16} aria-hidden="true"/><span>{label}</span></button>
+    <button ref={triggerRef} type="button" className={`delete-button${iconOnly ? " icon-button photo-delete-icon" : ""}`} aria-label={label} title={label} onClick={() => setOpen(true)}><Trash2 size={16} aria-hidden="true"/>{iconOnly ? null : <span>{label}</span>}</button>
     {open ? <div className="photo-source-overlay destructive-overlay" role="presentation" onMouseDown={(event) => { if (!pending && event.target === event.currentTarget) setOpen(false); }}>
       <section ref={dialogRef} className="photo-source-dialog destructive-dialog" role="alertdialog" aria-modal="true" aria-labelledby="destructive-title" aria-describedby="destructive-description" onKeyDown={onKeyDown}>
         <div className="dialog-heading"><h2 id="destructive-title">{label}</h2><button type="button" className="icon-button" aria-label={t("close")} disabled={pending} onClick={() => setOpen(false)}><X size={18} aria-hidden="true"/></button></div>

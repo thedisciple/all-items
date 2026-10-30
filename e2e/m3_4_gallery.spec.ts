@@ -26,11 +26,12 @@ test("three-photo gallery updates primary, order and one crop, then promotes a s
   await upload(page, page.locator(".gallery-add"), "#4d68a6");
   await expect(page.locator(".gallery-thumbnail")).toHaveCount(3);
   await page.getByRole("button", { name: "Фото 2", exact: true }).click();
-  const second = await page.locator('.gallery-thumbnail[aria-pressed="true"] img').getAttribute("src");
-  await page.getByRole("button", { name: "Сделать основным", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Фото 2 — Основное фото", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await page.getByRole("button", { name: "Переместить раньше", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Фото 1 — Основное фото", exact: true })).toHaveAttribute("aria-pressed", "true");
+  const second = await page.locator('.gallery-thumbnail[aria-current="true"] img').getAttribute("src");
+  await page.locator(".gallery-primary-button").nth(1).click();
+  await expect(page.getByRole("button", { name: "Фото 2 — Основное фото", exact: true })).toHaveAttribute("aria-current", "true");
+  await page.locator('.gallery-thumbnail[aria-current="true"]').focus();
+  await page.keyboard.press("Space");await page.keyboard.press("ArrowLeft");await page.keyboard.press("Space");
+  await expect(page.getByRole("button", { name: "Фото 1 — Основное фото", exact: true })).toHaveAttribute("aria-current", "true");
   expect(await page.locator(".gallery-thumbnail img").first().getAttribute("src")).toBe(second);
   await page.locator(".photo-edit-primary").click();
   const crop = page.getByRole("dialog", { name: "Редактировать фото" });

@@ -4,7 +4,7 @@ import { CurrencyFields } from "./currency-fields";
 import { currencyDigits, suggestedCurrency, validPrice } from "@/items/currencies";
 import { LockKeyhole } from "lucide-react";
 
-import { startTransition, useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { updateItemAction, type ActionFeedback } from "@/app/actions";
 import { FormSubmitButton } from "./form-submit-button";
@@ -13,6 +13,11 @@ import { CategoryField } from "./category-field";
 import { useI18n } from "@/i18n/provider";
 import type { Presentation } from "@/items/inventory-presentation";
 
+import { useExitEditor, useItemExit } from "./item-exit";
+
+import { recoverableAction } from "./recoverable-action";
+
+const safeUpdate = recoverableAction<ActionFeedback>(updateItemAction,{status:"error",message:"itemUpdateGeneric"});
 const idle: ActionFeedback = { status: "idle", message: "" };
 type Draft = {
   name: string; model: string; brand: string; categories: string[]; originalMarking: string;
@@ -27,12 +32,16 @@ export function ItemEditForm({ itemId, initial, initialRows, returnTo, initialPr
   const initialStock = initialRows.length ? initialRows.map(row => ({ location: row.location ?? "", quantity: String(row.quantity) })) : [{ location: "", quantity: initial.trackingMode === "unique" ? "1" : "0" }];
   const [rows, setRows] = useState<StockDraft[]>(initialStock);
   const dirty = JSON.stringify(draft) !== JSON.stringify(initial) || categoryDraft.some(entry => draft.categories.includes(entry.category)) || stockDraftSignature(rows) !== stockDraftSignature(initialStock);
-  const [feedback, action, pending] = useActionState(updateItemAction, idle);
+  const [feedback, action, pending] = useActionState(safeUpdate, idle);
   const router = useRouter();
-  useEffect(() => { if (feedback.status === "success") router.push(returnTo); }, [feedback, returnTo, router]);
+  const exit = useItemExit();
+  const formRef = useRef<HTMLFormElement>(null);
+  const saveForExit = useCallback(() => { const form=formRef.current;if(!form||!form.reportValidity()||form.querySelector('[type="submit"]')?.hasAttribute("disabled"))return false;form.requestSubmit();return true; }, []);
+  useExitEditor(dirty,pending,saveForExit);
+  useEffect(() => { if (feedback.status === "success") { if(exit)exit.saved(returnTo);else router.push(returnTo); } else if(feedback.status === "error") exit?.failed(); }, [feedback, returnTo, router, exit]);
   const field = (key: keyof Draft) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setDraft((value) => ({ ...value, [key]: event.target.value }));
 
-  return <form aria-busy={pending} onSubmit={event => { event.preventDefault(); if (!pending) { const data = new FormData(event.currentTarget); startTransition(() => action(data)); } }} className="detail-panel item-edit-form">
+  return <form ref={formRef} aria-busy={pending} onSubmit={event => { event.preventDefault(); if (!pending) { const data = new FormData(event.currentTarget); startTransition(() => action(data)); } }} className="detail-panel item-edit-form">
     <input type="hidden" name="id" value={itemId}/><input type="hidden" name="returnTo" value={returnTo}/>
     <div className="section-heading"><div><h2>{t("details")}</h2></div></div>
     <div className="detail-grid basic-item-fields">

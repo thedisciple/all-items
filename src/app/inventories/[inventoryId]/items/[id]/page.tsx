@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { z } from "zod";
 import { AppSidebar } from "@/app/components/app-sidebar";
 import { CollectionMembership } from "@/app/components/collection-membership";
+import { ItemDone } from "@/app/components/item-exit";
 import { ItemEditForm } from "@/app/components/item-edit-form";
 import { PhotoGallery } from "@/app/components/photo-gallery";
 import { DestructiveConfirmation } from "@/app/components/destructive-confirmation";
@@ -40,11 +41,12 @@ export default async function ItemPage({ params, searchParams }: Props) {
     askingCurrency: item.asking_currency ?? "", description: item.description ?? "", notes: item.notes ?? "",
   };
   const fromCollection = z.uuid().safeParse(query.from ?? "");
-  const returnTo = fromCollection.success ? `${base}/collections/${fromCollection.data}` : base;
+  const returnTo = fromCollection.success && collections.some(collection=>collection.id===fromCollection.data) ? `${base}/collections/${fromCollection.data}` : base;
   return <main className="app-shell">
     <AppSidebar active="items" locale={locale}/>
     <section className="main-content"><AppHeader/>
       <div className="content-wrap detail-wrap">
+        <ItemDone returnTo={returnTo}/>
         <div className="item-hero"><h1>{item.name || t("unidentifiedItemName")}</h1><span className="item-number-badge">{item.inventory_number}</span></div>
         <section className="photo-detail-panel" aria-label={t("photo")}>
           <PhotoGallery itemId={id} photos={photos} itemName={item.name || t("unidentifiedItemName")}/>

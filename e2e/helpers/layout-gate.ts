@@ -2,7 +2,8 @@ import { expect, type Locator, type Page } from "@playwright/test";
 
 // Use actual rendered geometry, independently of OS/font rasterization.
 export async function expectPageFits(page: Page) {
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const geometry=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,outside:[...document.querySelectorAll<HTMLElement>("body *")].filter(element=>{const b=element.getBoundingClientRect();return b.width&&b.right>innerWidth+1&&getComputedStyle(element).position!=="fixed"&&!element.closest(".gallery-strip");}).slice(0,12).map(element=>({tag:element.tagName,className:element.className,right:element.getBoundingClientRect().right,width:element.getBoundingClientRect().width}))}));
+  expect(geometry.scroll,JSON.stringify(geometry)).toBeLessThanOrEqual(geometry.width);
 }
 export async function expectControlsFit(region: Locator) {
   const outside = await region.evaluate(element => {

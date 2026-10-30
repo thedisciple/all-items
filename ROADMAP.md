@@ -158,7 +158,7 @@ M4A is the current scoped UX/create-flow milestone; it is not a public release. 
 ### M4A — Photo-first creation parity and UX gate — IN PROGRESS
 
 - [x] Header-owned sidebar toggle, shared responsive toolbar, dialog insets and ISO-only currency labels
-- [ ] Separate photo browsing, primary selection and accessible hold/drag ordering; safe detail exit
+- [x] Separate photo browsing, primary selection and accessible hold/drag ordering; safe detail exit
 - [ ] Multi-photo creation, complete local draft recovery, bounded private staging and retry-safe final commit
 - [ ] Synthetic Edge/keyboard/touch-mock regression gate and documentation reconciliation
 

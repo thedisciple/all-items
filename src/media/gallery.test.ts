@@ -193,3 +193,33 @@ it("round-trips an ordered gallery twice as new inventories with exact media byt
   expect(identities[0]!.some(id=>identities[1]!.includes(id))).toBe(false);
   expect(readInventoryArchive(await createInventoryArchive(inventory,{client,directory})).inventory).toEqual(original.inventory);
 },30_000);
+
+
+it("enforces the intake cap inside concurrent gallery writes and permits replacement",async()=>{
+  const item=await createItem(inventory,{name:"Synthetic bounded additions"});const file=await image();
+  for(let index=0;index<9;index++)await addItemPhoto(inventory,item.id,file);
+  const results=await Promise.allSettled([addItemPhoto(inventory,item.id,file),addItemPhoto(inventory,item.id,file)]);
+  expect(results.filter(result=>result.status==="fulfilled")).toHaveLength(1);
+  expect(results.filter(result=>result.status==="rejected")).toHaveLength(1);
+  const photos=await listItemPhotos(inventory,item.id);expect(photos).toHaveLength(10);expect(photos.filter(photo=>photo.isPrimary)).toHaveLength(1);
+  await expect(addItemPhoto(inventory,item.id,file)).rejects.toThrow("Photo addition limit");
+  await replaceItemPhoto(inventory,item.id,photos[4]!.id,file);
+  expect(await listItemPhotos(inventory,item.id)).toHaveLength(10);
+},60_000);
+
+it("keeps over-cap legacy galleries editable, ordered and portable without truncation",async()=>{
+  const item=await createItem(inventory,{name:"Synthetic eleven legacy photos"});const file=await image();
+  for(let index=0;index<10;index++)await addItemPhoto(inventory,item.id,file);
+  const original=(await listItemPhotos(inventory,item.id))[0]!;const extra=randomUUID();
+  for(const suffix of [".webp","-thumb.webp","-source.webp"])await copyFile(path.join(directory,"media/items",item.id,original.id+suffix),path.join(directory,"media/items",item.id,extra+suffix));
+  await client.execute({sql:"INSERT INTO media_assets(id,item_id,storage_path,thumbnail_path,source_storage_path,original_filename,mime_type,width,height,created_at,is_primary,display_order) VALUES(?,?,?,?,?,'synthetic.webp','image/webp',320,240,?,0,10)",args:[extra,item.id,item.id+"/"+extra+".webp",item.id+"/"+extra+"-thumb.webp",item.id+"/"+extra+"-source.webp",new Date().toISOString()]});
+  await expect(addItemPhoto(inventory,item.id,file)).rejects.toThrow("Photo addition limit");
+  await replaceItemPhoto(inventory,item.id,extra,file);
+  const ids=(await listItemPhotos(inventory,item.id)).map(photo=>photo.id).reverse();await reorderItemPhotos(inventory,item.id,ids);await setItemPrimaryPhoto(inventory,item.id,ids[0]!);
+  const archive=await createInventoryArchive(inventory,{client,directory});
+  expect(verifyInventoryArchive(archive).version).toBe(6);
+  const record=(readInventoryArchive(archive).inventory as PortableInventory).items.find(value=>value.id===item.id)!;expect(record.mediaAssets).toHaveLength(11);
+  const restored=await importArchiveAsNew(inventory,archive,"Synthetic over-cap restore",{client,directory});
+  const reread=readInventoryArchive(await createInventoryArchive({workspaceId:restored.inventoryId},{client,directory}));
+  expect((reread.inventory as PortableInventory).items.find(value=>value.name==="Synthetic eleven legacy photos")?.mediaAssets).toHaveLength(11);
+},120_000);

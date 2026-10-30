@@ -11,6 +11,7 @@ import { replaceCollectionCoverUpload } from "@/media/collection-covers";
 import { resolveInventory } from "@/items/inventories";
 import { inventoryPath, inventoryReturnPath } from "@/items/inventory-context";
 import { locales, type MessageKey } from "@/i18n/messages";
+import { PhotoLimitError, NEW_ITEM_PHOTO_LIMIT } from "@/media/limits";
 
 
 
@@ -90,6 +91,7 @@ export async function replacePhotoAction(_previous: PhotoActionFeedback, formDat
     revalidatePath(inventoryPath(context), "layout"); revalidatePath(inventoryPath(context,`/items/${id.data}`));
     return { status: "success", message: "photoSaved", mediaId: saved.id };
   } catch (error) {
+    if (error instanceof PhotoLimitError) return {status:"error",message:"galleryLimit",values:{count:NEW_ITEM_PHOTO_LIMIT}};
     const message = error instanceof MediaValidationError ? "invalidPhoto" : errorMessage(error, "photoSaveGeneric");
     return { status: "error", message };
   }

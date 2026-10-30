@@ -61,6 +61,9 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
   const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
   const [selectionError, setSelectionError] = useState<MessageKey|"">("");
   const pending = useSubmissionPending();
+  useEffect(() => { if (!pending) submittingRef.current = false; }, [pending]);
+
+  useEffect(() => { onDraftChange?.(Boolean(selectedFile || cropFile || sourceOpen)); }, [selectedFile,cropFile,sourceOpen,onDraftChange]);
 
   useEffect(() => {
     if (!previewUrl) return;

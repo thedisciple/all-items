@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState, startTransition, type KeyboardEvent } from "react";
+import { useItemExit } from "./item-exit";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Check, ChevronDown, Plus, Settings, Trash2, X } from "lucide-react";
@@ -13,13 +14,14 @@ const idle: InventoryFeedback = { status: "idle" };
 export function CreateInventoryControl({ menuItem = false }: { menuItem?: boolean }) {
   const { t } = useI18n();
   const router = useRouter();
+  const exit = useItemExit();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [feedback, action, pending] = useActionState(createInventoryAction, idle);
   const trigger = useRef<HTMLButtonElement>(null);
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => { if (open) input.current?.focus(); }, [open]);
-  useEffect(() => { if (feedback.status === "success" && feedback.inventoryId) { setOpen(false); setName(""); router.push(`/inventories/${feedback.inventoryId}`); } }, [feedback,router]);
+  useEffect(() => { if (feedback.status === "success" && feedback.inventoryId) { setOpen(false); setName(""); if(exit)exit.request(`/inventories/${feedback.inventoryId}`);else router.push(`/inventories/${feedback.inventoryId}`); } }, [feedback,router,exit]);
   const close = () => { if (!pending) { setOpen(false); trigger.current?.focus(); } };
   function keys(event: KeyboardEvent<HTMLElement>) {
     if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); close(); }
@@ -40,7 +42,7 @@ export function CreateInventoryControl({ menuItem = false }: { menuItem?: boolea
 }
 
 export function InventorySwitcher() {
-  const { t }=useI18n(); const { inventory,inventories,base }=useInventory(); const router=useRouter();
+  const { t }=useI18n(); const { inventory,inventories,base }=useInventory(); const router=useRouter(); const exit=useItemExit();
   const [open,setOpen]=useState(false);
   const root=useRef<HTMLDivElement>(null),trigger=useRef<HTMLButtonElement>(null),menu=useRef<HTMLDivElement>(null);
   const keyboardOpen=useRef(false);
@@ -63,7 +65,7 @@ export function InventorySwitcher() {
       const next=event.key==="Home"?0:event.key==="End"?entries.length-1:(index+(event.key==="ArrowDown"?1:entries.length-1))%entries.length;
       entries[next]?.focus();
     }}>
-      {inventories.map(entry=><button type="button" role="menuitemradio" aria-checked={entry.workspaceId===inventory.workspaceId} key={entry.workspaceId} onClick={()=>{setOpen(false);router.push(`/inventories/${entry.workspaceId}`);}}><span>{entry.name}{duplicates(entry.name)?` · ${entry.workspaceId.slice(0,8)}`:""}</span>{entry.workspaceId===inventory.workspaceId?<Check size={15} aria-hidden="true"/>:null}</button>)}
+      {inventories.map(entry=><button type="button" role="menuitemradio" aria-checked={entry.workspaceId===inventory.workspaceId} key={entry.workspaceId} onClick={()=>{setOpen(false);const target=`/inventories/${entry.workspaceId}`;if(exit)exit.request(target);else router.push(target);}}><span>{entry.name}{duplicates(entry.name)?` · ${entry.workspaceId.slice(0,8)}`:""}</span>{entry.workspaceId===inventory.workspaceId?<Check size={15} aria-hidden="true"/>:null}</button>)}
       <CreateInventoryControl menuItem/>
     </div>:null}
   </div>;

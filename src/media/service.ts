@@ -8,6 +8,7 @@ import { inventoryDatabase } from "@/items/inventories";
 import type { InventoryContext } from "@/items/inventory-context";
 import { createItem, type ItemFields } from "@/items/service";
 import { cropDataSchema } from "@/media/crop-data";
+import { NEW_ITEM_PHOTO_LIMIT, PhotoLimitError } from "./limits";
 
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 export const MAX_IMAGE_SIDE = 12_000;
@@ -187,6 +188,7 @@ async function persistItemPhoto(context: InventoryContext, itemId: string, image
   let previous: GalleryRow | undefined;
   try {
     await galleryWrite(context, itemId, async (tx, rows) => {
+      if (!replaceId && rows.length >= NEW_ITEM_PHOTO_LIMIT) throw new PhotoLimitError("Photo addition limit reached");
       previous = replaceId ? rows.find(row => row.id === replaceId) : undefined;
       if (replaceId && !previous) throw new Error("Photo not found");
       const end = Math.max(-1, ...rows.map(row => row.display_order)) + 1;
@@ -212,6 +214,11 @@ async function persistItemPhoto(context: InventoryContext, itemId: string, image
 }
 
 export async function addItemPhoto(context: InventoryContext, itemId: string, file: File, sourceFile: File = file, cropValue = "") {
+  mediaIdSchema.parse(itemId);
+  const { db, workspaceId } = await inventoryDatabase(context);
+  const count = await db.$client.execute({sql:"SELECT COUNT(m.id) AS count FROM items i LEFT JOIN media_assets m ON m.item_id=i.id WHERE i.id=? AND i.workspace_id=? GROUP BY i.id",args:[itemId,workspaceId]});
+  if (!count.rows.length) throw new Error("Item not found");
+  if (Number(count.rows[0]!.count) >= NEW_ITEM_PHOTO_LIMIT) throw new PhotoLimitError("Photo addition limit reached");
   return persistItemPhoto(context, itemId, await processImage(file, sourceFile, cropValue));
 }
 
