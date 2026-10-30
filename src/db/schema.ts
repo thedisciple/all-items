@@ -68,7 +68,9 @@ export const mediaAssets = sqliteTable("media_assets", {
   height: integer("height").notNull(),
   createdAt: text("created_at").notNull(),
   isPrimary: integer("is_primary", { mode: "boolean" }).notNull().default(true),
+  displayOrder: integer("display_order").notNull().default(0),
 }, (table) => [
+  uniqueIndex("media_assets_item_order_idx").on(table.itemId, table.displayOrder),
   uniqueIndex("media_assets_one_primary_per_item_idx").on(table.itemId).where(sql`${table.isPrimary} = 1`),
 ]);
 

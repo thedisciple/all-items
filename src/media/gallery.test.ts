@@ -1,0 +1,127 @@
+import { beforeAll, describe, expect, it } from "vitest";
+import { createClient } from "@libsql/client";
+import { copyFile, mkdtemp, mkdir, readFile, readdir } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+import { createHash, randomUUID } from "node:crypto";
+import sharp from "sharp";
+import { applyMigrations } from "@/db/migrate";
+import { createMigrationBackup } from "@/db/backup";
+import { createItem, getItem } from "@/items/service";
+import { addItemToCollection, createCollection, getCollection, listCollectionCoverOptions, setCollectionCover } from "@/items/collections";
+import { addItemPhoto, createItemWithPhoto, getPrimaryPhoto, listItemPhotos, readItemPhoto, removeItemPhoto, reorderItemPhotos, replaceItemPhoto, setItemPrimaryPhoto } from "./service";
+
+const inventory = { workspaceId: "00000000-0000-4000-8000-000000000001" };
+const foreign = { workspaceId: randomUUID() };
+let directory: string;
+let client: ReturnType<typeof createClient>;
+let legacyId: string;
+let beforeMedia: Record<string, unknown>[];
+let beforeBytes: string;
+let legacyPhoto: string;
+let backup: string;
+const hash = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
+async function image(color = "#56816c") {
+  const bytes = await sharp({ create: { width: 320, height: 240, channels: 3, background: color } }).png().toBuffer();
+  return new File([new Uint8Array(bytes)], "synthetic.png", { type: "image/png" });
+}
+
+beforeAll(async () => {
+  directory = await mkdtemp(path.join(os.tmpdir(), "all-items-gallery-"));
+  process.env.ALL_ITEMS_DATA_DIR = directory;
+  client = createClient({ url: pathToFileURL(path.join(directory, "all-items.db")).href });
+  const migrations = path.join(process.cwd(), "src/db/migrations");
+  const legacy = path.join(directory, "legacy"); await mkdir(legacy);
+  for (const name of (await readdir(migrations)).filter(name => name < "0011")) await copyFile(path.join(migrations, name), path.join(legacy, name));
+  await applyMigrations(client, legacy);
+  legacyId = (await createItemWithPhoto(inventory, { name: "Synthetic preserved legacy" }, await image())).id;
+  beforeMedia = (await client.execute("SELECT * FROM media_assets ORDER BY id")).rows as unknown as Record<string, unknown>[];
+  legacyPhoto = String(beforeMedia[0]!.id);
+  beforeBytes = hash((await readItemPhoto(inventory, legacyId, legacyPhoto, "image"))!);
+  backup = await createMigrationBackup(client, directory);
+  await applyMigrations(client, migrations); await applyMigrations(client, migrations);
+  await client.execute({ sql: "INSERT INTO workspaces(id,name,created_at) VALUES(?,?,?)", args: [foreign.workspaceId, "Synthetic other", "2026-01-01"] });
+}, 30_000);
+
+describe("ordered private item photos", () => {
+  it("preserves legacy columns, identities and media bytes through a verified repeatable migration", async () => {
+    const after = (await client.execute(`SELECT ${Object.keys(beforeMedia[0]!).join(",")} FROM media_assets ORDER BY id`)).rows;
+    expect(after).toEqual(beforeMedia);
+    expect(hash((await readItemPhoto(inventory, legacyId, legacyPhoto, "image"))!)).toBe(beforeBytes);
+    const checksums = JSON.parse(await readFile(path.join(backup, "verified-sha256.json"), "utf8"));
+    expect(checksums[`media/items/${legacyId}/${legacyPhoto}.webp`]).toBe(beforeBytes);
+    expect(await listItemPhotos(inventory, legacyId)).toMatchObject([{ id: legacyPhoto, displayOrder: 0, isPrimary: true }]);
+    expect((await client.execute("PRAGMA integrity_check")).rows[0]!.integrity_check).toBe("ok");
+    expect((await client.execute("PRAGMA foreign_key_check")).rows).toHaveLength(0);
+  });
+
+  it("adds, orders, promotes, replaces independently and deterministically deletes the primary", async () => {
+    const item = await createItem(inventory, { name: "Synthetic gallery" });
+    const first = await addItemPhoto(inventory, item.id, await image());
+    const second = await addItemPhoto(inventory, item.id, await image("#a47755"));
+    const third = await addItemPhoto(inventory, item.id, await image("#566c9b"));
+    const retained = hash((await readItemPhoto(inventory, item.id, first.id, "image"))!);
+    expect((await getPrimaryPhoto(inventory, item.id))?.id).toBe(first.id);
+    await setItemPrimaryPhoto(inventory, item.id, second.id);
+    await reorderItemPhotos(inventory, item.id, [third.id, second.id, first.id]);
+    expect((await listItemPhotos(inventory, item.id)).map(photo => photo.id)).toEqual([third.id, second.id, first.id]);
+    expect((await getItem(inventory, item.id))?.primary_media_id).toBe(second.id);
+    const replacement = await replaceItemPhoto(inventory, item.id, third.id, await image("#bbae45"));
+    expect((await listItemPhotos(inventory, item.id)).map(photo => photo.id)).toEqual([replacement.id, second.id, first.id]);
+    expect(hash((await readItemPhoto(inventory, item.id, first.id, "image"))!)).toBe(retained);
+    await removeItemPhoto(inventory, item.id, second.id);
+    expect((await getPrimaryPhoto(inventory, item.id))?.id).toBe(replacement.id);
+    expect((await listItemPhotos(inventory, item.id)).map(photo => photo.displayOrder)).toEqual([0, 1]);
+    await expect(reorderItemPhotos(inventory, item.id, [first.id, first.id])).rejects.toThrow();
+    await expect(client.execute({ sql: "UPDATE media_assets SET is_primary=1 WHERE id=?", args: [first.id] })).rejects.toThrow();
+    await expect(client.execute({ sql: "UPDATE media_assets SET display_order=0 WHERE id=?", args: [first.id] })).rejects.toThrow();
+    await removeItemPhoto(inventory, item.id, replacement.id); await removeItemPhoto(inventory, item.id, first.id);
+    expect(await listItemPhotos(inventory, item.id)).toEqual([]);
+    expect(await getPrimaryPhoto(inventory, item.id)).toBeNull();
+  });
+
+  it("keeps selected non-primary collection covers through reorder and replacement, then resets on deletion", async () => {
+    const second = await addItemPhoto(inventory, legacyId, await image());
+    const collection = await createCollection(inventory, { name: "Synthetic gallery cover" });
+    await addItemToCollection(inventory, collection.id, legacyId);
+    expect(await listCollectionCoverOptions(inventory, collection.id)).toHaveLength(2);
+    await setCollectionCover(inventory, collection.id, { type: "item_photo", itemId: legacyId, mediaId: second.id });
+    await reorderItemPhotos(inventory, legacyId, [second.id, legacyPhoto]);
+    expect((await getCollection(inventory, collection.id))?.coverMediaId).toBe(second.id);
+    const replacement = await replaceItemPhoto(inventory, legacyId, second.id, await image("#ad5959"));
+    expect((await getCollection(inventory, collection.id))?.coverMediaId).toBe(replacement.id);
+    expect(await readItemPhoto(inventory, legacyId, replacement.id, "image")).not.toBeNull();
+    await removeItemPhoto(inventory, legacyId, replacement.id);
+    expect((await getCollection(inventory, collection.id))?.coverType).toBe("default");
+    expect((await getPrimaryPhoto(inventory, legacyId))?.id).toBe(legacyPhoto);
+  });
+
+  it("serializes concurrent additions into distinct positions with one primary", async () => {
+    const item = await createItem(inventory, {name:"Synthetic concurrent gallery"});
+    const file = await image();
+    const added = await Promise.all([addItemPhoto(inventory,item.id,file),addItemPhoto(inventory,item.id,file),addItemPhoto(inventory,item.id,file)]);
+    const photos = await listItemPhotos(inventory,item.id);
+    expect(photos.map(photo=>photo.id).sort()).toEqual(added.map(photo=>photo.id).sort());
+    expect(photos.map(photo=>photo.displayOrder)).toEqual([0,1,2]);
+    expect(photos.filter(photo=>photo.isPrimary)).toHaveLength(1);
+  });
+
+  it("rejects foreign ownership and preserves previous media on processing and transaction failure", async () => {
+    const before = await listItemPhotos(inventory, legacyId);
+    const bytes = hash((await readItemPhoto(inventory, legacyId, legacyPhoto, "image"))!);
+    expect(await listItemPhotos(foreign, legacyId)).toEqual([]);
+    expect(await readItemPhoto(foreign, legacyId, legacyPhoto, "source")).toBeNull();
+    await expect(addItemPhoto(foreign, legacyId, await image())).rejects.toThrow();
+    await expect(setItemPrimaryPhoto(foreign, legacyId, legacyPhoto)).rejects.toThrow();
+    await expect(removeItemPhoto(foreign, legacyId, legacyPhoto)).rejects.toThrow();
+    await expect(reorderItemPhotos(foreign, legacyId, [legacyPhoto])).rejects.toThrow();
+    await expect(replaceItemPhoto(foreign, legacyId, legacyPhoto, await image())).rejects.toThrow();
+    await expect(replaceItemPhoto(inventory, legacyId, legacyPhoto, new File(["bad"], "bad.png", { type: "image/png" }))).rejects.toThrow();
+    await client.execute("CREATE TRIGGER gallery_synthetic_failure BEFORE INSERT ON media_assets BEGIN SELECT RAISE(ABORT,'synthetic media failure'); END");
+    try { await expect(replaceItemPhoto(inventory, legacyId, legacyPhoto, await image())).rejects.toThrow(); }
+    finally { await client.execute("DROP TRIGGER gallery_synthetic_failure"); }
+    expect(await listItemPhotos(inventory, legacyId)).toEqual(before);
+    expect(hash((await readItemPhoto(inventory, legacyId, legacyPhoto, "image"))!)).toBe(bytes);
+  });
+});

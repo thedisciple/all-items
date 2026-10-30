@@ -25,7 +25,7 @@ export async function listCollections(context: InventoryContext) {
   const result = await db.$client.execute({
     sql: `SELECT c.id, c.name, c.created_at AS createdAt, c.updated_at AS updatedAt, c.icon,
                  CASE WHEN c.cover_type = 'item_photo' AND EXISTS (
-                   SELECT 1 FROM item_collection_memberships cm JOIN media_assets m ON m.item_id = cm.item_id AND m.id = c.cover_media_id AND m.is_primary = 1
+                   SELECT 1 FROM item_collection_memberships cm JOIN media_assets m ON m.item_id = cm.item_id AND m.id = c.cover_media_id
                    WHERE cm.collection_id = c.id AND cm.item_id = c.cover_item_id
                  ) THEN 'item_photo'
                  WHEN c.cover_type = 'upload' AND EXISTS (SELECT 1 FROM collection_cover_assets ca WHERE ca.id = c.cover_upload_id AND ca.collection_id = c.id) THEN 'upload'
@@ -53,7 +53,7 @@ export async function getCollection(context: InventoryContext, idValue: unknown)
   const { db, workspaceId } = await inventoryDatabase(context);
   const result = await db.$client.execute({
     sql: `SELECT c.id, c.name, c.created_at AS createdAt, c.updated_at AS updatedAt, c.icon,
-                 CASE WHEN c.cover_type = 'item_photo' AND EXISTS (SELECT 1 FROM item_collection_memberships cm JOIN media_assets m ON m.item_id = cm.item_id AND m.id = c.cover_media_id AND m.is_primary = 1 WHERE cm.collection_id = c.id AND cm.item_id = c.cover_item_id) THEN 'item_photo'
+                 CASE WHEN c.cover_type = 'item_photo' AND EXISTS (SELECT 1 FROM item_collection_memberships cm JOIN media_assets m ON m.item_id = cm.item_id AND m.id = c.cover_media_id WHERE cm.collection_id = c.id AND cm.item_id = c.cover_item_id) THEN 'item_photo'
                  WHEN c.cover_type = 'upload' AND EXISTS (SELECT 1 FROM collection_cover_assets ca WHERE ca.id = c.cover_upload_id AND ca.collection_id = c.id)
                  THEN 'upload' WHEN c.cover_type = 'emoji' AND c.cover_icon IS NOT NULL THEN 'emoji' ELSE 'default' END AS coverType, c.cover_icon AS coverIcon,
                  c.cover_item_id AS coverItemId, c.cover_media_id AS coverMediaId, c.cover_upload_id AS coverUploadId,
@@ -170,8 +170,8 @@ export async function listCollectionCoverOptions(context: InventoryContext, coll
   const result = await db.$client.execute({
     sql: `SELECT i.id AS itemId, i.name, i.model, m.id AS mediaId
           FROM item_collection_memberships cm JOIN items i ON i.id = cm.item_id
-          JOIN media_assets m ON m.item_id = i.id AND m.is_primary = 1
-          WHERE cm.collection_id = ? AND i.workspace_id = ? AND EXISTS(SELECT 1 FROM collections c WHERE c.id=cm.collection_id AND c.workspace_id=i.workspace_id) ORDER BY lower(i.name), i.id`,
+          JOIN media_assets m ON m.item_id = i.id
+          WHERE cm.collection_id = ? AND i.workspace_id = ? AND EXISTS(SELECT 1 FROM collections c WHERE c.id=cm.collection_id AND c.workspace_id=i.workspace_id) ORDER BY lower(i.name), i.id, m.display_order, m.id`,
     args: [collectionId, workspaceId],
   });
   return result.rows.map((row) => ({ itemId: String(row.itemId), name: String(row.name), model: row.model == null ? null : String(row.model), mediaId: String(row.mediaId) }));
@@ -193,7 +193,7 @@ export async function setCollectionCover(context: InventoryContext, collectionId
       await tx.execute({ sql: "DELETE FROM collection_cover_assets WHERE collection_id = ?", args: [collectionId] });
     }
     if (selection.type === "item_photo") {
-      const valid = await tx.execute({ sql: `SELECT m.id FROM item_collection_memberships cm JOIN items i ON i.id = cm.item_id JOIN media_assets m ON m.item_id = i.id AND m.id = ? AND m.is_primary = 1 WHERE cm.collection_id = ? AND cm.item_id = ? AND i.workspace_id = ?`, args: [selection.mediaId, collectionId, selection.itemId, workspaceId] });
+      const valid = await tx.execute({ sql: `SELECT m.id FROM item_collection_memberships cm JOIN items i ON i.id = cm.item_id JOIN media_assets m ON m.item_id = i.id AND m.id = ? WHERE cm.collection_id = ? AND cm.item_id = ? AND i.workspace_id = ?`, args: [selection.mediaId, collectionId, selection.itemId, workspaceId] });
       if (!valid.rows.length) throw new Error("Фото для обложки не найдено.");
     }
     await tx.execute({ sql: `UPDATE collections SET cover_type = ?, cover_icon = ?, cover_item_id = ?, cover_media_id = ?, cover_upload_id = NULL, updated_at = ? WHERE id = ? AND workspace_id = ?`, args: [selection.type, selection.type === "emoji" ? selection.icon : null, selection.type === "item_photo" ? selection.itemId : null, selection.type === "item_photo" ? selection.mediaId : null, new Date().toISOString(), collectionId, workspaceId] });

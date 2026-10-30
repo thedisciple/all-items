@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef, useState, type KeyboardEvent, type R
 import { Trash2, X } from "lucide-react";
 import { ActionForm } from "./action-form";
 import type { ActionFeedback } from "@/app/actions";
+import { useRouter } from "next/navigation";
 import { InventoryField } from "./inventory-provider";
 import { useI18n } from "@/i18n/provider";
 
@@ -17,8 +18,10 @@ export function DestructiveConfirmation({ action, label, description, fields, ch
   children?: ReactNode;
 }) {
   const { t } = useI18n();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [feedback, submit, pending] = useActionState(async (_previous:ActionFeedback,data:FormData):Promise<ActionFeedback> => await action(data) ?? {status:"idle",message:""}, {status:"idle",message:""});
+  useEffect(() => { if (feedback.status === "success") { setOpen(false); router.refresh(); } }, [feedback, router]);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
   const didOpen = useRef(false);

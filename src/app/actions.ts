@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { createItem, photoFirstItemValues, updateItem, type ItemFields } from "@/items/service";
-import { createItemWithPhoto, deleteItemWithMedia, removePrimaryPhoto, replacePrimaryPhoto, MediaValidationError } from "@/media/service";
+import { createItemWithPhoto, deleteItemWithMedia, removePrimaryPhoto, replacePrimaryPhoto, MediaValidationError, addItemPhoto, replaceItemPhoto, setItemPrimaryPhoto, reorderItemPhotos, removeItemPhoto } from "@/media/service";
 import { addItemToCollection, addItemsToCollection, createCollection, deleteCollection, removeItemFromCollection, renameCollection, setCollectionCover } from "@/items/collections";
 import { replaceCollectionCoverUpload } from "@/media/collection-covers";
 import { resolveInventory } from "@/items/inventories";
@@ -82,7 +82,11 @@ export async function replacePhotoAction(_previous: PhotoActionFeedback, formDat
   const sourceFile = sourceInput instanceof File && sourceInput.size > 0 ? sourceInput : file;
   const cropValue = String(formData.get("crop") ?? "");
   try {
-    const saved = await replacePrimaryPhoto(context, id.data, file, sourceFile, cropValue);
+    const operation = z.enum(["add", "replace"]).parse(formData.get("photoOperation") ?? "replace");
+    const mediaId = formData.get("mediaId");
+    const saved = operation === "add" ? await addItemPhoto(context, id.data, file, sourceFile, cropValue)
+      : mediaId ? await replaceItemPhoto(context, id.data, z.string().uuid().parse(mediaId), file, sourceFile, cropValue)
+      : await replacePrimaryPhoto(context, id.data, file, sourceFile, cropValue);
     revalidatePath(inventoryPath(context), "layout"); revalidatePath(inventoryPath(context,`/items/${id.data}`));
     return { status: "success", message: "photoSaved", mediaId: saved.id };
   } catch (error) {
@@ -233,4 +237,26 @@ export async function removeItem(formData: FormData): Promise<void | ActionFeedb
   } catch { return {status:"error",message:"operationFailed"}; }
   revalidatePath(inventoryPath(context), "layout");
   redirect(inventoryPath(context));
+}
+
+export async function galleryPhotoAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
+  const context = await resolveInventory(formData.get("inventoryId")).catch(() => null);
+  if (!context) return {status:"error",message:"inventoryNotFound"};
+  try {
+    const id = z.string().uuid().parse(formData.get("id"));
+    const operation = z.enum(["primary","reorder","delete"]).parse(formData.get("operation"));
+    if (operation === "reorder") await reorderItemPhotos(context,id,JSON.parse(String(formData.get("order"))));
+    else {
+      const mediaId = z.string().uuid().parse(formData.get("mediaId"));
+      if (operation === "primary") await setItemPrimaryPhoto(context,id,mediaId);
+      else { z.literal("on").parse(formData.get("confirm")); await removeItemPhoto(context,id,mediaId); }
+    }
+    revalidatePath(inventoryPath(context),"layout");
+    return {status:"success",message:"changesSaved"};
+  } catch { return {status:"error",message:"operationFailed"}; }
+}
+
+export async function deleteGalleryPhoto(formData: FormData): Promise<ActionFeedback> {
+  formData.set("operation","delete");
+  return galleryPhotoAction({status:"idle",message:""},formData);
 }

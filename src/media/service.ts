@@ -64,6 +64,7 @@ export async function removeAssetFiles(context: InventoryContext, row: StoredAss
   const db = (await import("@/db/client")).getDatabase;
   const live = await (await db()).$client.execute({ sql: "SELECT i.workspace_id FROM media_assets m JOIN items i ON i.id=m.item_id WHERE m.id=?", args: [row.id] });
   if (live.rows.some(owner => owner.workspace_id !== context.workspaceId)) throw new Error("Invalid media cleanup inventory");
+  if (live.rows.length) throw new Error("Refusing to remove referenced photo files");
   const paths = assertStoredPaths(row);
   for(const file of [paths.full,paths.thumbnail,paths.source]) await assertPrivatePath(dataDirectory(),file);
   await Promise.all([rm(paths.full, { force: true }), rm(paths.thumbnail, { force: true }), rm(paths.source, { force: true })]);
@@ -140,42 +141,123 @@ async function writeAssetFiles(itemId: string, mediaId: string, image: Awaited<R
   return paths;
 }
 
-async function setPrimaryPhoto(context: InventoryContext, itemId: string, image: Awaited<ReturnType<typeof processImage>>) {
+type GalleryRow = StoredAsset & { is_primary: number; display_order: number; width: number; height: number; created_at: string; crop_data: string | null };
+
+type MediaTransaction = Awaited<ReturnType<Awaited<ReturnType<typeof inventoryDatabase>>["db"]["$client"]["transaction"]>>;
+
+async function galleryWrite<T>(context: InventoryContext, itemId: string, operation: (tx: MediaTransaction, rows: GalleryRow[]) => Promise<T>) {
+  mediaIdSchema.parse(itemId);
   const { db, workspaceId } = await inventoryDatabase(context);
-  const owner = await db.$client.execute({ sql: "SELECT id FROM items WHERE id=? AND workspace_id=?", args: [itemId,workspaceId] });
+  let tx: MediaTransaction;
+  for (let attempt = 0; ; attempt++) {
+    try { tx = await db.$client.transaction("write"); break; }
+    catch (error) {
+      if (!(error instanceof Error) || !error.message.includes("SQLITE_BUSY") || attempt >= 8) throw error;
+      await new Promise(resolve => setTimeout(resolve, Math.min(10 * 2 ** attempt, 250)));
+    }
+  }
+  try {
+    const owner = await tx.execute({ sql: "SELECT id FROM items WHERE id=? AND workspace_id=?", args: [itemId, workspaceId] });
+    if (!owner.rows.length) throw new Error("Item not found");
+    const result = await tx.execute({ sql: "SELECT * FROM media_assets WHERE item_id=? ORDER BY display_order,id", args: [itemId] });
+    const value = await operation(tx, result.rows as unknown as GalleryRow[]);
+    const check = await tx.execute({ sql: "SELECT COUNT(*) AS count,COALESCE(SUM(is_primary),0) AS primaries,COUNT(DISTINCT display_order) AS positions FROM media_assets WHERE item_id=?", args: [itemId] });
+    const row = check.rows[0]!;
+    if (Number(row.primaries) !== (Number(row.count) ? 1 : 0) || row.count !== row.positions) throw new Error("Invalid photo gallery");
+    await tx.commit();
+    return value;
+  } catch (error) { await tx.rollback(); throw error; }
+}
+
+async function assignPhotoOrder(tx: MediaTransaction, rows: GalleryRow[], ids: string[]) {
+  const offset = Math.max(0, ...rows.map(row => row.display_order)) + rows.length + 1;
+  for (const row of rows) await tx.execute({ sql: "UPDATE media_assets SET display_order=? WHERE id=?", args: [row.display_order + offset, row.id] });
+  for (const [index, id] of ids.entries()) await tx.execute({ sql: "UPDATE media_assets SET display_order=? WHERE id=?", args: [index, id] });
+}
+
+async function persistItemPhoto(context: InventoryContext, itemId: string, image: Awaited<ReturnType<typeof processImage>>, replaceId?: string) {
+  mediaIdSchema.parse(itemId);
+  if (replaceId) mediaIdSchema.parse(replaceId);
+  const { db, workspaceId } = await inventoryDatabase(context);
+  const owner = await db.$client.execute({ sql: "SELECT id FROM items WHERE id=? AND workspace_id=?", args: [itemId, workspaceId] });
   if (!owner.rows.length) throw new Error("Item not found");
   const mediaId = crypto.randomUUID();
   const paths = await writeAssetFiles(itemId, mediaId, image);
   const newAsset = { id: mediaId, item_id: itemId, storage_path: paths.relativeFull, thumbnail_path: paths.relativeThumbnail, source_storage_path: paths.relativeSource };
-  const tx = await db.$client.transaction("write").catch(async (error: unknown) => {
-    try { await removeAssetFiles(context, newAsset); }
-    catch (cleanupError) { console.error("Unable to remove staged private image files", cleanupError); }
-    throw error;
-  });
-  let previous: StoredAsset[] = [];
+  let previous: GalleryRow | undefined;
   try {
-    const existing = await tx.execute({ sql: "SELECT id, item_id, storage_path, thumbnail_path, source_storage_path FROM media_assets WHERE item_id = ? AND is_primary = 1", args: [itemId] });
-    previous = existing.rows as unknown as StoredAsset[];
-    const item = await tx.execute({ sql: "SELECT id FROM items WHERE id = ? AND workspace_id = ?", args: [itemId, workspaceId] });
-    if (!item.rows.length) throw new Error("Вещь не найдена");
-    await tx.execute({ sql: "DELETE FROM media_assets WHERE item_id = ? AND is_primary = 1 AND EXISTS(SELECT 1 FROM items WHERE id=? AND workspace_id=?)", args: [itemId,itemId,workspaceId] });
-    await tx.execute({
-      sql: `INSERT INTO media_assets (id, item_id, storage_path, thumbnail_path, source_storage_path, crop_data, original_filename, mime_type, width, height, created_at, is_primary)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'image/webp', ?, ?, ?, 1)`,
-      args: [mediaId, itemId, paths.relativeFull, paths.relativeThumbnail, paths.relativeSource, image.cropData, image.originalFilename, image.width, image.height, new Date().toISOString()],
+    await galleryWrite(context, itemId, async (tx, rows) => {
+      previous = replaceId ? rows.find(row => row.id === replaceId) : undefined;
+      if (replaceId && !previous) throw new Error("Photo not found");
+      const end = Math.max(-1, ...rows.map(row => row.display_order)) + 1;
+      const position = previous?.display_order ?? end;
+      const primary = previous ? Number(previous.is_primary) : rows.length ? 0 : 1;
+      if (previous) await tx.execute({ sql: "UPDATE media_assets SET display_order=?,is_primary=0 WHERE id=?", args: [end, previous.id] });
+      await tx.execute({
+        sql: "INSERT INTO media_assets(id,item_id,storage_path,thumbnail_path,source_storage_path,crop_data,original_filename,mime_type,width,height,created_at,is_primary,display_order) VALUES(?,?,?,?,?,?,?,'image/webp',?,?,?,?,?)",
+        args: [mediaId,itemId,paths.relativeFull,paths.relativeThumbnail,paths.relativeSource,image.cropData,image.originalFilename,image.width,image.height,new Date().toISOString(),primary,position],
+      });
+      if (previous) {
+        // The replacement is durable before references move; siblings retain identity and bytes.
+        await tx.execute({ sql: "UPDATE collections SET cover_media_id=? WHERE cover_media_id=? AND workspace_id=? AND cover_item_id=?", args: [mediaId,previous.id,workspaceId,itemId] });
+        await tx.execute({ sql: "DELETE FROM media_assets WHERE id=?", args: [previous.id] });
+      }
     });
-    await tx.commit();
   } catch (error) {
-    await tx.rollback();
-    try { await removeAssetFiles(context, newAsset); }
-    catch (cleanupError) { console.error("Unable to remove staged private image files", cleanupError); }
+    try { await removeAssetFiles(context, newAsset); } catch { /* Preserve a referenced asset after an ambiguous commit acknowledgement. */ }
     throw error;
   }
-  for (const oldAsset of previous) {
-    try { await removeAssetFiles(context, oldAsset); }
-    catch (error) { console.error("Unable to remove replaced private image files", error); }
-  }
+  if (previous) try { await removeAssetFiles(context, previous); } catch { console.error("Private photo cleanup remains pending after replacement"); }
   return { id: mediaId, width: image.width, height: image.height, createdAt: new Date().toISOString() };
+}
+
+export async function addItemPhoto(context: InventoryContext, itemId: string, file: File, sourceFile: File = file, cropValue = "") {
+  return persistItemPhoto(context, itemId, await processImage(file, sourceFile, cropValue));
+}
+
+export async function replaceItemPhoto(context: InventoryContext, itemId: string, mediaId: string, file: File, sourceFile: File = file, cropValue = "") {
+  return persistItemPhoto(context, itemId, await processImage(file, sourceFile, cropValue), mediaId);
+}
+
+export async function setItemPrimaryPhoto(context: InventoryContext, itemId: string, mediaId: string) {
+  mediaIdSchema.parse(mediaId);
+  return galleryWrite(context, itemId, async (tx, rows) => {
+    if (!rows.some(row => row.id === mediaId)) throw new Error("Photo not found");
+    await tx.execute({ sql: "UPDATE media_assets SET is_primary=0 WHERE item_id=? AND is_primary=1", args: [itemId] });
+    await tx.execute({ sql: "UPDATE media_assets SET is_primary=1 WHERE id=? AND item_id=?", args: [mediaId,itemId] });
+  });
+}
+
+export async function reorderItemPhotos(context: InventoryContext, itemId: string, value: unknown) {
+  const ids = z.array(mediaIdSchema).max(20_000).parse(value);
+  return galleryWrite(context, itemId, async (tx, rows) => {
+    if (new Set(ids).size !== ids.length || ids.length !== rows.length || ids.some(id => !rows.some(row => row.id === id))) throw new Error("Photo gallery changed");
+    await assignPhotoOrder(tx, rows, ids);
+  });
+}
+
+export async function removeItemPhoto(context: InventoryContext, itemId: string, mediaId: string) {
+  mediaIdSchema.parse(mediaId);
+  const removed = await galleryWrite(context, itemId, async (tx, rows) => {
+    const target = rows.find(row => row.id === mediaId);
+    if (!target) throw new Error("Photo not found");
+    const survivors = rows.filter(row => row.id !== mediaId);
+    await tx.execute({ sql: "DELETE FROM media_assets WHERE id=? AND item_id=?", args: [mediaId,itemId] });
+    if (target.is_primary && survivors.length) await tx.execute({ sql: "UPDATE media_assets SET is_primary=1 WHERE id=?", args: [survivors[0]!.id] });
+    await assignPhotoOrder(tx, survivors, survivors.map(row => row.id));
+    // The existing deletion trigger resets covers referencing exactly this photo.
+    return target;
+  });
+  try { await removeAssetFiles(context, removed); } catch { console.error("Private photo cleanup remains pending after deletion"); }
+  return true;
+}
+
+export type ItemPhotoDTO = { id: string; isPrimary: boolean; displayOrder: number; width: number; height: number; createdAt: string; crop: z.infer<typeof cropDataSchema> | null };
+export async function listItemPhotos(context: InventoryContext, itemId: string): Promise<ItemPhotoDTO[]> {
+  mediaIdSchema.parse(itemId);
+  const { db, workspaceId } = await inventoryDatabase(context);
+  const result = await db.$client.execute({ sql: "SELECT m.* FROM media_assets m JOIN items i ON i.id=m.item_id WHERE m.item_id=? AND i.workspace_id=? ORDER BY m.display_order,m.id", args: [itemId,workspaceId] });
+  return result.rows.map(row => ({ id: String(row.id), isPrimary: Boolean(row.is_primary), displayOrder: Number(row.display_order), width: Number(row.width), height: Number(row.height), createdAt: String(row.created_at), crop: row.crop_data ? cropDataSchema.parse(JSON.parse(String(row.crop_data))) : null }));
 }
 
 export async function createItemWithPhoto(context: InventoryContext, input: ItemFields, file: File, sourceFile: File = file, cropValue = "", stock?: unknown) {
@@ -209,11 +291,8 @@ export async function createItemWithPhoto(context: InventoryContext, input: Item
 }
 
 export async function replacePrimaryPhoto(context: InventoryContext, itemId: string, file: File, sourceFile: File = file, cropValue = "") {
-  itemId = mediaIdSchema.parse(itemId);
-  const { db, workspaceId } = await inventoryDatabase(context);
-  const item = await db.$client.execute({ sql: "SELECT id FROM items WHERE id = ? AND workspace_id = ?", args: [itemId, workspaceId] });
-  if (!item.rows.length) throw new Error("Вещь не найдена");
-  return setPrimaryPhoto(context, itemId, await processImage(file, sourceFile, cropValue));
+  const primary = await getPrimaryPhoto(context, itemId);
+  return primary ? replaceItemPhoto(context, itemId, primary.id, file, sourceFile, cropValue) : addItemPhoto(context, itemId, file, sourceFile, cropValue);
 }
 
 export async function getPrimaryPhoto(context: InventoryContext, itemId: string) {
@@ -228,7 +307,7 @@ export async function getPrimaryPhoto(context: InventoryContext, itemId: string)
   return result.rows.length ? result.rows[0] as unknown as { id: string; width: number; height: number; createdAt: string } : null;
 }
 
-export async function readPrimaryPhoto(context: InventoryContext, itemId: string, mediaId: string, variantValue: string | null) {
+export async function readItemPhoto(context: InventoryContext, itemId: string, mediaId: string, variantValue: string | null) {
   itemId = mediaIdSchema.parse(itemId);
   mediaId = mediaIdSchema.parse(mediaId);
   const variant: Variant = variantValue === "source" ? "source" : mediaVariantSchema.parse(variantValue ?? "image");
@@ -236,13 +315,15 @@ export async function readPrimaryPhoto(context: InventoryContext, itemId: string
   const result = await db.$client.execute({
     sql: `SELECT m.id, m.item_id, m.storage_path, m.thumbnail_path, m.source_storage_path
           FROM media_assets m INNER JOIN items i ON i.id = m.item_id
-          WHERE m.item_id = ? AND m.id = ? AND i.workspace_id = ? AND m.is_primary = 1 LIMIT 1`,
+          WHERE m.item_id = ? AND m.id = ? AND i.workspace_id = ? LIMIT 1`,
     args: [itemId, mediaId, workspaceId],
   });
   if (!result.rows.length) return null;
   const record = result.rows[0] as unknown as StoredAsset;
   const paths = assertStoredPaths(record);
-  return readFile(variant === "thumbnail" ? paths.thumbnail : variant === "source" && record.source_storage_path ? paths.source : paths.full);
+  const target = variant === "thumbnail" ? paths.thumbnail : variant === "source" && record.source_storage_path ? paths.source : paths.full;
+  await assertPrivatePath(dataDirectory(), target);
+  return readFile(target);
 }
 
 export async function getNormalizedPhotoForAnalysis(context: InventoryContext, itemId: string) {
@@ -254,26 +335,8 @@ export async function getNormalizedPhotoForAnalysis(context: InventoryContext, i
 }
 
 export async function removePrimaryPhoto(context: InventoryContext, itemId: string) {
-  itemId = mediaIdSchema.parse(itemId);
-  const { db, workspaceId } = await inventoryDatabase(context);
-  const tx = await db.$client.transaction("write");
-  let removed: StoredAsset[] = [];
-  try {
-    const result = await tx.execute({
-      sql: `SELECT m.id, m.item_id, m.storage_path, m.thumbnail_path, m.source_storage_path
-            FROM media_assets m INNER JOIN items i ON i.id = m.item_id
-            WHERE m.item_id = ? AND i.workspace_id = ? AND m.is_primary = 1`,
-      args: [itemId, workspaceId],
-    });
-    removed = result.rows as unknown as StoredAsset[];
-    await tx.execute({ sql: "DELETE FROM media_assets WHERE item_id = ? AND is_primary = 1 AND EXISTS(SELECT 1 FROM items WHERE id=? AND workspace_id=?)", args: [itemId,itemId,workspaceId] });
-    await tx.commit();
-  } catch (error) { await tx.rollback(); throw error; }
-  for (const asset of removed) {
-    try { await removeAssetFiles(context, asset); }
-    catch (error) { console.error("Unable to remove private image files after metadata removal", error); }
-  }
-  return removed.length > 0;
+  const primary = await getPrimaryPhoto(context, itemId);
+  return primary ? removeItemPhoto(context, itemId, primary.id) : false;
 }
 
 export async function deleteItemWithMedia(context: InventoryContext, itemId: string) {
@@ -299,3 +362,6 @@ export async function deleteItemWithMedia(context: InventoryContext, itemId: str
     catch (error) { console.error("Unable to remove private image files after item deletion", error); }
   }
 }
+
+// Compatibility for internal callers; the controlled route now serves every owned gallery photo.
+export const readPrimaryPhoto = readItemPhoto;

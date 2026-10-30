@@ -1,4 +1,11 @@
 const ru = {
+  gallery: "Фотографии",
+  galleryPhoto: "Фото {number}",
+  galleryPrimary: "Основное фото",
+  galleryMakePrimary: "Сделать основным",
+  galleryEarlier: "Переместить раньше",
+  galleryLater: "Переместить позже",
+  galleryDeleteWarning: "Удалить только это фото? Если оно выбрано обложкой коллекции, обложка будет сброшена. Остальные фотографии сохранятся.",
   saveItem: "Сохранить вещь",
   defaultSort: "Сортировка по умолчанию", preferencesSaved: "Настройка сохранена", preferencesFailed: "Не удалось сохранить настройку.", customCategoryEmoji: "Эмодзи категории", customEmojiScope: "Эмодзи применяется к этой категории во всём инвентаре.", categoryMatchesSystem: "Это название соответствует встроенной категории; её эмодзи изменить здесь нельзя.",
   draftRecoveryTitle: "Найден черновик", draftRecoveryPrompt: "Восстановить несохранённую вещь с этого устройства?", draftRestore: "Восстановить", draftDiscardSaved: "Удалить черновик", draftLoading: "Проверяем черновик…", draftStorageFailed: "Не удалось сохранить или прочитать черновик на этом устройстве. Данные остаются в открытой форме.", draftStorageConflict: "Черновик изменён в другой вкладке. Здесь он не будет перезаписан.", draftSavedCleanupFailed: "Вещь сохранена, но удалить локальный черновик не удалось. Проверьте его перед повторным использованием.",
@@ -277,6 +284,13 @@ const ru = {
 } as const;
 
 const en: Record<MessageKey, string> = {
+  gallery: "Photos",
+  galleryPhoto: "Photo {number}",
+  galleryPrimary: "Primary photo",
+  galleryMakePrimary: "Make primary",
+  galleryEarlier: "Move earlier",
+  galleryLater: "Move later",
+  galleryDeleteWarning: "Delete only this photo? Collections using it as a cover will return to the default cover. Other photos are kept.",
   saveItem: "Save item",
   defaultSort: "Default sort order", preferencesSaved: "Preference saved", preferencesFailed: "Could not save the preference.", customCategoryEmoji: "Category emoji", customEmojiScope: "The emoji applies to this category throughout the inventory.", categoryMatchesSystem: "This name matches a built-in category; its emoji cannot be changed here.",
   draftRecoveryTitle: "Draft found", draftRecoveryPrompt: "Restore the unsaved item from this device?", draftRestore: "Restore", draftDiscardSaved: "Discard draft", draftLoading: "Checking for a draft…", draftStorageFailed: "Could not read or save the draft on this device. Your data remains in the open form.", draftStorageConflict: "The draft changed in another tab. It will not be overwritten here.", draftSavedCleanupFailed: "The item was saved, but its local draft could not be removed. Check it before using it again.",
@@ -388,6 +402,13 @@ const en: Record<MessageKey, string> = {
 };
 
 const uk: Record<MessageKey, string> = {
+  gallery: "Фотографії",
+  galleryPhoto: "Фото {number}",
+  galleryPrimary: "Основне фото",
+  galleryMakePrimary: "Зробити основним",
+  galleryEarlier: "Перемістити раніше",
+  galleryLater: "Перемістити пізніше",
+  galleryDeleteWarning: "Видалити лише це фото? Обкладинки колекцій із цим фото буде скинуто. Інші фотографії залишаться.",
   saveItem: "Зберегти річ",
   defaultSort: "Типове сортування", preferencesSaved: "Налаштування збережено", preferencesFailed: "Не вдалося зберегти налаштування.", customCategoryEmoji: "Емодзі категорії", customEmojiScope: "Емодзі застосовується до цієї категорії в усьому інвентарі.", categoryMatchesSystem: "Ця назва відповідає вбудованій категорії; її емодзі тут змінити не можна.",
   draftRecoveryTitle: "Знайдено чернетку", draftRecoveryPrompt: "Відновити незбережену річ із цього пристрою?", draftRestore: "Відновити", draftDiscardSaved: "Видалити чернетку", draftLoading: "Перевіряємо чернетку…", draftStorageFailed: "Не вдалося прочитати або зберегти чернетку на цьому пристрої. Дані залишаються у відкритій формі.", draftStorageConflict: "Чернетку змінено в іншій вкладці. Тут її не буде перезаписано.", draftSavedCleanupFailed: "Річ збережено, але локальну чернетку не вдалося видалити. Перевірте її перед повторним використанням.",
@@ -438,6 +459,13 @@ const uk: Record<MessageKey, string> = {
 };
 
 const srLatn: Record<MessageKey, string> = {
+  gallery: "Fotografije",
+  galleryPhoto: "Fotografija {number}",
+  galleryPrimary: "Glavna fotografija",
+  galleryMakePrimary: "Postavi kao glavnu",
+  galleryEarlier: "Pomeri ranije",
+  galleryLater: "Pomeri kasnije",
+  galleryDeleteWarning: "Obrisati samo ovu fotografiju? Kolekcije koje je koriste kao naslovnu vratiće se na podrazumevanu sliku. Ostale fotografije ostaju.",
   saveItem: "Sačuvaj stvar",
   defaultSort: "Podrazumevani redosled", preferencesSaved: "Podešavanje je sačuvano", preferencesFailed: "Podešavanje nije sačuvano.", customCategoryEmoji: "Emoji kategorije", customEmojiScope: "Emoji važi za ovu kategoriju u celom inventaru.", categoryMatchesSystem: "Ovaj naziv odgovara ugrađenoj kategoriji; njen emoji se ovde ne može promeniti.",
   draftRecoveryTitle: "Pronađen nacrt", draftRecoveryPrompt: "Vratiti nesačuvanu stvar sa ovog uređaja?", draftRestore: "Vrati", draftDiscardSaved: "Obriši nacrt", draftLoading: "Provera nacrta…", draftStorageFailed: "Nacrt nije moguće pročitati ili sačuvati na ovom uređaju. Podaci ostaju u otvorenom obrascu.", draftStorageConflict: "Nacrt je promenjen u drugoj kartici. Ovde neće biti prepisan.", draftSavedCleanupFailed: "Stvar je sačuvana, ali lokalni nacrt nije uklonjen. Proverite ga pre ponovne upotrebe.",
@@ -488,6 +516,13 @@ const srLatn: Record<MessageKey, string> = {
 };
 
 const zhHans: Record<MessageKey, string> = {
+  gallery: "照片",
+  galleryPhoto: "照片 {number}",
+  galleryPrimary: "主照片",
+  galleryMakePrimary: "设为主照片",
+  galleryEarlier: "向前移动",
+  galleryLater: "向后移动",
+  galleryDeleteWarning: "仅删除此照片？使用它作为封面的收藏集将恢复默认封面。其他照片将保留。",
   saveItem: "保存物品",
   defaultSort: "默认排序", preferencesSaved: "设置已保存", preferencesFailed: "无法保存设置。", customCategoryEmoji: "类别表情", customEmojiScope: "此表情应用于当前库存中的该类别。", categoryMatchesSystem: "此名称与内置类别匹配，无法在此更改其表情。",
   draftRecoveryTitle: "找到草稿", draftRecoveryPrompt: "恢复此设备上未保存的物品？", draftRestore: "恢复", draftDiscardSaved: "删除草稿", draftLoading: "正在检查草稿…", draftStorageFailed: "无法在此设备读取或保存草稿。数据仍保留在打开的表单中。", draftStorageConflict: "草稿已在其他标签页更改，此处不会覆盖它。", draftSavedCleanupFailed: "物品已保存，但无法删除本地草稿。再次使用前请先检查。",

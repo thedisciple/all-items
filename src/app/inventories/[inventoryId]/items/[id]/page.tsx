@@ -5,12 +5,12 @@ import { z } from "zod";
 import { AppSidebar } from "@/app/components/app-sidebar";
 import { CollectionMembership } from "@/app/components/collection-membership";
 import { ItemEditForm } from "@/app/components/item-edit-form";
-import { PhotoReplacement } from "@/app/components/photo-replacement";
+import { PhotoGallery } from "@/app/components/photo-gallery";
 import { DestructiveConfirmation } from "@/app/components/destructive-confirmation";
-import { removeItem, removePhoto } from "@/app/actions";
+import { removeItem } from "@/app/actions";
 import { listCollections, listItemCollections } from "@/items/collections";
 import { getItem } from "@/items/service";
-import { getPrimaryPhoto } from "@/media/service";
+import { listItemPhotos } from "@/media/service";
 import { getLocale } from "@/i18n/server";
 import { translate } from "@/i18n/messages";
 import { AppHeader } from "@/app/components/app-header";
@@ -26,9 +26,9 @@ export default async function ItemPage({ params, searchParams }: Props) {
   if (!parsedId.success) notFound();
   const item = await getItem(context, parsedId.data);
   if (!item) notFound();
-  const [locale, photo, collections, memberships] = await Promise.all([
+  const [locale, photos, collections, memberships] = await Promise.all([
     getLocale(),
-    getPrimaryPhoto(context, id), listCollections(context), listItemCollections(context, id),
+    listItemPhotos(context, id), listCollections(context), listItemCollections(context, id),
   ]);
   const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
   const draft = {
@@ -46,8 +46,7 @@ export default async function ItemPage({ params, searchParams }: Props) {
       <div className="content-wrap detail-wrap">
         <div className="item-hero"><h1>{item.name || t("unidentifiedItemName")}</h1><span className="item-number-badge">{item.inventory_number}</span></div>
         <section className="photo-detail-panel" aria-label={t("photo")}>
-          <PhotoReplacement itemId={id} photoUrl={photo ? `${base}/media/${id}/${photo.id}?v=${photo.id}` : null} itemName={item.name || t("unidentifiedItemName")}/>
-          {photo ? <DestructiveConfirmation action={removePhoto} label={t("photoDelete")} description={t("photoDeleteWarning")} fields={{ id }}/> : null}
+          <PhotoGallery itemId={id} photos={photos} itemName={item.name || t("unidentifiedItemName")}/>
         </section>
         <ItemEditForm itemId={id} initial={draft} initialRows={item.stock} returnTo={returnTo}/>
         <CollectionMembership itemId={id} collections={collections.map(({ id: collectionId, name }) => ({ id: collectionId, name }))} memberships={memberships}/>

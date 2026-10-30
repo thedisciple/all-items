@@ -23,6 +23,7 @@ type Props = {
   resultToken?: string;
   retryReady?: boolean;
   externalPreview?: boolean;
+  initialCrop?: CropData | null;
   onPreviewChange?: (url: string | null) => void;
   onDraftChange?: (dirty: boolean) => void;
   resetToken?: number;
@@ -39,7 +40,7 @@ function cameraErrorKey(error: unknown) {
   return "cameraUnavailable";
 }
 
-export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoSubmit = false, savedToken, resultToken, retryReady = false, externalPreview = false, onPreviewChange, onDraftChange, resetToken, recovery, onRecoveryChange }: Props) {
+export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoSubmit = false, savedToken, resultToken, retryReady = false, externalPreview = false, initialCrop, onPreviewChange, onDraftChange, resetToken, recovery, onRecoveryChange }: Props) {
   const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const sourceInputRef = useRef<HTMLInputElement>(null);
@@ -145,6 +146,7 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
     }
     setSelectionError("");
     closeSources();
+    setSavedCrop(null);
     setCropFile(file);
     onRecoveryChange?.({ selected: selectedFile, source: sourceFile, pending: file, crop: cropData });
   }
@@ -179,6 +181,8 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
     acceptSelection(original, null);
   }
 
+  const [savedCrop, setSavedCrop] = useState<CropData | null>(null);
+
   async function editCurrentPhoto() {
     if (selectedFile) {
       const original = sourceFile ?? selectedFile;
@@ -194,6 +198,7 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
       if (!response.ok) throw new Error("Photo unavailable");
       const blob = await response.blob();
       const file = new File([blob], "saved-photo.webp", { type: blob.type || "image/webp", lastModified: Date.now() });
+      setSavedCrop(initialCrop ?? null);
       setCropFile(file);
     } catch {
       setSelectionError("photoSelectionFailed");
@@ -306,6 +311,6 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
         </>}
       </section>
     </div> : null}
-    {cropFile ? <PhotoCropper initialCrop={cropFile === sourceFile ? cropData : null} file={cropFile} onConfirm={confirmCrop} onCancel={cancelCrop} onUseOriginal={useOriginalPhoto}/> : null}
+    {cropFile ? <PhotoCropper initialCrop={cropFile === sourceFile ? cropData : selectedFile ? null : savedCrop} file={cropFile} onConfirm={confirmCrop} onCancel={cancelCrop} onUseOriginal={useOriginalPhoto}/> : null}
   </div>;
 }
