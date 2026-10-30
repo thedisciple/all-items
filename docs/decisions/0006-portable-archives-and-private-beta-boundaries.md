@@ -1,7 +1,11 @@
 # ADR 0006: Portable archives and private beta boundaries
 
-- Status: planned; not implemented
+- Status: archive foundation implemented and evolved through M3.4 revision 6/import-as-new; authenticated pilot, providers and integrations remain planned.
 - Date: 2026-10-22
+
+## Current status
+
+The decision below records the original plan. Revision 6 with tested revision 2–5 adapters, readable media, verifier, import-as-new and scoped deletion are implemented; optional encryption, merge/replacement and reliable scheduled backup/restore orchestration are not. The historical M3.5 pilot number does not precede M4A/M4B or authorize network exposure. See [current archive contract](../architecture/archive-format.md) and [planning audit](../product/m4a-planning-audit.md).
 
 ## Context
 

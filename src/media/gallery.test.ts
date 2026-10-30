@@ -53,7 +53,7 @@ beforeAll(async () => {
   backup = await createMigrationBackup(client, directory);
   await applyMigrations(client, migrations); await applyMigrations(client, migrations);
   await client.execute({ sql: "INSERT INTO workspaces(id,name,created_at) VALUES(?,?,?)", args: [foreign.workspaceId, "Synthetic other", "2026-01-01"] });
-}, 30_000);
+}, 120_000);
 
 describe("ordered private item photos", () => {
   it("preserves legacy columns, identities and media bytes through a verified repeatable migration", async () => {

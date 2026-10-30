@@ -1,6 +1,6 @@
 # Decision 0005: Stable categories, local language preference, and crop derivatives
 
-Status: accepted for M2C.
+Status: historical M2C decision, partly superseded. Current UI has five languages; M2D introduced stripped editable sources and M3.4 ordered galleries. The historical derivative-only restriction below is not the current media contract. See [current architecture](../architecture.md).
 
 ## Context
 

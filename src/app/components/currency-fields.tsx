@@ -13,7 +13,7 @@ export function CurrencyFields({ price, currency, onPriceChange, onCurrencyChang
     <label className="field"><span className="private-field-label"><LockKeyhole size={12} aria-hidden="true"/>{t("askingPrice")}</span><input type="text" inputMode="decimal" maxLength={32} name="askingPrice" value={price} aria-invalid={invalid} onChange={event => { onPriceChange(event.target.value); if (!currency && event.target.value.trim()) onCurrencyChange(selected); }}/>{invalid ? <small className="form-error">{t("currencyPriceInvalid", { currency: selected, digits })}</small> : null}</label>
     <label className="field"><span>{t("currency")}</span><select name="askingCurrency" value={selected} onChange={event => onCurrencyChange(event.target.value)}>
       {currency && !isSupportedCurrency(currency) ? <option value={currency}>{currency}</option> : null}
-      {orderedCurrencies(locale).map(code => <option key={code} value={code}>{code} — {t(currencyMessageKey(code))}</option>)}
+      {orderedCurrencies(locale).map(code => <option key={code} value={code} title={t(currencyMessageKey(code))} aria-label={`${code} — ${t(currencyMessageKey(code))}`}>{code}</option>)}
     </select></label>
   </>;
 }

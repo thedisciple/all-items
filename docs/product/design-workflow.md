@@ -56,3 +56,7 @@ This workflow is informed by the transparent single-product case study [How we d
 For a concrete layout defect, inspect competing CSS rules and the actual image box before attributing a screenshot to object-fit alone. Use bounded zero-minimum grid tracks and measure both outer and rendered image geometry. Intrinsic native-control sizing needs allowance for borders and arrow rendering; test complete selected labels, not only container bounds. Treat visual and accessibility feedback as observable states across component remounts.
 
 Keep display conventions separate from storage contracts. M3.4 found a real ISO/Intl HUF precision mismatch; pinned units and an additive historical exponent preserve data. See the [task-specific decisions and sources](m3-4-design.md). No generated concept was needed to resolve these specific constraints; synthetic implemented screenshots and task checks supplied the evidence.
+
+## M4A regression gate
+
+Measure complete tasks at 1440/1100/900/760/560/390/360px in all five locales. Assert page/control bounds, selected-label fit, stable header vertical center, shared dialog insets, keyboard paths and reduced motion. Use synthetic screenshots as diagnostic artifacts outside Git, not OS/font-specific pixel snapshots. Record actual viewport/device emulation separately from physical browser zoom, camera or touch testing. Distinguish browsing, primary selection, draft order and committed order in gesture tests.

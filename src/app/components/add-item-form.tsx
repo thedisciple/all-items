@@ -5,6 +5,7 @@ import { suggestedCurrency, validPrice } from "@/items/currencies";
 import { LockKeyhole } from "lucide-react";
 
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
 import { addItemAction, type ActionFeedback } from "@/app/actions";
@@ -28,6 +29,8 @@ export function AddItemForm() {
   const [rows, setRows] = useState<StockDraft[]>([{ location: "", quantity: "1" }]);
   const [categoryDraft, setCategoryDraft] = useState<Presentation[]>([]);
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
   const router = useRouter();
@@ -140,7 +143,7 @@ export function AddItemForm() {
   return <>
     <button ref={triggerRef} type="button" className="add-button add-dialog-trigger" onClick={() => setOpen(true)}><Plus size={17} aria-hidden="true"/><span>{t("addItem")}</span></button>
     {storageError && !open ? <p className="form-error" role="alert">{t(storageError)}</p> : null}
-    <div className="photo-source-overlay add-dialog-overlay" role="presentation" hidden={!open}>
+    {mounted ? createPortal(<div className="photo-source-overlay add-dialog-overlay" role="presentation" hidden={!open}>
       <section ref={dialogRef} className="photo-source-dialog add-item-dialog" role="dialog" aria-modal="true" aria-labelledby="add-item-title" onKeyDown={(event) => {
         const target = event.target;
         if (target instanceof HTMLElement && target.closest('[role="dialog"]') !== event.currentTarget) return;
@@ -176,6 +179,6 @@ export function AddItemForm() {
           <div className="dialog-actions"><FormSubmitButton className="add-button" disabled={pending || !validPrice(draft.askingPrice, draft.askingCurrency || suggestedCurrency(locale)) || !validStockDraft(rows, draft.trackingMode)} pendingLabel={t("addingItem")}><Plus size={16} aria-hidden="true"/><span>{pending ? t("addingItem") : t("saveItem")}</span></FormSubmitButton><button type="button" className="text-button" onClick={() => { setOpen(false); triggerRef.current?.focus(); }}>{t("close")}</button>{dirty ? <button type="button" className="text-button" onClick={() => { if (window.confirm(t("discardDraftConfirm"))) { if (storageEnabled.current) void enqueue(null).catch(() => {}); setDraft({ name: "", model: "", brand: "", categories: [], trackingMode: "unique", originalMarking: "", description: "", notes: "", identificationStatus: "unknown", saleIntent: "not_for_sale", askingPrice: "", askingCurrency: "" }); setRows([{ location: "", quantity: "1" }]); setCategoryDraft([]); setResetToken((value) => value + 1); setPhotoDirty(false); setPhotoDraft(null); } }}>{t("discardDraft")}</button> : null}</div>
         </form>}
       </section>
-    </div>
+    </div>, document.body) : null}
   </>;
 }

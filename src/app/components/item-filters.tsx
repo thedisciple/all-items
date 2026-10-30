@@ -7,6 +7,7 @@ import { useI18n } from "@/i18n/provider";
 import { useInventory } from "./inventory-provider";
 
 type Props = {
+  actions?: React.ReactNode;
   categories: { value: string; label: string }[];
   statuses: { value: string; label: string }[];
   searchPlaceholder: string;
@@ -14,7 +15,7 @@ type Props = {
 
 const filterKeys = ["q", "category", "status", "sort"] as const;
 
-export function ItemFilters({ categories, statuses, searchPlaceholder }: Props) {
+export function ItemFilters({ categories, statuses, searchPlaceholder, actions }: Props) {
   const { t } = useI18n();
   const { presentation } = useInventory();
   const pathname = usePathname();
@@ -71,7 +72,7 @@ export function ItemFilters({ categories, statuses, searchPlaceholder }: Props) 
     const queryString = next.toString();
     rememberScroll();
     router.push(queryString ? pathname + "?" + queryString : pathname, { scroll: false });
-    filterRef.current?.querySelector("input")?.focus();
+    filterRef.current?.querySelector<HTMLInputElement>(".search-field input")?.focus();
   };
 
   const categoryLabel = categories.find(option => option.value === params.get("category"))?.label ?? t("categoriesAll");
@@ -79,7 +80,8 @@ export function ItemFilters({ categories, statuses, searchPlaceholder }: Props) 
   const sort = params.get("sort") ?? presentation.preferences.sort;
   const sortLabel = t(sort === "name" ? "sortName" : sort === "quantity" ? "sortQuantity" : "sortNewest");
 
-  return <div ref={filterRef} className="filter-bar" aria-label={t("inventoryFilters")}>
+  return <div ref={filterRef} className={`filter-bar${actions ? " inventory-toolbar" : ""}`} aria-label={t("inventoryFilters")}>
+    {actions}
     <label className="search-field"><Search size={17} aria-hidden="true"/><input type="search" aria-label={searchPlaceholder} value={query} onChange={(event) => { editedSinceNavigation.current = true; setQuery(event.target.value); }} placeholder={searchPlaceholder} maxLength={160}/></label>
     <label className="filter-select"><span aria-hidden="true">{categoryLabel}</span><select aria-label={t("category")} title={categories.find(option=>option.value===params.get("category"))?.label ?? t("categoriesAll")} value={params.get("category") ?? ""} onChange={(event) => navigate("category", event.target.value)}>
       <option value="">{t("categoriesAll")}</option>{categories.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}

@@ -42,7 +42,7 @@ export function LanguageSwitcher() {
     }
   };
   return <div ref={rootRef} className="language-switcher-wrap" onKeyDown={onKeyDown}>
-    <button ref={triggerRef} className="language-switcher" type="button" aria-label={t("language")} aria-haspopup="menu" aria-expanded={open} disabled={pending} onClick={() => setOpen((value) => !value)}>
+    <button ref={triggerRef} className="language-switcher" type="button" aria-label={t("language")} title={t(languageLabels[locale])} aria-description={t(languageLabels[locale])} aria-haspopup="menu" aria-expanded={open} disabled={pending} onClick={() => setOpen((value) => !value)}>
       <img src={`/flags/${flagFiles[locale]}.svg`} alt="" width="20" height="15"/>
       <span>{t(languageLabels[locale])}</span><ChevronDown size={15} aria-hidden="true"/>
     </button>

@@ -34,8 +34,7 @@ export default async function Home({ searchParams, params: routeParams }: Props)
     <section className="main-content">
       <AppHeader/>
       <div className="content-wrap"><h1 className="visually-hidden">{t("inventory")}</h1>
-        <AddItemForm key={context.workspaceId}/>
-        <ItemFilters categories={categoryOptions} statuses={Object.entries(statusLabels).map(([value,label]) => ({ value, label }))} searchPlaceholder={t("searchItems")}/>
+        <ItemFilters actions={<AddItemForm key={context.workspaceId}/>} categories={categoryOptions} statuses={Object.entries(statusLabels).map(([value,label]) => ({ value, label }))} searchPlaceholder={t("searchItems")}/>
         {hasFilters ? <div className="list-heading"><span className="list-total">{t("resultCount", { count: items.length })}</span></div> : <div className="inventory-list-spacing"/>}
         {items.length ? <div className="item-list">{items.map(item => <InventoryItemRow key={String(item.id)} item={item} base={base} locale={locale} query={params} customEmoji={customEmoji} highlighted={params.added === String(item.id)}/>)}</div> : <div className="empty-state"><div className="empty-orbit">✳</div><h3>{hasFilters ? t("noMatches") : t("noItems")}</h3><p>{hasFilters ? t("adjustFilters") : t("addFirstItem")}</p></div>}
       </div>

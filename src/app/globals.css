@@ -790,3 +790,36 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .collection-cover-preview .media-preview { height: 210px; }
 
 .filter-chevron { position: absolute; right: 12px; top: 14px; pointer-events: none; color: #aeb7a4; }
+
+/* M4A: one wrapping action toolbar and stable header targets. */
+:root { --dialog-inset: 20px; --dialog-action-gap: 12px; }
+.header-sidebar-toggle { flex: 0 0 44px; width: 44px; height: 44px; }
+.header-location { flex: 1 1 auto; }
+.header-location .inventory-switcher { flex: 1 1 auto; max-width: 370px; }
+.inventory-menu-trigger { min-width: 0; }
+.inventory-toolbar { margin-top: 0; }
+.inventory-toolbar > .add-dialog-trigger { flex: 0 0 auto; width: auto; height: var(--control-height); min-height: var(--control-height); }
+.inventory-toolbar > .form-error { flex-basis: 100%; }
+.photo-source-dialog { padding: var(--dialog-inset); }
+.photo-source-dialog:has(> form .dialog-actions),.photo-source-dialog:has(> .dialog-actions) { padding-bottom: 0; }
+.photo-source-dialog > form { padding-bottom: 0; }
+.photo-source-dialog > form .dialog-actions,.photo-source-dialog > .dialog-actions { gap: var(--dialog-action-gap); padding-block: var(--dialog-inset) calc(var(--dialog-inset) + env(safe-area-inset-bottom,0px)); margin-bottom: 0; }
+.photo-source-dialog > form .dialog-actions { bottom: 0; }
+.crop-dialog > .crop-actions { margin-inline: calc(-1 * var(--dialog-inset)); padding-inline: var(--dialog-inset); }
+@media (max-width: 600px) { :root { --dialog-inset: 16px; } }
+@media (max-width: 560px) {
+  .topbar { gap: 6px; padding-inline: 10px; }
+  .header-location { gap: 4px; }
+  .header-location .inventory-switcher { gap: 4px; }
+  .inventory-menu-trigger { max-width: 100%; width: 100%; padding-inline: 8px; gap: 4px; }
+  .language-switcher { flex-shrink: 0; }
+}
+
+@media (max-width: 560px) {
+  .language-switcher { min-width: 60px; width: 60px; min-height: 44px; gap: 6px; }
+  .language-switcher > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .language-switcher-wrap { flex: 0 0 60px; }
+}
+
+/* Mobile navigation stays labelled and available; collapse is a desktop preference. */
+@media (max-width: 560px) { .header-sidebar-toggle { display: none; } }

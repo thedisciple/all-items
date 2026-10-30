@@ -142,23 +142,43 @@ Follow [the architecture decision](docs/architecture/adr-multiple-inventories.md
 ## M3 — Remaining personal organization
 
 - [ ] Optional encrypted archive export as a future security enhancement
-- [ ] Automated backup and populated-workspace merge/replacement with verified recovery; extend crash/reload recovery to additional workflows where useful
+- [ ] M4B: verified automatic local backups, retention policy and actual restore drills; extend recovery to additional workflows where useful
+- [ ] Populated-workspace merge/replacement only after a separate conflict and verified recovery design
 - [ ] Styled XLSX spreadsheet export separate from the full-fidelity ZIP archive
-- [ ] Flexible item attributes and portable image paths
+- [ ] Flexible item attributes (readable portable image paths are implemented)
 - [ ] Favorites, pinned collections, recently used items, preferred view, and quick actions
 - [ ] Smart filters, tags, saved searches, and inventory completeness indicators
 - [ ] Optional organization goals based on actual progress
 - [ ] Image optimization refinements and advanced multi-photo/batch workflows
 
-## M4 — Quality and release — NOT STARTED
+## M4 — Quality and release — IN PROGRESS
+
+M4A is the current scoped UX/create-flow milestone; it is not a public release. See [planning audit](docs/product/m4a-planning-audit.md).
+
+### M4A — Photo-first creation parity and UX gate — IN PROGRESS
+
+- [x] Header-owned sidebar toggle, shared responsive toolbar, dialog insets and ISO-only currency labels
+- [ ] Separate photo browsing, primary selection and accessible hold/drag ordering; safe detail exit
+- [ ] Multi-photo creation, complete local draft recovery, bounded private staging and retry-safe final commit
+- [ ] Synthetic Edge/keyboard/touch-mock regression gate and documentation reconciliation
+
+### M4B — Reliable recovery and usability release checks — PLANNED
+
+- [ ] Verified automatic local backups, retention and restore drills on isolated data
+- [ ] Physical camera/touch/zoom and task-based usability acceptance; release compatibility policy
+
+### Release groundwork (gated; no release implied)
 
 - [ ] Mobile UX refinement, accessibility, and security review
 - [ ] Real task-based usability tests and interaction-count/form-completion measures
 - [ ] Error-recovery, performance, responsive consistency, and microcopy reviews
-- [ ] CI, synthetic-data screenshots, and v0.1 release preparation
+- [x] CI for typecheck, lint, isolated unit tests and build
+- [ ] Synthetic-data visual gate and v0.1 release preparation
 - [ ] Optional authenticated LAN access only after server-side authentication and origin protections are complete
 
-## M3.5 — Private multi-user beta — NOT STARTED
+## Authenticated private pilot — NOT STARTED (historical M3.5 label)
+
+The old number is not execution order. Recovery/usability groundwork and a separately approved security milestone precede any network pilot. AI identification is a distinct optional local capability and does not require exposing this app.
 
 - [ ] Plan a 5–10 person invite-only pilot on a production-mode host with authenticated HTTPS access
 - [ ] Implement secure sessions, workspace-scoped authorization in every service and media route, and verify isolation between users
@@ -210,4 +230,11 @@ Follow [the architecture decision](docs/architecture/adr-multiple-inventories.md
 - [ ] Optional managed hosting/marketplace monetization; keep the self-hosted personal core useful and free and preserve GPLv3
 - [ ] Legal, regulatory, trust, privacy, identity, moderation, support, and payment-partner review before implementation
 
-AI identification, marketplace, sharing, synchronization, achievements, rankings, analytics, payments, and transactions are future directions. M2B implements none of these.
+AI identification, marketplace, sharing, synchronization, achievements, rankings, analytics, payments, and transactions remain future directions after M3.4.
+
+## Retained follow-up decisions
+
+- [ ] Re-evaluate the initial M4A ten-photo addition policy and long galleries with real task evidence; never truncate legacy/imported media
+- [ ] Optional bundled light/dark/accent themes with readable contrast, local preference scope and reduced-motion behavior
+- [ ] Human-reviewed AI photo identification after M4B, provider adapters and explicit local/cloud consent; never overwrite original markings automatically
+- [ ] Preserve the independent project, marketplace, Telegram/MCP and optional organization proposals; implement only through separately scoped milestones

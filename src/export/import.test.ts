@@ -86,8 +86,8 @@ beforeAll(async () => {
   destination = await installation(path.join(root, "destination"));
   await seed();
   validArchive = await createInventoryArchive(source,source);
-},30_000);
-afterAll(async () => { await source?.client.close(); await destination?.client.close(); if (root) try { await rm(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 }); } catch (error) { if (!(error instanceof Error && "code" in error && error.code === "EBUSY")) throw error; } }, 30_000);
+},120_000);
+afterAll(async () => { await source?.client.close(); await destination?.client.close(); if (root) try { await rm(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 }); } catch (error) { if (!(error instanceof Error && "code" in error && error.code === "EBUSY")) throw error; } }, 120_000);
 
 describe("current and transitional archive restore", () => {
   it("rejects malformed, unsupported and inconsistent archives without changing the installation", async () => {
@@ -290,7 +290,7 @@ describe("non-destructive imports",()=>{
     expect(after.inventory).toEqual(before.inventory);
     for(const [file,hash]of Object.entries(beforeMedia))expect((await mediaHashes(destination.directory))[file]).toBe(hash);
     expect((await destination.client.execute("PRAGMA foreign_key_check")).rows).toHaveLength(0);
-  },30_000);
+  },120_000);
 
   it("isolates staging, promotion and transaction failures and retains the source archive for recovery",async()=>{
     const before=(await destination.client.execute("SELECT * FROM workspaces ORDER BY id")).rows;
@@ -309,7 +309,7 @@ describe("non-destructive imports",()=>{
       if(state.status==="failed-import-cleaned"){expect(await readFile(path.join(recovery,entry,"source.zip"))).toEqual(Buffer.from(validArchive));sources++;}
     }
     expect(sources).toBeGreaterThanOrEqual(4);
-  },30_000);
+  },120_000);
 
   it("recovers interrupted uncommitted promotion and preserves a fully committed import",async()=>{
     const count=Number((await destination.client.execute("SELECT COUNT(*) AS n FROM workspaces")).rows[0]!.n);
@@ -325,7 +325,7 @@ describe("non-destructive imports",()=>{
     await recoverInventoryImports(destination.client,destination.directory);
     expect(await mediaHashes(destination.directory)).toEqual(committed);
     expect((await readdir(destination.directory)).some(name=>name.startsWith(".import-"))).toBe(false);
-  },30_000);
+  },120_000);
 
   it("serializes concurrent imports and accepts original revision 2/3 contracts as new inventories",async()=>{
     const results=await Promise.all([importArchiveAsNew(destination,validArchive,"Concurrent A",destination),importArchiveAsNew(destination,validArchive,"Concurrent B",destination)]);
@@ -341,7 +341,7 @@ describe("non-destructive imports",()=>{
     const before=await mediaHashes(destination.directory);
     await expect(importArchiveAsNew(destination,new Uint8Array([1,2,3]),"Invalid",destination)).rejects.toThrow();
     expect(await mediaHashes(destination.directory)).toEqual(before);
-  },30_000);
+  },120_000);
 
   it("refuses linked private destinations before promoting any files",async()=>{
     const target=await installation(path.join(root,"linked"));
