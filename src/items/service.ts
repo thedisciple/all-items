@@ -121,6 +121,10 @@ export async function createItem(context: InventoryContext, input: ItemFields, s
     if (parsed.categoryPresentation) await saveCategoryPresentations(tx, workspaceId, parsed.categoryPresentation, canonicalCategories(parsed.categories ?? (parsed.category ? [parsed.category] : [])));
     await replaceStock(tx, id, workspaceId, rows, now);
     if (attach) await attach(tx, id);
+    if (!parsed.name) {
+      const photo = await tx.execute({sql:"SELECT id FROM media_assets WHERE item_id=? LIMIT 1",args:[id]});
+      if (!photo.rows.length) throw new Error("An unnamed new item requires a photo");
+    }
     await tx.commit();
     return { id, inventoryNumber: `INV-${String(sequence).padStart(6, "0")}` };
   } catch (error) {

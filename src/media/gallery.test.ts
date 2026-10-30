@@ -6,6 +6,8 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { createHash, randomUUID } from "node:crypto";
 import sharp from "sharp";
+import { createInventoryArchive, readInventoryArchive, verifyInventoryArchive } from "@/export/archive";
+import { importArchiveAsNew, type PortableInventory } from "@/export/import";
 import { applyMigrations } from "@/db/migrate";
 import { createMigrationBackup } from "@/db/backup";
 import { createItem, getItem } from "@/items/service";
@@ -125,3 +127,55 @@ describe("ordered private item photos", () => {
     expect(hash((await readItemPhoto(inventory, legacyId, legacyPhoto, "image"))!)).toBe(bytes);
   });
 });
+
+
+it("round-trips an ordered gallery twice as new inventories with exact media bytes and remapped covers", async () => {
+  const source = await image("#758a96");
+  const item = await createItemWithPhoto(inventory,{name:"",model:"Synthetic portable unnamed"},source);
+  const first = (await getPrimaryPhoto(inventory,item.id))!;
+  const second = await addItemPhoto(inventory,item.id,await image("#937667"));
+  const crop = {x:10,y:10,width:120,height:100,rotate:0,scaleX:1,scaleY:1};
+  const derivative = await sharp(Buffer.from(await source.arrayBuffer())).extract({left:10,top:10,width:120,height:100}).png().toBuffer();
+  const third = await addItemPhoto(inventory,item.id,new File([new Uint8Array(derivative)],"synthetic-crop.png",{type:"image/png"}),source,JSON.stringify(crop));
+  await setItemPrimaryPhoto(inventory,item.id,second.id);
+  await reorderItemPhotos(inventory,item.id,[third.id,first.id,second.id]);
+  const collection = await createCollection(inventory,{name:"Synthetic portable gallery cover"});
+  await addItemToCollection(inventory,collection.id,item.id);
+  await setCollectionCover(inventory,collection.id,{type:"item_photo",itemId:item.id,mediaId:first.id});
+  const bytes = await createInventoryArchive(inventory,{client,directory});
+  expect(verifyInventoryArchive(bytes).version).toBe(6);
+  const original = readInventoryArchive(bytes);
+  const records = original.inventory as PortableInventory;
+  const archivedItem = records.items.find(row=>row.id===item.id)!;
+  expect(archivedItem.name).toBe("");
+  expect(archivedItem.primaryMediaId).toBe(second.id);
+  expect(archivedItem.mediaAssets.map(photo=>photo.id)).toEqual([third.id,first.id,second.id]);
+  expect(archivedItem.mediaAssets[0]!.imagePath).toMatch(/photo-01.webp$/);
+  const identities: string[][]=[];
+  for(const name of ["Synthetic gallery restore one","Synthetic gallery restore two"]) {
+    const imported = await importArchiveAsNew(inventory,bytes,name,{client,directory});
+    const target = {workspaceId:imported.inventoryId};
+    const restored = readInventoryArchive(await createInventoryArchive(target,{client,directory})).inventory as PortableInventory;
+    const restoredItem = restored.items.find(row=>row.inventory_number===archivedItem.inventory_number)!;
+    identities.push(restoredItem.mediaAssets.map(photo=>photo.id));
+    expect(restoredItem.name).toBe("");
+    expect(restoredItem.mediaAssets.map(photo=>photo.displayOrder)).toEqual([0,1,2]);
+    expect(restoredItem.mediaAssets.map(photo=>photo.isPrimary)).toEqual([false,false,true]);
+    expect(restoredItem.mediaAssets[0]!.cropData).toBe(JSON.stringify(crop));
+    expect(restoredItem.primaryMediaId).toBe(restoredItem.mediaAssets[2]!.id);
+    for(const [position,photo] of archivedItem.mediaAssets.entries()) for(const variant of ["image","thumbnail","source"]) {
+      expect(hash((await readItemPhoto(target,restoredItem.id,restoredItem.mediaAssets[position]!.id,variant))!)).toBe(hash((await readItemPhoto(inventory,item.id,photo.id,variant))!));
+    }
+    const restoredCover = restored.collections.find(row=>row.name==="Synthetic portable gallery cover")!;
+    expect(restoredCover.cover_media_id).toBe(restoredItem.mediaAssets[1]!.id);
+    const reordered = restoredItem.mediaAssets.map(photo=>photo.id).reverse();
+    await reorderItemPhotos(target,restoredItem.id,reordered);
+    await removeItemPhoto(target,restoredItem.id,restoredItem.primaryMediaId!);
+    expect((await getPrimaryPhoto(target,restoredItem.id))?.id).toBe(reordered[1]);
+    expect((await getCollection(target,restoredCover.id))?.coverMediaId).toBe(reordered[1]);
+    await removeItemPhoto(target,restoredItem.id,reordered[1]!);
+    expect((await getCollection(target,restoredCover.id))?.coverType).toBe("default");
+  }
+  expect(identities[0]!.some(id=>identities[1]!.includes(id))).toBe(false);
+  expect(readInventoryArchive(await createInventoryArchive(inventory,{client,directory})).inventory).toEqual(original.inventory);
+},30_000);

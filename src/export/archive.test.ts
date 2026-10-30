@@ -5,7 +5,7 @@ import { ArchiveError, buildInventoryArchive, collectionArchivePaths, formatInve
 describe("portable inventory archive", () => {
   it("builds and verifies an empty valid archive", () => {
     const result = verifyInventoryArchive(buildInventoryArchive({ workspace: null, locations: [], items: [], collections: [], memberships: [] }));
-    expect(result).toMatchObject({ valid: true, version: 5, entryCount: 4 });
+    expect(result).toMatchObject({ valid: true, version: 6, entryCount: 4 });
   });
 
   it("keeps photo arrays, crop information, collection links, and Unicode references portable", () => {

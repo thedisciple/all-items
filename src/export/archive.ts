@@ -9,7 +9,7 @@ import { portablePreferences, categoryPresentations } from "@/items/inventory-pr
 import { getDatabase, dataDirectory } from "@/db/client";
 
 export const ARCHIVE_FORMAT = "all-items-portable-inventory";
-export const ARCHIVE_VERSION = 5;
+export const ARCHIVE_VERSION = 6;
 export const MAX_ARCHIVE_BYTES = 128 * 1024 * 1024;
 export const MAX_ENTRY_BYTES = 32 * 1024 * 1024;
 export const MAX_ARCHIVE_ENTRIES = 20_000;
@@ -57,7 +57,9 @@ function canonicalizeInventory(inventory: Record<string, unknown>, assets: Recor
   for (const item of (Array.isArray(copy.items) ? copy.items : []) as Array<Record<string, unknown>>) {
     item.categories ??= canonicalCategories(typeof item.category === "string" ? [item.category] : []);
     const photos = (Array.isArray(item.mediaAssets) ? item.mediaAssets : []) as Array<Record<string, unknown>>;
+    item.primaryMediaId ??= photos.find(asset => asset.isPrimary)?.id ?? null;
     for (const [index, asset] of photos.entries()) {
+      asset.displayOrder ??= index;
       const paths = itemArchivePaths(item, asset, index, photos.length);
       move(asset, "imagePath", paths.imagePath);
       move(asset, "thumbnailPath", paths.thumbnailPath);
@@ -76,7 +78,7 @@ function canonicalizeInventory(inventory: Record<string, unknown>, assets: Recor
   return { inventory: copy, assets: mapped };
 }
 const manifestSchema = z.object({
-  format: z.literal(ARCHIVE_FORMAT), version: z.union([z.literal(2), z.literal(3), z.literal(4), z.literal(ARCHIVE_VERSION)]), exportedAt: z.string().datetime(), applicationVersion: z.string(),
+  format: z.literal(ARCHIVE_FORMAT), version: z.union([z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(ARCHIVE_VERSION)]), exportedAt: z.string().datetime(), applicationVersion: z.string(),
   entries: z.array(z.object({ path: z.string(), size: z.number().int().nonnegative(), sha256: z.string().regex(/^[0-9a-f]{64}$/) })).max(MAX_ARCHIVE_ENTRIES),
 });
 const portableInventorySchema = z.object({
@@ -110,7 +112,7 @@ export function readInventoryArchive(input: Uint8Array) {
   let rawManifest: unknown;
   try { rawManifest = JSON.parse(Buffer.from(manifestBytes).toString("utf8")); }
   catch { throw new ArchiveError("The archive manifest is invalid."); }
-  if (typeof rawManifest !== "object" || rawManifest === null || (rawManifest as Record<string, unknown>).format !== ARCHIVE_FORMAT || ![2, 3, 4, ARCHIVE_VERSION].includes(Number((rawManifest as Record<string, unknown>).version))) throw new ArchiveError("Unsupported archive format. Regenerate the archive from the current All Items installation.");
+  if (typeof rawManifest !== "object" || rawManifest === null || (rawManifest as Record<string, unknown>).format !== ARCHIVE_FORMAT || ![2, 3, 4, 5, ARCHIVE_VERSION].includes(Number((rawManifest as Record<string, unknown>).version))) throw new ArchiveError("Unsupported archive format. Regenerate the archive from the current All Items installation.");
   try { manifest = manifestSchema.parse(rawManifest); inventory = portableInventorySchema.parse(JSON.parse(Buffer.from(inventoryBytes).toString("utf8"))); }
   catch { throw new ArchiveError("The archive metadata is invalid."); }
   const expected = new Map<string, { size: number; sha256: string }>();
@@ -136,10 +138,10 @@ export function readInventoryArchive(input: Uint8Array) {
     const parsed = z.array(z.string().min(1).max(80)).max(20).safeParse(item.categories);
     if (!parsed.success || new Set(parsed.data).size !== parsed.data.length || parsed.data.some(value => !value.trim() || canonicalCategory(value) !== value)) throw new ArchiveError("An item has invalid category assignments.");
   }
-  if (manifest.version === 5) {
+  if (manifest.version >= 5) {
     if (!portablePreferences.safeParse(inventory.preferences).success || !categoryPresentations.safeParse(inventory.customCategories).success) throw new ArchiveError("The archive has invalid inventory preferences or category presentation.");
   } else { inventory.preferences = { version: 1, sort: "date" }; inventory.customCategories = []; }
-  validateReferences(inventory, files);
+  validateReferences(inventory, files, manifest.version);
   return { manifest, inventory, files };
 }
 
@@ -189,7 +191,7 @@ function preflightZip(input: Uint8Array) {
   return names;
 }
 
-function validateReferences(inventory: Record<string, unknown>, files: Record<string, Uint8Array>) {
+function validateReferences(inventory: Record<string, unknown>, files: Record<string, Uint8Array>, version: number) {
   const assetPaths = new Set<string>();
   const values = Array.isArray(inventory.items) ? inventory.items : [];
   const itemsById = new Map<string, Set<string>>();
@@ -207,12 +209,14 @@ function validateReferences(inventory: Record<string, unknown>, files: Record<st
       if (typeof value !== "string" || !safePath(value) || !value.startsWith("Items/") || !files[value] || assetPaths.has(value)) throw new ArchiveError("An item references a missing, shared or unsafe media asset.");
       assetPaths.add(value);
     }
-    for (const asset of item.mediaAssets as Array<Record<string, unknown>>) {
+    for (const [position, asset] of (item.mediaAssets as Array<Record<string, unknown>>).entries()) {
+      if (version >= 6 && asset.displayOrder !== position) throw new ArchiveError("An item has invalid photo ordering.");
       if (typeof asset.id !== "string" || !z.string().uuid().safeParse(asset.id).success || mediaIds.has(asset.id) || allMediaIds.has(asset.id) || typeof asset.isPrimary !== "boolean") throw new ArchiveError("An item has invalid media identity metadata.");
       mediaIds.add(asset.id);
       allMediaIds.add(asset.id);
       if (asset.isPrimary) primaryCount++;
     }
+    if (version >= 6 && item.primaryMediaId !== ((item.mediaAssets as Array<Record<string, unknown>>).find(asset => asset.isPrimary)?.id ?? null)) throw new ArchiveError("An item has invalid primary photo identity.");
     if (mediaIds.size > 0 && primaryCount !== 1) throw new ArchiveError("An item must have exactly one primary media asset when it has photos.");
     if (typeof item.id === "string") itemsById.set(item.id, mediaIds);
   }
@@ -317,7 +321,7 @@ export async function createInventoryArchive(inventory: InventoryContext, contex
     const preferences = await tx.execute({sql:"SELECT version,sort FROM inventory_preferences WHERE workspace_id=?",args:[workspaceId]});
     const customCategories = await tx.execute({sql:"SELECT category,emoji FROM custom_category_presentation WHERE workspace_id=? ORDER BY category",args:[workspaceId]});
     const stock = await tx.execute({sql:"SELECT s.* FROM stock_entries s JOIN items p ON p.id=s.item_id WHERE p.workspace_id=? ORDER BY s.item_id,s.created_at,s.id",args:[workspaceId]});
-    const media = await tx.execute({sql:"SELECT m.* FROM media_assets m JOIN items p ON p.id=m.item_id WHERE p.workspace_id=? ORDER BY m.item_id,m.created_at,m.id",args:[workspaceId]});
+    const media = await tx.execute({sql:"SELECT m.* FROM media_assets m JOIN items p ON p.id=m.item_id WHERE p.workspace_id=? ORDER BY m.item_id,m.display_order,m.id",args:[workspaceId]});
     const collections = await tx.execute({ sql: "SELECT * FROM collections WHERE workspace_id = ? ORDER BY created_at, id", args: [workspaceId] });
     const memberships = await tx.execute({sql:"SELECT cm.* FROM item_collection_memberships cm JOIN collections p ON p.id=cm.collection_id WHERE p.workspace_id=? ORDER BY cm.collection_id,cm.item_id",args:[workspaceId]});
     const covers = await tx.execute({ sql: `SELECT ca.* FROM collection_cover_assets ca JOIN collections c ON c.id = ca.collection_id
@@ -341,7 +345,7 @@ export async function createInventoryArchive(inventory: InventoryContext, contex
     preferences: snapshot.preferences[0] ?? { version: 1, sort: "date" },
     customCategories: snapshot.customCategories,
     locations: snapshot.locations,
-    items: snapshot.items.map((item) => ({ ...item, categories: snapshot.categoryAssignments.filter(row => row.item_id === item.id).map(row => row.category), stock: snapshot.stock.filter((row) => row.item_id === item.id), collectionIds: snapshot.memberships.filter((row) => row.item_id === item.id).map((row) => row.collection_id), mediaAssets: snapshot.media.filter((row) => row.item_id === item.id).map((asset) => ({ id: asset.id, isPrimary: Boolean(asset.is_primary), displayOrder: null, originalFilename: asset.original_filename, mimeType: asset.mime_type, width: asset.width, height: asset.height, cropData: asset.crop_data, createdAt: asset.created_at, imagePath: `media/items/${asset.storage_path}`, thumbnailPath: `media/items/${asset.thumbnail_path}`, sourcePath: asset.source_storage_path ? `media/items/${asset.source_storage_path}` : null })) })),
+    items: snapshot.items.map((item) => ({ ...item, primaryMediaId: snapshot.media.find(row => row.item_id === item.id && row.is_primary)?.id ?? null, categories: snapshot.categoryAssignments.filter(row => row.item_id === item.id).map(row => row.category), stock: snapshot.stock.filter((row) => row.item_id === item.id), collectionIds: snapshot.memberships.filter((row) => row.item_id === item.id).map((row) => row.collection_id), mediaAssets: snapshot.media.filter((row) => row.item_id === item.id).map((asset) => ({ id: asset.id, isPrimary: Boolean(asset.is_primary), displayOrder: Number(asset.display_order), originalFilename: asset.original_filename, mimeType: asset.mime_type, width: asset.width, height: asset.height, cropData: asset.crop_data, createdAt: asset.created_at, imagePath: `media/items/${asset.storage_path}`, thumbnailPath: `media/items/${asset.thumbnail_path}`, sourcePath: asset.source_storage_path ? `media/items/${asset.source_storage_path}` : null })) })),
     collections: snapshot.collections.map((collection) => { const cover = snapshot.covers.find((asset) => asset.collection_id === collection.id); return { ...collection, itemIds: snapshot.memberships.filter((row) => row.collection_id === collection.id).map((row) => row.item_id), uploadCover: cover ? { id: cover.id, width: cover.width, height: cover.height, createdAt: cover.created_at, path: `media/${collectionCoverPath(String(cover.storage_path))}`, thumbnailPath: `media/${collectionCoverPath(String(cover.thumbnail_path))}` } : null }; }),
     memberships: snapshot.memberships,
   };

@@ -134,25 +134,43 @@ describe("current and transitional archive restore", () => {
       expect((await target.client.execute("SELECT COUNT(*) AS n FROM inventory_preferences")).rows[0]!.n).toBe(0);
       expect((await target.client.execute("SELECT COUNT(*) AS n FROM custom_category_presentation")).rows[0]!.n).toBe(0);
       const exported=readInventoryArchive(await createInventoryArchive(target,target));
-      expect(exported.manifest.version).toBe(5);
+      expect(exported.manifest.version).toBe(6);
       expect((exported.inventory.items as Array<{categories: string[]}>)[0]!.categories).toContain("electronics");
     } finally { target.client.close(); }
   });
 
-  it("accepts revision 4 archives with default presentation", async () => {
-    const revision4 = modifiedArchive(files => {
+  it.each([3,4,5])("restores revision %i with its legacy gallery adapter and presentation policy", async revision => {
+    const legacy = modifiedArchive(files => {
       const manifest = JSON.parse(Buffer.from(files["manifest.json"]!).toString("utf8"));
-      manifest.version = 4; files["manifest.json"] = Buffer.from(JSON.stringify(manifest));
+      manifest.version = revision; files["manifest.json"] = Buffer.from(JSON.stringify(manifest));
       const inventory = JSON.parse(Buffer.from(files["inventory.json"]!).toString("utf8"));
-      delete inventory.preferences; delete inventory.customCategories;
+      for (const item of inventory.items) { delete item.primaryMediaId; for (const photo of item.mediaAssets) photo.displayOrder = null; }
+      if (revision < 5) { delete inventory.preferences; delete inventory.customCategories; }
       files["inventory.json"] = Buffer.from(JSON.stringify(inventory));
     });
-    const parsed = readInventoryArchive(revision4);
-    expect(parsed.inventory.preferences).toEqual({ version: 1, sort: "date" });
-    expect(parsed.inventory.customCategories).toEqual([]);
-    const target = await installation(path.join(root, "revision4"));
-    try { await restoreInventoryArchive(revision4, target); expect((await target.client.execute("SELECT COUNT(*) AS n FROM items")).rows[0]!.n).toBe(2); }
-    finally { target.client.close(); }
+    const parsed = readInventoryArchive(legacy);
+    expect(parsed.inventory.preferences).toEqual({ version: 1, sort: revision < 5 ? "date" : "name" });
+    const target = await installation(path.join(root, "revision" + revision));
+    try {
+      await restoreInventoryArchive(legacy, target);
+      expect((await target.client.execute("SELECT COUNT(*) AS n FROM items")).rows[0]!.n).toBe(2);
+      expect((await target.client.execute("SELECT is_primary,display_order FROM media_assets")).rows).toEqual([{is_primary:1,display_order:0}]);
+    } finally { target.client.close(); }
+  });
+
+  it("rejects invalid revision 6 ordering and primary identity in the read-only verifier", async () => {
+    for (const kind of ["order", "primary"]) {
+      const broken = modifiedArchive(files => {
+        const inventory = JSON.parse(Buffer.from(files["inventory.json"]!).toString("utf8"));
+        const item = inventory.items.find((row: {mediaAssets:unknown[]}) => row.mediaAssets.length);
+        if (kind === "order") item.mediaAssets[0].displayOrder = 1;
+        else item.primaryMediaId = randomUUID();
+        files["inventory.json"] = Buffer.from(JSON.stringify(inventory));
+      });
+      expect(() => verifyInventoryArchive(broken)).toThrow();
+      await expect(previewInventoryArchive(broken)).rejects.toThrow();
+    }
+    await emptyDestination();
   });
 
   it("rolls back failures while staging, preparing and promoting files", async () => {

@@ -5,9 +5,9 @@ import { readInventoryArchive, verifyInventoryArchive } from "../src/export/arch
 import { previewInventoryArchive } from "../src/export/import";
 
 test("downloads a complete archive and imports it twice as new inventories while preserving a populated target", async ({ page }) => {
-  test.setTimeout(180_000);
+  test.setTimeout(240_000);
   const image = await sharp({ create: { width: 260, height: 180, channels: 3, background: "#678853" } }).png().toBuffer();
-  const cover = await sharp({ create: { width: 400, height: 200, channels: 3, background: "#68639a" } }).png().toBuffer();
+
 
   await page.goto("/inventories/00000000-0000-4000-8000-000000000001");
   await page.locator(".add-dialog-trigger").click();
@@ -21,6 +21,20 @@ test("downloads a complete archive and imports it twice as new inventories while
   await add.locator(".category-options input").nth(2).check();
   await add.getByRole("button", { name: "Сохранить вещь" }).click();
   await expect(page).toHaveURL(/added=/);
+  await page.getByRole("link",{name:"Restored gadget 中文",exact:true}).click();
+  for(const [index,color] of ["#89784f","#4f7389"].entries()) {
+    await page.locator('.gallery-add input[name="photo"]').setInputFiles({name:"synthetic-more.png",mimeType:"image/png",buffer:await sharp({create:{width:300,height:220,channels:3,background:color}}).png().toBuffer()});
+    const crop=page.getByRole("dialog",{name:"Редактировать фото"}); await expect(crop.getByRole("button",{name:"Готово"})).toBeEnabled(); await crop.getByRole("button",{name:"Готово"}).click();
+    await expect(page.locator(".gallery-thumbnail")).toHaveCount(index+2);
+    await expect(page.locator('.gallery-add input[name="photo"]')).toBeEnabled();
+    await expect(page.locator(".gallery-add .photo-edit-primary")).toHaveCount(0);
+  }
+  await expect(page.locator(".gallery-thumbnail")).toHaveCount(3);
+  await page.getByRole("button",{name:"Фото 2",exact:true}).click();
+  await page.getByRole("button",{name:"Сделать основным",exact:true}).click();
+  await expect(page.getByRole("button",{name:"Фото 2 — Основное фото",exact:true})).toBeVisible();
+  await page.getByRole("button",{name:"Переместить раньше",exact:true}).click();
+  await expect(page.getByRole("button",{name:"Фото 1 — Основное фото",exact:true})).toBeVisible();
 
   await page.goto("/inventories/00000000-0000-4000-8000-000000000001/collections");
   await page.locator(".collection-create-trigger").click();
@@ -35,8 +49,8 @@ test("downloads a complete archive and imports it twice as new inventories while
   await expect(page.locator(".item-row").filter({ hasText: "Restored gadget 中文" })).toBeVisible();
   await page.getByRole("button", { name: /(?:Изменить|Добавить) обложку/ }).click();
   const coverDialog = page.getByRole("dialog", { name: "Обложка коллекции" });
-  await coverDialog.getByLabel("Обложка коллекции").selectOption("upload");
-  await coverDialog.locator('input[type="file"]').setInputFiles({ name: "synthetic-cover.png", mimeType: "image/png", buffer: cover });
+  await coverDialog.getByLabel("Обложка коллекции").selectOption("item_photo");
+  await coverDialog.locator('select[name="selectedPhoto"]').selectOption({index:2});
   await expect(coverDialog.getByRole("img", { name: "Предпросмотр обложки" })).toBeVisible();
   await coverDialog.getByRole("button", { name: "Сохранить обложку" }).click();
   await expect(page.locator(".collection-detail-cover")).toBeVisible();
@@ -48,15 +62,16 @@ test("downloads a complete archive and imports it twice as new inventories while
   const archivePath = await download.path();
   if (!archivePath) throw new Error("The test archive was not downloaded.");
   const archive = new Uint8Array(await readFile(archivePath));
-  expect(verifyInventoryArchive(archive).version).toBe(5);
+  expect(verifyInventoryArchive(archive).version).toBe(6);
   expect((await previewInventoryArchive(archive)).items).toBe(1);
+  expect((await previewInventoryArchive(archive)).photos).toBe(3);
 
   const targetOriginal="http://127.0.0.1:3103/inventories/00000000-0000-4000-8000-000000000001";
   await page.goto(targetOriginal);
   await page.locator(".add-dialog-trigger").click();
   const existing=page.getByRole("dialog",{name:"\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0432\u0435\u0449\u044c"});
   await existing.getByLabel("\u041d\u0430\u0437\u0432\u0430\u043d\u0438\u0435").fill("Existing target item");
-  await existing.getByRole("button",{name:"\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0432\u0435\u0449\u044c",exact:true}).click();
+  await existing.getByRole("button",{name:"Сохранить вещь",exact:true}).click();
   await expect(page).toHaveURL(/added=/);
   const beforeTarget=readInventoryArchive(new Uint8Array(await (await page.request.get(`${targetOriginal}/api/export/archive`)).body()));
   async function importCopy(name:string) {
@@ -77,6 +92,7 @@ test("downloads a complete archive and imports it twice as new inventories while
   await page.getByRole("link",{name:/Restored gadget/}).click();
   expect(new URL(page.url()).pathname.split("/").at(-1)).not.toBe((readInventoryArchive(archive).inventory.items as Array<{id:string}>)[0]!.id);
   await expect(page.locator(".category-selection .category-chip")).toHaveCount(2);
+  await expect(page.locator(".gallery-thumbnail")).toHaveCount(3);
   await expect.poll(()=>page.locator(".detail-photo").first().evaluate(image=>(image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
   const firstPhoto=(await page.locator(".detail-photo").first().getAttribute("src"))!;
   await page.goto(`${first}/collections`);
@@ -87,7 +103,7 @@ test("downloads a complete archive and imports it twice as new inventories while
   await page.goto(first);await page.locator(".add-dialog-trigger").click();
   const next=page.getByRole("dialog",{name:"\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0432\u0435\u0449\u044c"});
   await next.getByLabel("\u041d\u0430\u0437\u0432\u0430\u043d\u0438\u0435").fill("After restore");
-  await next.getByRole("button",{name:"\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0432\u0435\u0449\u044c",exact:true}).click();
+  await next.getByRole("button",{name:"Сохранить вещь",exact:true}).click();
   await expect(page.getByRole("link",{name:/After restore/})).toContainText("INV-000002");
   await page.goto(`${first}/data`);
   const second=await importCopy("Recovered second");expect(second).not.toBe(first);
@@ -100,6 +116,17 @@ test("downloads a complete archive and imports it twice as new inventories while
   expect(afterTarget.inventory).toEqual(beforeTarget.inventory);
   const afterSource=readInventoryArchive(new Uint8Array(await (await page.request.get("http://127.0.0.1:3102/inventories/00000000-0000-4000-8000-000000000001/api/export/archive")).body()));
   expect(afterSource.inventory).toEqual(readInventoryArchive(archive).inventory);
+  await page.goto(second);
+  await page.getByRole("link",{name:/Restored gadget/}).click();
+  await expect(page.locator(".gallery-thumbnail")).toHaveCount(3);
+  await page.getByRole("button",{name:"Удалить фотографию",exact:true}).click();
+  await page.getByRole("alertdialog").getByRole("button",{name:"Удалить фотографию",exact:true}).click();
+  await expect(page.locator(".gallery-thumbnail")).toHaveCount(2);
+  await page.getByRole("button",{name:"Переместить позже",exact:true}).click();
+  await expect(page.getByRole("button",{name:"Фото 2 — Основное фото",exact:true})).toBeVisible();
+  await page.goto(`${second}/collections`);
+  await page.locator(".collection-card").filter({hasText:"Portable DIY"}).click();
+  await expect.poll(()=>page.locator(".collection-detail-cover").evaluate(image=>(image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
   await page.goto(`${second}/data`);
   await page.locator('.import-panel input[type="file"]').setInputFiles({name:"invalid.zip",mimeType:"application/zip",buffer:Buffer.from("invalid")});
   await expect(page.locator(".import-panel [role=alert]")).toContainText("\u0410\u0440\u0445\u0438\u0432");

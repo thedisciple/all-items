@@ -19,8 +19,9 @@ const nullableText = z.string().nullable();
 const timestamp = z.string().min(1).max(100);
 const locationSchema = z.object({ id, workspace_id: id, name: z.string().min(1).max(120), created_at: timestamp });
 const stockSchema = z.object({ id, item_id: id, location_id: id.nullable(), quantity: z.number().int().min(0).max(1_000_000), created_at: timestamp, updated_at: timestamp });
-const mediaSchema = z.object({ id, isPrimary: z.boolean(), displayOrder: z.number().int().nonnegative().nullable(), originalFilename: z.string().max(255), mimeType: z.literal("image/webp"), width: z.number().int().positive().max(12_000), height: z.number().int().positive().max(12_000), cropData: nullableText, createdAt: timestamp, imagePath: z.string(), thumbnailPath: z.string(), sourcePath: z.string().nullable() });
+const mediaSchema = z.object({ id, isPrimary: z.boolean(), displayOrder: z.number().int().nonnegative(), originalFilename: z.string().max(255), mimeType: z.literal("image/webp"), width: z.number().int().positive().max(12_000), height: z.number().int().positive().max(12_000), cropData: nullableText, createdAt: timestamp, imagePath: z.string(), thumbnailPath: z.string(), sourcePath: z.string().nullable() });
 const itemSchema = z.object({
+  primaryMediaId: id.nullable(),
   id, workspace_id: id, inventory_number: z.string().regex(/^INV-\d{6,}$/), name: z.string().max(160), model: z.string().max(160).nullable(), brand: z.string().max(120).nullable(),
   category: z.string().max(80).nullable(), categories: z.array(z.string().min(1).max(80)).max(20), original_marking:z.string().max(160).nullable(), notes:z.string().max(2000).nullable(), description:z.string().max(4000).nullable(),
   identification_status: z.enum(["unknown", "user_confirmed", "source_verified"]), tracking_mode: z.enum(["unique", "bulk", "consumable"]),
@@ -75,7 +76,8 @@ function validatedRecords(value: unknown): PortableInventory {
     }
     if (item.tracking_mode === "unique" && total !== 1) throw new ImportError("A unique item must have quantity one.");
     let primaryCount = 0;
-    for (const media of item.mediaAssets) {
+    for (const [position, media] of item.mediaAssets.entries()) {
+      if (media.displayOrder !== position) throw new ImportError("Invalid photo ordering.");
       if (mediaIds.has(media.id)) throw new ImportError("The archive contains duplicate photographs.");
       mediaIds.add(media.id);
       if (media.isPrimary) primaryCount++;
@@ -84,6 +86,7 @@ function validatedRecords(value: unknown): PortableInventory {
         catch { throw new ImportError("The archive contains invalid crop data."); }
       }
     }
+    if (item.primaryMediaId !== (item.mediaAssets.find(media => media.isPrimary)?.id ?? null)) throw new ImportError("Invalid primary photo identity.");
     if (item.mediaAssets.length && primaryCount !== 1) throw new ImportError("An item has invalid primary photograph information.");
   }
   if (!Number.isSafeInteger(largestNumber) || inventory.workspace.next_inventory_number <= largestNumber) throw new ImportError("The archive has an invalid inventory-number sequence.");
@@ -116,7 +119,11 @@ async function validateImage(bytes: Uint8Array, expected?: { width: number; heig
 async function validatedArchive(input: Uint8Array) {
   const { manifest, inventory: untyped, files } = readInventoryArchive(input);
   const records = manifest.version === 2 ? { ...untyped, items: (untyped.items as Array<Record<string, unknown>>).map(item => ({ ...item, categories: canonicalCategories(typeof item.category === "string" ? [item.category] : []) })) } : untyped;
-  const inventory = validatedRecords(records);
+  const adapted = manifest.version < 6 ? { ...records, items: (records.items as Array<Record<string, unknown>>).map(item => {
+    const media = item.mediaAssets as Array<Record<string, unknown>>;
+    return { ...item, primaryMediaId: media.find(photo => photo.isPrimary)?.id ?? null, mediaAssets: media.map((photo, displayOrder) => ({ ...photo, displayOrder })) };
+  }) } : records;
+  const inventory = validatedRecords(adapted);
   if (manifest.version < 4 && inventory.workspace.id !== ORIGINAL_INVENTORY_ID) throw new ImportError("Legacy archive inventory identity is invalid.");
   const promotions: Promotion[] = [];
   for (const item of inventory.items) for (const media of item.mediaAssets) {
@@ -277,9 +284,9 @@ async function persistInventoryInTransaction(client: Executor, inventory: Portab
     await insertRow(client, "items", ["id", "workspace_id", "name", "model", "inventory_number", "brand", "category", "original_marking", "notes", "description", "identification_status", "tracking_mode", "sale_intent", "asking_price_minor", "asking_currency", "created_at", "updated_at"], item);
     for (const category of item.categories) await insertRow(client, "item_categories", ["item_id", "category"], { item_id: item.id, category });
     for (const stock of item.stock) await insertRow(client, "stock_entries", ["id", "item_id", "location_id", "quantity", "created_at", "updated_at"], stock);
-    for (const media of item.mediaAssets) await insertRow(client, "media_assets", ["id", "item_id", "storage_path", "thumbnail_path", "source_storage_path", "crop_data", "original_filename", "mime_type", "width", "height", "created_at", "is_primary"], {
+    for (const media of item.mediaAssets) await insertRow(client, "media_assets", ["id", "item_id", "storage_path", "thumbnail_path", "source_storage_path", "crop_data", "original_filename", "mime_type", "width", "height", "created_at", "is_primary", "display_order"], {
       id: media.id, item_id: item.id, storage_path: `${item.id}/${media.id}.webp`, thumbnail_path: `${item.id}/${media.id}-thumb.webp`, source_storage_path: media.sourcePath ? `${item.id}/${media.id}-source.webp` : null,
-      crop_data: media.cropData, original_filename: media.originalFilename, mime_type: media.mimeType, width: media.width, height: media.height, created_at: media.createdAt, is_primary: media.isPrimary ? 1 : 0,
+      crop_data: media.cropData, original_filename: media.originalFilename, mime_type: media.mimeType, width: media.width, height: media.height, created_at: media.createdAt, is_primary: media.isPrimary ? 1 : 0, display_order: media.displayOrder,
     });
   }
   for (const collection of inventory.collections) {
@@ -310,6 +317,7 @@ function remapInventory(source:PortableInventory,name:string) {
     item.id=allocate("items",item.id);item.workspace_id=workspaceId;
     for(const stock of item.stock) {stock.id=allocate("stock",stock.id);stock.item_id=item.id;stock.location_id=stock.location_id?reference("locations",stock.location_id):null;}
     for(const media of item.mediaAssets) media.id=allocate("media",media.id);
+    item.primaryMediaId=item.primaryMediaId?reference("media",item.primaryMediaId):null;
   }
   for(const collection of inventory.collections) {
     collection.id=allocate("collections",collection.id);collection.workspace_id=workspaceId;

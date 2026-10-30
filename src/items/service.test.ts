@@ -375,6 +375,7 @@ describe("private image storage", () => {
 describe("M3.4 unnamed photo items", () => {
   it("persists empty automatic names, preserves literal names and still rejects photo-less empty creation", async () => {
     await expect(createItem(inventory, { name: " " })).rejects.toThrow();
+    await expect(createItem(inventory, {name:""},undefined,async()=>{})).rejects.toThrow("requires a photo");
     const bytes = await sharp({create:{width:160,height:120,channels:3,background:"#546a78"}}).png().toBuffer();
     const created = await createItemWithPhoto(inventory, photoFirstItemValues({name:"",model:"Synthetic unnamed"},true), new File([new Uint8Array(bytes)],"unnamed.png",{type:"image/png"}));
     expect((await getItem(inventory,created.id))?.name).toBe("");
