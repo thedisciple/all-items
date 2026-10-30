@@ -44,7 +44,7 @@ function formValues(formData: FormData) {
     notes: String(formData.get("notes") ?? ""), description: String(formData.get("description") ?? ""),
     identificationStatus: String(formData.get("identificationStatus") ?? "unknown"), trackingMode: String(formData.get("trackingMode") ?? "unique"),
     saleIntent: String(formData.get("saleIntent") ?? "not_for_sale"), askingPrice: String(formData.get("askingPrice") ?? ""),
-    askingCurrency: String(formData.get("askingCurrency") ?? "RUB"),
+    askingCurrency: String(formData.get("askingCurrency") ?? ""),
   };
 }
 

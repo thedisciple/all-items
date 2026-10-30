@@ -2,17 +2,20 @@
 
 import { useInventory } from "./inventory-provider";
 import Link from "next/link";
-import { Boxes, Database, LibraryBig } from "lucide-react";
+import { Boxes, Database, LibraryBig, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { type Locale, translate } from "@/i18n/messages";
 
 export function AppSidebar({ active, locale }: { active: "items" | "collections" | "data" | "settings"; locale: Locale }) {
-  const { base, counts } = useInventory();
-  return <aside className="sidebar">
-    <Link className="brand" href={base} aria-label={`All Items — ${translate(locale, "inventory")}`}><span className="brand-mark" aria-hidden="true">A</span><span>All Items</span></Link>
-    <nav className="side-navigation" aria-label={translate(locale, "primaryNavigation")}>
-      <Link className={`nav-link ${active === "items" ? "active" : ""}`} href={base}><Boxes size={15} aria-hidden="true"/>{translate(locale, "inventory")}<span className="nav-count">{new Intl.NumberFormat(locale).format(counts.items)}</span></Link>
-      <Link className={`nav-link ${active === "collections" ? "active" : ""}`} href={`${base}/collections`}><LibraryBig size={15} aria-hidden="true"/>{translate(locale, "collections")}<span className="nav-count">{new Intl.NumberFormat(locale).format(counts.collections)}</span></Link>
-      <Link className={`nav-link ${active === "data" ? "active" : ""}`} href={`${base}/data`}><Database size={15} aria-hidden="true"/>{translate(locale, "data")}</Link>
+  const { base, counts, sidebar } = useInventory();
+  const t = (key: Parameters<typeof translate>[1]) => translate(locale,key);
+  return <aside className="sidebar" data-collapsed={sidebar.collapsed} data-animate={sidebar.animate}>
+    <div className="sidebar-heading"><Link className="brand" href={base} aria-label={`All Items — ${t("inventory")}`}><span className="brand-mark" aria-hidden="true">A</span><span className="brand-text">All Items</span></Link>
+      <button type="button" className="icon-button sidebar-toggle" aria-label={t(sidebar.collapsed ? "sidebarExpand" : "sidebarCollapse")} title={t(sidebar.collapsed ? "sidebarExpand" : "sidebarCollapse")} aria-expanded={!sidebar.collapsed} aria-controls="sidebar-navigation" onClick={sidebar.toggle}>{sidebar.collapsed ? <PanelLeftOpen size={17} aria-hidden="true"/> : <PanelLeftClose size={17} aria-hidden="true"/>}</button>
+    </div>
+    <nav id="sidebar-navigation" className="side-navigation" aria-label={t("primaryNavigation")}>
+      <Link className={`nav-link ${active === "items" ? "active" : ""}`} aria-label={`${t("inventory")} ${new Intl.NumberFormat(locale).format(counts.items)}`} title={t("inventory")} href={base}><Boxes size={15} aria-hidden="true"/><span className="nav-label">{t("inventory")}</span><span className="nav-count">{new Intl.NumberFormat(locale).format(counts.items)}</span></Link>
+      <Link className={`nav-link ${active === "collections" ? "active" : ""}`} aria-label={`${t("collections")} ${new Intl.NumberFormat(locale).format(counts.collections)}`} title={t("collections")} href={`${base}/collections`}><LibraryBig size={15} aria-hidden="true"/><span className="nav-label">{t("collections")}</span><span className="nav-count">{new Intl.NumberFormat(locale).format(counts.collections)}</span></Link>
+      <Link className={`nav-link ${active === "data" ? "active" : ""}`} title={t("data")} aria-label={t("data")} href={`${base}/data`}><Database size={15} aria-hidden="true"/><span className="nav-label">{t("data")}</span></Link>
     </nav>
   </aside>;
 }

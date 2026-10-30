@@ -1,5 +1,7 @@
 "use client";
 
+import { CurrencyFields } from "./currency-fields";
+import { currencyDigits, suggestedCurrency, validPrice } from "@/items/currencies";
 import { LockKeyhole } from "lucide-react";
 
 import { startTransition, useActionState, useEffect, useState } from "react";
@@ -18,8 +20,8 @@ type Draft = {
   askingCurrency: string; description: string; notes: string;
 };
 
-export function ItemEditForm({ itemId, initial, initialRows, returnTo }: { itemId: string; initial: Draft; initialRows: { location: string | null; quantity: number }[]; returnTo: string }) {
-  const { t } = useI18n();
+export function ItemEditForm({ itemId, initial, initialRows, returnTo, initialPriceExponent = 2 }: { initialPriceExponent?: number; itemId: string; initial: Draft; initialRows: { location: string | null; quantity: number }[]; returnTo: string }) {
+  const { locale, t } = useI18n();
   const [draft, setDraft] = useState(initial);
   const [categoryDraft, setCategoryDraft] = useState<Presentation[]>([]);
   const initialStock = initialRows.length ? initialRows.map(row => ({ location: row.location ?? "", quantity: String(row.quantity) })) : [{ location: "", quantity: initial.trackingMode === "unique" ? "1" : "0" }];
@@ -45,12 +47,11 @@ export function ItemEditForm({ itemId, initial, initialRows, returnTo }: { itemI
       <label className="field"><span>{t("identificationStatus")}</span><select name="identificationStatus" value={draft.identificationStatus} onChange={field("identificationStatus")}><option value="unknown">{t("itemStatusUnknown")}</option><option value="user_confirmed">{t("itemStatusConfirmed")}</option><option value="source_verified">{t("itemStatusVerified")}</option></select></label>
 
       <label className="field"><span className="private-field-label"><LockKeyhole size={12} aria-hidden="true"/>{t("saleIntent")}</span><select name="saleIntent" value={draft.saleIntent} onChange={field("saleIntent")}><option value="not_for_sale">{t("saleNo")}</option><option value="considering">{t("saleConsidering")}</option><option value="willing_to_sell">{t("saleYes")}</option></select></label>
-      <label className="field"><span className="private-field-label"><LockKeyhole size={12} aria-hidden="true"/>{t("askingPrice")}</span><input type="number" min="0" step="0.01" name="askingPrice" value={draft.askingPrice} onChange={field("askingPrice")}/></label>
-      <label className="field"><span>{t("currency")}</span><select name="askingCurrency" value={draft.askingCurrency} onChange={field("askingCurrency")}><option value="RUB">RUB</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="HUF">HUF</option></select></label>
+            <CurrencyFields exponent={draft.askingCurrency === initial.askingCurrency ? initialPriceExponent : currencyDigits(draft.askingCurrency || suggestedCurrency(locale))} price={draft.askingPrice} currency={draft.askingCurrency} onPriceChange={askingPrice => setDraft(value => ({...value,askingPrice}))} onCurrencyChange={askingCurrency => setDraft(value => ({...value,askingCurrency}))}/>
       <label className="field full-field"><span>{t("itemDescription")}</span><textarea name="description" maxLength={4000} value={draft.description} onChange={field("description")}/></label>
       <label className="field full-field"><span className="private-field-label"><LockKeyhole size={12} aria-hidden="true"/>{t("itemNotes")}</span><textarea name="notes" maxLength={2000} value={draft.notes} onChange={field("notes")}/></label>
     </div></details>
-    <div className="form-action-row"><FormSubmitButton className="add-button" disabled={pending || !dirty || (Boolean(initial.name) && !draft.name.trim()) || !validStockDraft(rows, draft.trackingMode)} pendingLabel={t("savingChanges")}>{pending ? t("savingChanges") : t("saveChanges")}</FormSubmitButton>
+    <div className="form-action-row"><FormSubmitButton className="add-button" disabled={pending || !dirty || (Boolean(initial.name) && !draft.name.trim()) || !validPrice(draft.askingPrice, draft.askingCurrency || suggestedCurrency(locale), draft.askingCurrency === initial.askingCurrency ? initialPriceExponent : undefined) || !validStockDraft(rows, draft.trackingMode)} pendingLabel={t("savingChanges")}>{pending ? t("savingChanges") : t("saveChanges")}</FormSubmitButton>
       <a className="quiet-button" href={returnTo}>{t("cancel")}</a>
       {feedback.status === "error" && feedback.message ? <p className="inline-status error-status" role="alert">{feedback.message ? t(feedback.message, feedback.values) : ""}</p> : null}
     </div>

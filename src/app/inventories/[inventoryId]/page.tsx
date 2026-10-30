@@ -18,11 +18,10 @@ export default async function Home({ searchParams, params: routeParams }: Props)
   const context = await routeInventory((await routeParams).inventoryId);
   const base = inventoryPath(context);
   const params = await searchParams;
-  const presentation = await getInventoryPresentation(context);
+  const [locale, presentation] = await Promise.all([getLocale(), getInventoryPresentation(context)]);
   const customEmoji = Object.fromEntries(presentation.categories.map(value => [value.category, value.emoji]));
-  const [locale, items, storedCategories] = await Promise.all([
-    getLocale(),
-    listItems(context, { search: params.q, category: params.category || undefined, status: params.status || undefined, sort: params.sort ?? presentation.preferences.sort }),
+  const [items, storedCategories] = await Promise.all([
+    listItems(context, { search: params.q, unnamedLabel: translate(locale,"unidentifiedItemName"), category: params.category || undefined, status: params.status || undefined, sort: params.sort ?? presentation.preferences.sort }),
     listCategoryValues(context),
   ]);
   const t = (key: Parameters<typeof translate>[1], values?: Record<string, string | number>) => translate(locale, key, values);

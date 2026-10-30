@@ -159,7 +159,7 @@ describe("M1 inventory", () => {
   it("applies migrations repeatedly without duplicating schema", async () => {
     await applyMigrations(client, migrations);
     const names = await client.execute("SELECT name FROM _all_items_migrations ORDER BY name");
-    expect(names.rows.map((row) => row.name)).toEqual(["0001_foundation", "0002_inventory_management", "0003_private_media", "0004_collections", "0005_editable_media_source", "0006_collection_covers", "0007_item_categories", "0008_inventory_boundaries", "0009_inventory_import_operations", "0010_inventory_presentation", "0011_ordered_item_photos"]);
+    expect(names.rows.map((row) => row.name)).toEqual(["0001_foundation", "0002_inventory_management", "0003_private_media", "0004_collections", "0005_editable_media_source", "0006_collection_covers", "0007_item_categories", "0008_inventory_boundaries", "0009_inventory_import_operations", "0010_inventory_presentation", "0011_ordered_item_photos", "0012_price_minor_units"]);
   });
 });
 
@@ -379,11 +379,40 @@ describe("M3.4 unnamed photo items", () => {
     const bytes = await sharp({create:{width:160,height:120,channels:3,background:"#546a78"}}).png().toBuffer();
     const created = await createItemWithPhoto(inventory, photoFirstItemValues({name:"",model:"Synthetic unnamed"},true), new File([new Uint8Array(bytes)],"unnamed.png",{type:"image/png"}));
     expect((await getItem(inventory,created.id))?.name).toBe("");
+    expect((await listItems(inventory,{search:"Unidentified",unnamedLabel:"Unidentified item"})).map(row=>row.id)).toContain(created.id);
+    expect((await listItems(inventory,{search:"Неизвест",unnamedLabel:"Неизвестный предмет"})).map(row=>row.id)).toContain(created.id);
     expect((await listItems(inventory,{search:"Synthetic unnamed",sort:"name"})).map(row=>row.id)).toContain(created.id);
     await updateItem(inventory,created.id,{name:"",model:"Changed unnamed"});
     expect((await getItem(inventory,created.id))?.name).toBe("");
     await updateItem(inventory,created.id,{name:"Unidentified item"});
     expect((await getItem(inventory,created.id))?.name).toBe("Unidentified item");
     await expect(updateItem(inventory,created.id,{name:""})).rejects.toThrow();
+  });
+});
+
+
+describe("M3.4 currency persistence", () => {
+  it("stores no currency for a blank price and validates currency-specific precision", async () => {
+    const blank = await createItem(inventory,{name:"Synthetic no price",askingCurrency:"USD"});
+    expect(await getItem(inventory,blank.id)).toMatchObject({asking_price_minor:null,asking_currency:null});
+    for(const [code,amount,minor] of [["RSD","12.50",1250],["UAH","1.25",125],["CNY","0.29",29],["HUF","12.34",1234],["JPY","123",123],["KWD","1.234",1234]] as const) {
+      const item = await createItem(inventory,{name:"Synthetic "+code,askingPrice:amount,askingCurrency:code});
+      expect(await getItem(inventory,item.id)).toMatchObject({asking_price_minor:minor,asking_currency:code});
+      await updateItem(inventory,item.id,{name:"Synthetic renamed "+code,askingPrice:amount,askingCurrency:code});
+      expect(await getItem(inventory,item.id)).toMatchObject({asking_price_minor:minor,asking_currency:code});
+    }
+    await expect(createItem(inventory,{name:"Synthetic invalid precision",askingPrice:"1.23",askingCurrency:"JPY"})).rejects.toThrow();
+    await expect(createItem(inventory,{name:"Synthetic unknown currency",askingPrice:"1",askingCurrency:"XYZ"})).rejects.toThrow();
+  });
+  it("preserves an unknown historical currency literal and amount while editing other fields", async () => {
+    const item = await createItem(inventory,{name:"Synthetic historical currency"});
+    await client.execute({sql:"UPDATE items SET asking_price_minor=1234,asking_currency='JPY',asking_price_exponent=2 WHERE id=?",args:[item.id]});
+    await updateItem(inventory,item.id,{name:"Synthetic legacy JPY",askingPrice:"12.34",askingCurrency:"JPY"});
+    expect(await getItem(inventory,item.id)).toMatchObject({asking_price_minor:1234,asking_currency:"JPY",asking_price_exponent:2});
+    await client.execute({sql:"UPDATE items SET asking_price_minor=1234,asking_currency=? WHERE id=?",args:["Historical coin",item.id]});
+    await updateItem(inventory,item.id,{name:"Synthetic historical renamed",askingPrice:"12.34",askingCurrency:"Historical coin"});
+    expect(await getItem(inventory,item.id)).toMatchObject({asking_price_minor:1234,asking_currency:"Historical coin"});
+    await expect(updateItem(inventory,item.id,{name:"Invalid change",askingPrice:"12.34",askingCurrency:"XYZ"})).rejects.toThrow();
+    expect(await getItem(inventory,item.id)).toMatchObject({name:"Synthetic historical renamed",asking_price_minor:1234,asking_currency:"Historical coin"});
   });
 });

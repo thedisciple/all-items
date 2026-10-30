@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Search, X } from "lucide-react";
+import { ChevronDown, Search, X } from "lucide-react";
 import { useI18n } from "@/i18n/provider";
 import { useInventory } from "./inventory-provider";
 
@@ -35,7 +35,7 @@ export function ItemFilters({ categories, statuses, searchPlaceholder }: Props) 
     window.scrollTo({ top: previous <= max ? previous : Math.min(max, Math.max(0, filtersTop-16)), behavior: "instant" });
   }, [paramsString]);
   const editedSinceNavigation = useRef(false);
-  const activeFilters = filterKeys.some((key) => key !== "sort" && Boolean(params.get(key)));
+  const activeFilters = filterKeys.some(key => key === "sort" ? Boolean(params.get(key) && params.get(key) !== presentation.preferences.sort) : Boolean(params.get(key)));
 
   useEffect(() => {
     if (!editedSinceNavigation.current) setQuery(params.get("q") ?? "");
@@ -74,17 +74,22 @@ export function ItemFilters({ categories, statuses, searchPlaceholder }: Props) 
     filterRef.current?.querySelector("input")?.focus();
   };
 
+  const categoryLabel = categories.find(option => option.value === params.get("category"))?.label ?? t("categoriesAll");
+  const statusLabel = statuses.find(option => option.value === params.get("status"))?.label ?? t("statusAny");
+  const sort = params.get("sort") ?? presentation.preferences.sort;
+  const sortLabel = t(sort === "name" ? "sortName" : sort === "quantity" ? "sortQuantity" : "sortNewest");
+
   return <div ref={filterRef} className="filter-bar" aria-label={t("inventoryFilters")}>
-    <label className="search-field"><Search size={17} aria-hidden="true"/><input type="search" value={query} onChange={(event) => { editedSinceNavigation.current = true; setQuery(event.target.value); }} placeholder={searchPlaceholder} maxLength={160}/></label>
-    <select aria-label={t("category")} title={categories.find(option=>option.value===params.get("category"))?.label ?? t("categoriesAll")} value={params.get("category") ?? ""} onChange={(event) => navigate("category", event.target.value)}>
+    <label className="search-field"><Search size={17} aria-hidden="true"/><input type="search" aria-label={searchPlaceholder} value={query} onChange={(event) => { editedSinceNavigation.current = true; setQuery(event.target.value); }} placeholder={searchPlaceholder} maxLength={160}/></label>
+    <label className="filter-select"><span aria-hidden="true">{categoryLabel}</span><select aria-label={t("category")} title={categories.find(option=>option.value===params.get("category"))?.label ?? t("categoriesAll")} value={params.get("category") ?? ""} onChange={(event) => navigate("category", event.target.value)}>
       <option value="">{t("categoriesAll")}</option>{categories.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
-    </select>
-    <select aria-label={t("statusAny")} title={statuses.find(option=>option.value===params.get("status"))?.label ?? t("statusAny")} value={params.get("status") ?? ""} onChange={(event) => navigate("status", event.target.value)}>
+    </select><ChevronDown className="filter-chevron" size={16} aria-hidden="true"/>
+    </label><label className="filter-select"><span aria-hidden="true">{statusLabel}</span><select aria-label={t("statusAny")} title={statuses.find(option=>option.value===params.get("status"))?.label ?? t("statusAny")} value={params.get("status") ?? ""} onChange={(event) => navigate("status", event.target.value)}>
       <option value="">{t("statusAny")}</option>{statuses.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
-    </select>
-    <select aria-label={t("sortLabel")} value={params.get("sort") ?? presentation.preferences.sort} onChange={(event) => navigate("sort", event.target.value)}>
+    </select><ChevronDown className="filter-chevron" size={16} aria-hidden="true"/>
+    </label><label className="filter-select"><span aria-hidden="true">{sortLabel}</span><select aria-label={t("sortLabel")} value={params.get("sort") ?? presentation.preferences.sort} onChange={(event) => navigate("sort", event.target.value)}>
       <option value="date">{t("sortNewest")}</option><option value="name">{t("sortName")}</option><option value="quantity">{t("sortQuantity")}</option>
-    </select>
-    {<button type="button" className="quiet-button clear-filters-button" disabled={!activeFilters} onClick={clear}><X size={15} aria-hidden="true"/>{t("clearFilters")}</button>}
+    </select><ChevronDown className="filter-chevron" size={16} aria-hidden="true"/>
+    </label>{<button type="button" className="quiet-button clear-filters-button" disabled={!activeFilters} onClick={clear}><X size={15} aria-hidden="true"/>{t("clearFilters")}</button>}
   </div>;
 }

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { currencyDigits, isSupportedCurrency, parsePriceMinor } from "./currencies";
 import { inventoryDatabase } from "@/items/inventories";
 import type { InventoryContext } from "@/items/inventory-context";
 import { canonicalCategories, categoryKeyForStoredValue } from "./categories";
@@ -19,9 +20,8 @@ export const itemFields = z.object({
   identificationStatus: z.enum(["unknown", "user_confirmed", "source_verified"]).default("unknown"),
   trackingMode: z.enum(["unique", "bulk", "consumable"]).default("unique"),
   saleIntent: z.enum(["not_for_sale", "considering", "willing_to_sell"]).default("not_for_sale"),
-  askingPrice: z.string().trim().optional().transform((value) => value ? Number(value.replace(",", ".")) : null)
-    .pipe(z.number().finite().nonnegative().max(999999999).nullable()),
-  askingCurrency: z.enum(["RUB", "EUR", "USD", "HUF"]).default("RUB"),
+  askingPrice: z.string().trim().max(32).default(""),
+  askingCurrency: z.string().trim().max(80).default(""),
 });
 export type ItemFields = z.input<typeof itemFields>;
 
@@ -58,6 +58,7 @@ export type ItemDetailDTO = {
   sale_intent: string;
   asking_price_minor: number | null;
   asking_currency: string | null;
+  asking_price_exponent: number;
   created_at: string;
   updated_at: string;
   quantity: number;
@@ -66,6 +67,7 @@ export type ItemDetailDTO = {
 };
 const itemListFilters = z.object({
   search: z.string().trim().max(160).optional(),
+  unnamedLabel: z.string().trim().max(160).optional(),
   category: z.string().trim().max(80).optional(),
   status: z.enum(["unknown", "user_confirmed", "source_verified"]).optional(),
   sort: z.enum(["date", "name", "quantity"]).optional(),
@@ -100,6 +102,8 @@ async function beginWriteTransaction(db: Awaited<ReturnType<typeof inventoryData
 export async function createItem(context: InventoryContext, input: ItemFields, stock?: unknown, attach?: (tx: Pick<Client, "execute">, id: string) => Promise<void>) {
   return serializeLocalWrite(async () => {
   const parsed = (attach ? photoItemFields : itemFields).parse(input);
+  const price = parsePriceMinor(parsed.askingPrice, parsed.askingCurrency);
+  if (price !== null && !isSupportedCurrency(parsed.askingCurrency)) throw new Error("Unsupported currency");
   const rows = normalizedStock(stock ?? [{ location: "", quantity: parsed.trackingMode === "unique" ? 1 : 0 }], parsed.trackingMode);
   const { db, workspaceId } = await inventoryDatabase(context);
   const tx = await beginWriteTransaction(db);
@@ -111,11 +115,11 @@ export async function createItem(context: InventoryContext, input: ItemFields, s
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
     await tx.execute({
-      sql: `INSERT INTO items (id, workspace_id, name, model, inventory_number, brand, category, original_marking, notes, description, identification_status, tracking_mode, sale_intent, asking_price_minor, asking_currency, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      sql: `INSERT INTO items (id, workspace_id, name, model, inventory_number, brand, category, original_marking, notes, description, identification_status, tracking_mode, sale_intent, asking_price_minor, asking_currency, asking_price_exponent, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [id, workspaceId, parsed.name, parsed.model, `INV-${String(sequence).padStart(6, "0")}`, parsed.brand, null,
         parsed.originalMarking, parsed.notes, parsed.description, parsed.identificationStatus, parsed.trackingMode, parsed.saleIntent,
-        parsed.askingPrice === null ? null : Math.round(parsed.askingPrice * 100), parsed.askingPrice !== null ? parsed.askingCurrency : null, now, now],
+        price, price !== null ? parsed.askingCurrency : null, price !== null ? currencyDigits(parsed.askingCurrency) : 2, now, now],
     });
     await replaceCategories(tx, id, parsed.categories ?? (parsed.category ? [parsed.category] : []));
     if (parsed.categoryPresentation) await saveCategoryPresentations(tx, workspaceId, parsed.categoryPresentation, canonicalCategories(parsed.categories ?? (parsed.category ? [parsed.category] : [])));
@@ -134,17 +138,18 @@ export async function createItem(context: InventoryContext, input: ItemFields, s
   });
 }
 
-export async function listItems(context: InventoryContext, filters: { search?: string; category?: string; status?: string; sort?: string; direction?: string; collectionId?: string } = {}): Promise<Array<Record<string, unknown> & { categories: string[] }>> {
+export async function listItems(context: InventoryContext, filters: { search?: string; unnamedLabel?: string; category?: string; status?: string; sort?: string; direction?: string; collectionId?: string } = {}): Promise<Array<Record<string, unknown> & { categories: string[] }>> {
   const parsedFilters = itemListFilters.parse(filters);
   const { db, workspaceId } = await inventoryDatabase(context);
   const search = parsedFilters.search || "";
   const clauses = ["i.workspace_id = ?"];
   const args: (string | number)[] = [workspaceId];
   if (search) {
+    const matchesUnnamed = parsedFilters.unnamedLabel?.normalize("NFKC").toLocaleLowerCase().includes(search.normalize("NFKC").toLocaleLowerCase());
     clauses.push(`(i.name LIKE ? OR i.model LIKE ? OR i.original_marking LIKE ? OR i.brand LIKE ? OR i.notes LIKE ?
       OR i.inventory_number LIKE ? OR i.description LIKE ? OR EXISTS (SELECT 1 FROM item_categories sca WHERE sca.item_id = i.id AND sca.category LIKE ?)
       OR EXISTS (SELECT 1 FROM stock_entries ss INNER JOIN locations sl ON sl.id = ss.location_id WHERE ss.item_id = i.id AND sl.name LIKE ?)
-      OR EXISTS (SELECT 1 FROM item_collection_memberships sicm INNER JOIN collections sc ON sc.id = sicm.collection_id WHERE sicm.item_id = i.id AND sc.name LIKE ?))`);
+      OR EXISTS (SELECT 1 FROM item_collection_memberships sicm INNER JOIN collections sc ON sc.id = sicm.collection_id WHERE sicm.item_id = i.id AND sc.name LIKE ?) ${matchesUnnamed ? "OR i.name = ''" : ""})`);
     const match = `%${search}%`; args.push(match, match, match, match, match, match, match, match, match, match);
   }
   if (parsedFilters.category) {
@@ -193,7 +198,7 @@ export async function getItem(context: InventoryContext, id: string): Promise<It
   const result = await db.$client.execute({
     sql: `SELECT i.id, i.name, i.model, i.inventory_number, i.brand, (SELECT json_group_array(category) FROM (SELECT category FROM item_categories WHERE item_id=i.id ORDER BY category)) AS categories_json, i.original_marking,
                  i.notes, i.description, i.identification_status, i.tracking_mode, i.sale_intent,
-                 i.asking_price_minor, i.asking_currency, i.created_at, i.updated_at,
+                 i.asking_price_minor, i.asking_currency, i.asking_price_exponent, i.created_at, i.updated_at,
                  COALESCE(SUM(s.quantity), 0) AS quantity,
                  (SELECT m.id FROM media_assets m WHERE m.item_id = i.id AND m.is_primary = 1 LIMIT 1) AS primary_media_id
           FROM items i LEFT JOIN stock_entries s ON s.item_id = i.id WHERE i.workspace_id = ? AND i.id = ? GROUP BY i.id`,
@@ -222,6 +227,7 @@ export async function getItem(context: InventoryContext, id: string): Promise<It
     sale_intent: String(row.sale_intent),
     asking_price_minor: row.asking_price_minor == null ? null : Number(row.asking_price_minor),
     asking_currency: row.asking_currency == null ? null : String(row.asking_currency),
+    asking_price_exponent: Number(row.asking_price_exponent),
     created_at: String(row.created_at),
     updated_at: String(row.updated_at),
     quantity: Number(row.quantity),
@@ -277,15 +283,18 @@ export async function updateItem(context: InventoryContext, id: string, input: I
     const { db, workspaceId } = await inventoryDatabase(context);
     const tx = await beginWriteTransaction(db);
     try {
-      const existing = await tx.execute({ sql: "SELECT id,name FROM items WHERE id=? AND workspace_id=?", args: [id,workspaceId] });
+      const existing = await tx.execute({ sql: "SELECT id,name,asking_currency,asking_price_minor,asking_price_exponent FROM items WHERE id=? AND workspace_id=?", args: [id,workspaceId] });
       if (!existing.rows.length) throw new Error("Item not found");
       if (!parsed.name && existing.rows[0]!.name !== "") itemFields.parse(input);
+      const exponent = existing.rows[0]!.asking_price_minor !== null && parsed.askingCurrency === existing.rows[0]!.asking_currency ? Number(existing.rows[0]!.asking_price_exponent) : currencyDigits(parsed.askingCurrency);
+      const price = parsePriceMinor(parsed.askingPrice, parsed.askingCurrency, exponent);
+      if (price !== null && !isSupportedCurrency(parsed.askingCurrency) && parsed.askingCurrency !== existing.rows[0]!.asking_currency) throw new Error("Unsupported currency");
       const current = await tx.execute({ sql: "SELECT s.quantity,l.name AS location FROM stock_entries s LEFT JOIN locations l ON l.id=s.location_id WHERE s.item_id=?", args: [id] });
       const rows = normalizedStock(stock ?? current.rows.map(row => ({quantity: Number(row.quantity), location: String(row.location ?? "")})), parsed.trackingMode);
       const now = new Date().toISOString();
       await tx.execute({
-        sql: `UPDATE items SET name=?,model=?,brand=?,original_marking=?,notes=?,description=?,identification_status=?,tracking_mode=?,sale_intent=?,asking_price_minor=?,asking_currency=?,updated_at=? WHERE id=? AND workspace_id=?`,
-        args: [parsed.name,parsed.model,parsed.brand,parsed.originalMarking,parsed.notes,parsed.description,parsed.identificationStatus,parsed.trackingMode,parsed.saleIntent,parsed.askingPrice === null ? null : Math.round(parsed.askingPrice*100),parsed.askingPrice !== null ? parsed.askingCurrency : null,now,id,workspaceId],
+        sql: `UPDATE items SET name=?,model=?,brand=?,original_marking=?,notes=?,description=?,identification_status=?,tracking_mode=?,sale_intent=?,asking_price_minor=?,asking_currency=?,asking_price_exponent=?,updated_at=? WHERE id=? AND workspace_id=?`,
+        args: [parsed.name,parsed.model,parsed.brand,parsed.originalMarking,parsed.notes,parsed.description,parsed.identificationStatus,parsed.trackingMode,parsed.saleIntent,price,price !== null ? parsed.askingCurrency : null,price !== null ? exponent : 2,now,id,workspaceId],
       });
       if (parsed.categories !== undefined || input.category !== undefined) await replaceCategories(tx,id,parsed.categories ?? (parsed.category ? [parsed.category] : []));
       if (parsed.categoryPresentation) await saveCategoryPresentations(tx, workspaceId, parsed.categoryPresentation, canonicalCategories(parsed.categories ?? (parsed.category ? [parsed.category] : [])));

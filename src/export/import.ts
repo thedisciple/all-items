@@ -25,7 +25,7 @@ const itemSchema = z.object({
   id, workspace_id: id, inventory_number: z.string().regex(/^INV-\d{6,}$/), name: z.string().max(160), model: z.string().max(160).nullable(), brand: z.string().max(120).nullable(),
   category: z.string().max(80).nullable(), categories: z.array(z.string().min(1).max(80)).max(20), original_marking:z.string().max(160).nullable(), notes:z.string().max(2000).nullable(), description:z.string().max(4000).nullable(),
   identification_status: z.enum(["unknown", "user_confirmed", "source_verified"]), tracking_mode: z.enum(["unique", "bulk", "consumable"]),
-  sale_intent: z.enum(["not_for_sale", "considering", "willing_to_sell"]), asking_price_minor: z.number().int().nonnegative().nullable(), asking_currency: nullableText,
+  sale_intent: z.enum(["not_for_sale", "considering", "willing_to_sell"]), asking_price_minor: z.number().int().nonnegative().nullable(), asking_currency: nullableText, asking_price_exponent: z.number().int().min(0).max(3),
   created_at: timestamp, updated_at: timestamp, stock: z.array(stockSchema).min(1).max(50), collectionIds: z.array(id), mediaAssets: z.array(mediaSchema),
 });
 const coverSchema = z.object({ id, width: z.number().int().positive().max(12_000), height: z.number().int().positive().max(12_000), createdAt: timestamp, path: z.string(), thumbnailPath: z.string() });
@@ -121,7 +121,7 @@ async function validatedArchive(input: Uint8Array) {
   const records = manifest.version === 2 ? { ...untyped, items: (untyped.items as Array<Record<string, unknown>>).map(item => ({ ...item, categories: canonicalCategories(typeof item.category === "string" ? [item.category] : []) })) } : untyped;
   const adapted = manifest.version < 6 ? { ...records, items: (records.items as Array<Record<string, unknown>>).map(item => {
     const media = item.mediaAssets as Array<Record<string, unknown>>;
-    return { ...item, primaryMediaId: media.find(photo => photo.isPrimary)?.id ?? null, mediaAssets: media.map((photo, displayOrder) => ({ ...photo, displayOrder })) };
+    return { ...item, asking_price_exponent: 2, primaryMediaId: media.find(photo => photo.isPrimary)?.id ?? null, mediaAssets: media.map((photo, displayOrder) => ({ ...photo, displayOrder })) };
   }) } : records;
   const inventory = validatedRecords(adapted);
   if (manifest.version < 4 && inventory.workspace.id !== ORIGINAL_INVENTORY_ID) throw new ImportError("Legacy archive inventory identity is invalid.");
@@ -281,7 +281,7 @@ async function persistInventoryInTransaction(client: Executor, inventory: Portab
   for (const category of inventory.customCategories) await client.execute({sql:"INSERT INTO custom_category_presentation(workspace_id,category,emoji) VALUES(?,?,?)",args:[workspaceId,category.category,category.emoji]});
   for (const location of inventory.locations) await insertRow(client, "locations", ["id", "workspace_id", "name", "created_at"], location);
   for (const item of inventory.items) {
-    await insertRow(client, "items", ["id", "workspace_id", "name", "model", "inventory_number", "brand", "category", "original_marking", "notes", "description", "identification_status", "tracking_mode", "sale_intent", "asking_price_minor", "asking_currency", "created_at", "updated_at"], item);
+    await insertRow(client, "items", ["id", "workspace_id", "name", "model", "inventory_number", "brand", "category", "original_marking", "notes", "description", "identification_status", "tracking_mode", "sale_intent", "asking_price_minor", "asking_currency", "asking_price_exponent", "created_at", "updated_at"], item);
     for (const category of item.categories) await insertRow(client, "item_categories", ["item_id", "category"], { item_id: item.id, category });
     for (const stock of item.stock) await insertRow(client, "stock_entries", ["id", "item_id", "location_id", "quantity", "created_at", "updated_at"], stock);
     for (const media of item.mediaAssets) await insertRow(client, "media_assets", ["id", "item_id", "storage_path", "thumbnail_path", "source_storage_path", "crop_data", "original_filename", "mime_type", "width", "height", "created_at", "is_primary", "display_order"], {

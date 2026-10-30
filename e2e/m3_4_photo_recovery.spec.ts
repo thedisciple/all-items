@@ -96,6 +96,8 @@ test("photo-only names and crop validation follow the locale without rewriting l
       await dialog.getByRole("button", { name: copy.close, exact: true }).first().click();
       await expect.poll(() => page.evaluate(() => new Promise<number>(resolve => { const open = indexedDB.open("all-items-drafts", 1); open.onsuccess = () => { const db = open.result; const q = db.transaction("drafts").objectStore("drafts").count(); q.onsuccess = () => { resolve(q.result); db.close(); }; }; }))).toBe(0);
     }
+    await page.goto(`${base}?q=${encodeURIComponent(copy.unidentifiedItemName)}`);
+    await expect(page.getByRole("link", {name:copy.unidentifiedItemName,exact:true})).toBeVisible();
     await page.goto(`${base}/items/${savedId}`);
     await expect(page.locator("h1")).toHaveText(copy.unidentifiedItemName);
     await expect(page.locator('input[name="name"]')).toHaveValue("");

@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { createClient } from "@libsql/client";
-import { copyFile, mkdtemp, mkdir, readFile, readdir } from "node:fs/promises";
+import { copyFile, mkdtemp, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -21,6 +21,7 @@ let client: ReturnType<typeof createClient>;
 let legacyId: string;
 let beforeMedia: Record<string, unknown>[];
 let beforeBytes: string;
+let beforeItems: Record<string, unknown>[];
 let legacyPhoto: string;
 let backup: string;
 const hash = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
@@ -37,7 +38,15 @@ beforeAll(async () => {
   const legacy = path.join(directory, "legacy"); await mkdir(legacy);
   for (const name of (await readdir(migrations)).filter(name => name < "0011")) await copyFile(path.join(migrations, name), path.join(legacy, name));
   await applyMigrations(client, legacy);
-  legacyId = (await createItemWithPhoto(inventory, { name: "Synthetic preserved legacy" }, await image())).id;
+  legacyId = randomUUID(); legacyPhoto = randomUUID();
+  await client.execute({sql:"INSERT INTO items(id,workspace_id,name,inventory_number,asking_price_minor,asking_currency,created_at,updated_at) VALUES(?,?,?,?,1234,'HUF',?,?)",args:[legacyId,inventory.workspaceId,"Synthetic preserved legacy","INV-000001","2026-01-01","2026-01-01"]});
+  await client.execute({sql:"INSERT INTO stock_entries(id,item_id,quantity,created_at,updated_at) VALUES(?,?,1,?,?)",args:[randomUUID(),legacyId,"2026-01-01","2026-01-01"]});
+  await client.execute({sql:"UPDATE workspaces SET next_inventory_number=2 WHERE id=?",args:[inventory.workspaceId]});
+  const bytes = await sharp({create:{width:320,height:240,channels:3,background:"#56816c"}}).webp().toBuffer();
+  const mediaFolder = path.join(directory,"media","items",legacyId); await mkdir(mediaFolder,{recursive:true});
+  await writeFile(path.join(mediaFolder,legacyPhoto+".webp"),bytes); await writeFile(path.join(mediaFolder,legacyPhoto+"-thumb.webp"),bytes);
+  await client.execute({sql:"INSERT INTO media_assets(id,item_id,storage_path,thumbnail_path,original_filename,mime_type,width,height,created_at,is_primary) VALUES(?,?,?,?,?,'image/webp',320,240,?,1)",args:[legacyPhoto,legacyId,legacyId+"/"+legacyPhoto+".webp",legacyId+"/"+legacyPhoto+"-thumb.webp","legacy.webp","2026-01-01"]});
+  beforeItems = (await client.execute("SELECT * FROM items ORDER BY id")).rows as unknown as Record<string,unknown>[];
   beforeMedia = (await client.execute("SELECT * FROM media_assets ORDER BY id")).rows as unknown as Record<string, unknown>[];
   legacyPhoto = String(beforeMedia[0]!.id);
   beforeBytes = hash((await readItemPhoto(inventory, legacyId, legacyPhoto, "image"))!);
@@ -50,6 +59,9 @@ describe("ordered private item photos", () => {
   it("preserves legacy columns, identities and media bytes through a verified repeatable migration", async () => {
     const after = (await client.execute(`SELECT ${Object.keys(beforeMedia[0]!).join(",")} FROM media_assets ORDER BY id`)).rows;
     expect(after).toEqual(beforeMedia);
+    expect((await client.execute(`SELECT ${Object.keys(beforeItems[0]!).join(",")} FROM items ORDER BY id`)).rows).toEqual(beforeItems);
+    expect(await getItem(inventory,legacyId)).toMatchObject({asking_price_minor:1234,asking_currency:"HUF",asking_price_exponent:2});
+    expect(await readItemPhoto(inventory,legacyId,legacyPhoto,"source")).toEqual(await readItemPhoto(inventory,legacyId,legacyPhoto,"image"));
     expect(hash((await readItemPhoto(inventory, legacyId, legacyPhoto, "image"))!)).toBe(beforeBytes);
     const checksums = JSON.parse(await readFile(path.join(backup, "verified-sha256.json"), "utf8"));
     expect(checksums[`media/items/${legacyId}/${legacyPhoto}.webp`]).toBe(beforeBytes);
@@ -131,7 +143,7 @@ describe("ordered private item photos", () => {
 
 it("round-trips an ordered gallery twice as new inventories with exact media bytes and remapped covers", async () => {
   const source = await image("#758a96");
-  const item = await createItemWithPhoto(inventory,{name:"",model:"Synthetic portable unnamed"},source);
+  const item = await createItemWithPhoto(inventory,{name:"",model:"Synthetic portable unnamed",askingPrice:"12.345",askingCurrency:"KWD"},source);
   const first = (await getPrimaryPhoto(inventory,item.id))!;
   const second = await addItemPhoto(inventory,item.id,await image("#937667"));
   const crop = {x:10,y:10,width:120,height:100,rotate:0,scaleX:1,scaleY:1};
@@ -148,6 +160,7 @@ it("round-trips an ordered gallery twice as new inventories with exact media byt
   const records = original.inventory as PortableInventory;
   const archivedItem = records.items.find(row=>row.id===item.id)!;
   expect(archivedItem.name).toBe("");
+  expect([archivedItem.asking_price_minor,archivedItem.asking_currency]).toEqual([12345,"KWD"]);
   expect(archivedItem.primaryMediaId).toBe(second.id);
   expect(archivedItem.mediaAssets.map(photo=>photo.id)).toEqual([third.id,first.id,second.id]);
   expect(archivedItem.mediaAssets[0]!.imagePath).toMatch(/photo-01.webp$/);
@@ -159,6 +172,7 @@ it("round-trips an ordered gallery twice as new inventories with exact media byt
     const restoredItem = restored.items.find(row=>row.inventory_number===archivedItem.inventory_number)!;
     identities.push(restoredItem.mediaAssets.map(photo=>photo.id));
     expect(restoredItem.name).toBe("");
+    expect([restoredItem.asking_price_minor,restoredItem.asking_currency]).toEqual([12345,"KWD"]);
     expect(restoredItem.mediaAssets.map(photo=>photo.displayOrder)).toEqual([0,1,2]);
     expect(restoredItem.mediaAssets.map(photo=>photo.isPrimary)).toEqual([false,false,true]);
     expect(restoredItem.mediaAssets[0]!.cropData).toBe(JSON.stringify(crop));

@@ -19,7 +19,7 @@ async function readCropState(page: Page) {
 async function selectPhoto(page: Page, name = "synthetic.png", buffer?: Buffer) {
   buffer ??= await syntheticPhoto();
   await page.getByRole("button", { name: "Добавить фото" }).click();
-  await page.locator('input[name="photo"]').setInputFiles({ name, mimeType: "image/png", buffer });
+  await page.locator('input[name="photo"]').first().setInputFiles({ name, mimeType: "image/png", buffer });
   const editor = page.getByRole("dialog", { name: "Редактировать фото" });
   await expect(editor.getByRole("button", { name: "Готово" })).toBeEnabled();
   return editor;
@@ -183,7 +183,7 @@ test("deletes a saved photo immediately and allows a replacement without a reloa
   consoleErrors.length = 0;
   await page.getByRole("button", { name: "Удалить фотографию" }).click();
   const confirmation = page.getByRole("alertdialog", { name: "Удалить фотографию" });
-  await expect(confirmation.getByText(/Фотография будет удалена/)).toBeVisible();
+  await expect(confirmation.getByText(/Удалить только это фото/)).toBeVisible();
   await confirmation.getByRole("button", { name: "Удалить фотографию" }).click();
   await expect(page.locator(".compact-photo-placeholder")).toBeVisible();
   await expect(page.locator(".photo-viewer-image img.detail-photo")).toHaveCount(0);
@@ -194,7 +194,7 @@ test("deletes a saved photo immediately and allows a replacement without a reloa
   await expect(photoLessRow.locator(".item-thumb")).toBeVisible();
   await photoLessLink.click();
   await page.getByRole("button", { name: "Добавить фото" }).click();
-  await page.locator('input[name="photo"]').setInputFiles({ name: "replacement.png", mimeType: "image/png", buffer: await syntheticPhoto() });
+  await page.locator('input[name="photo"]').first().setInputFiles({ name: "replacement.png", mimeType: "image/png", buffer: await syntheticPhoto() });
   const editor = page.getByRole("dialog", { name: "Редактировать фото" });
   await editor.getByRole("button", { name: "Готово" }).click();
   await expect(page.locator(".photo-viewer-image img.detail-photo")).toBeVisible();
@@ -382,7 +382,7 @@ test("recovers from canvas encoding failure and keeps an existing saved photo on
   expect(recoveredSavedUrl).toBeTruthy();
 
   await page.getByRole("button", { name: "Заменить фото" }).click();
-  await page.locator('input[name="photo"]').setInputFiles({ name: "broken.png", mimeType: "image/png", buffer: Buffer.from("not an image") });
+  await page.locator('input[name="photo"]').first().setInputFiles({ name: "broken.png", mimeType: "image/png", buffer: Buffer.from("not an image") });
   const fallback = page.getByRole("button", { name: "Продолжить без кадрирования" });
   await expect(fallback).toBeVisible();
   await fallback.click();

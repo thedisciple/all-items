@@ -1,3 +1,4 @@
+import { priceDecimal } from "@/items/currencies";
 import { createHash } from "node:crypto";
 import { lstat, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -55,6 +56,7 @@ function canonicalizeInventory(inventory: Record<string, unknown>, assets: Recor
     if (assets[oldPath]) mapped[newPath] = assets[oldPath];
   };
   for (const item of (Array.isArray(copy.items) ? copy.items : []) as Array<Record<string, unknown>>) {
+    item.asking_price_exponent ??= 2;
     item.categories ??= canonicalCategories(typeof item.category === "string" ? [item.category] : []);
     const photos = (Array.isArray(item.mediaAssets) ? item.mediaAssets : []) as Array<Record<string, unknown>>;
     item.primaryMediaId ??= photos.find(asset => asset.isPrimary)?.id ?? null;
@@ -198,6 +200,7 @@ function validateReferences(inventory: Record<string, unknown>, files: Record<st
   const allMediaIds = new Set<string>();
   const numbers = new Set<string>();
   for (const item of values as Array<Record<string, unknown>>) {
+    if (version >= 6 && !z.number().int().min(0).max(3).safeParse(item.asking_price_exponent).success) throw new ArchiveError("Invalid stored price precision.");
     if (typeof item.id !== "string" || !z.string().uuid().safeParse(item.id).success || !Array.isArray(item.mediaAssets)) throw new ArchiveError("An item has invalid media references.");
     if (itemsById.has(item.id) || typeof item.inventory_number !== "string" || numbers.has(item.inventory_number)) throw new ArchiveError("The archive contains duplicate item identities or inventory numbers.");
     numbers.add(item.inventory_number);
@@ -372,13 +375,13 @@ export function csvCell(value: unknown) {
 
 export function formatInventoryCsv(rows: Array<Record<string, unknown>>) {
   const columns = ["Inventory number", "Name", "Model", "Brand", "Categories", "Quantity", "Locations", "Identification status", "Sale intent", "Asking price", "Currency", "Description", "Notes"];
-  return Buffer.from(`\uFEFF${[columns, ...rows.map((row) => [row.inventory_number, row.name, row.model, row.brand, JSON.stringify(row.categories ?? (row.category ? [row.category] : [])), row.quantity, row.locations, row.identification_status, row.sale_intent, row.asking_price_minor == null ? null : (Number(row.asking_price_minor) / 100).toFixed(2), row.asking_currency, row.description, row.notes])].map((row) => row.map(csvCell).join(",")).join("\r\n")}\r\n`, "utf8");
+  return Buffer.from(`\uFEFF${[columns, ...rows.map((row) => [row.inventory_number, row.name, row.model, row.brand, JSON.stringify(row.categories ?? (row.category ? [row.category] : [])), row.quantity, row.locations, row.identification_status, row.sale_intent, row.asking_price_minor == null ? null : priceDecimal(Number(row.asking_price_minor), row.asking_currency == null ? null : String(row.asking_currency), Number(row.asking_price_exponent ?? 2)), row.asking_currency, row.description, row.notes])].map((row) => row.map(csvCell).join(",")).join("\r\n")}\r\n`, "utf8");
 }
 
 export async function createInventoryCsv(context: InventoryContext) {
   const { workspaceId } = inventoryContextSchema.parse(context);
   const { inventoryDatabase } = await import("@/items/inventories");
   const { db } = await inventoryDatabase(context);
-  const rows = await db.$client.execute({ sql: `SELECT i.inventory_number, i.name, i.model, i.brand, (SELECT json_group_array(category) FROM (SELECT category FROM item_categories WHERE item_id=i.id ORDER BY category)) AS categories_json, i.identification_status, i.sale_intent, i.asking_price_minor, i.asking_currency, i.description, i.notes, COALESCE(SUM(s.quantity), 0) AS quantity, GROUP_CONCAT(l.name, '; ') AS locations FROM items i LEFT JOIN stock_entries s ON s.item_id = i.id LEFT JOIN locations l ON l.id = s.location_id WHERE i.workspace_id = ? GROUP BY i.id ORDER BY i.inventory_number`, args: [workspaceId] });
+  const rows = await db.$client.execute({ sql: `SELECT i.inventory_number, i.name, i.model, i.brand, (SELECT json_group_array(category) FROM (SELECT category FROM item_categories WHERE item_id=i.id ORDER BY category)) AS categories_json, i.identification_status, i.sale_intent, i.asking_price_minor, i.asking_currency, i.asking_price_exponent, i.description, i.notes, COALESCE(SUM(s.quantity), 0) AS quantity, GROUP_CONCAT(l.name, '; ') AS locations FROM items i LEFT JOIN stock_entries s ON s.item_id = i.id LEFT JOIN locations l ON l.id = s.location_id WHERE i.workspace_id = ? GROUP BY i.id ORDER BY i.inventory_number`, args: [workspaceId] });
   return formatInventoryCsv(rows.rows.map(row => ({ ...row, categories: JSON.parse(String(row.categories_json)) })));
 }

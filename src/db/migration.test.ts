@@ -31,7 +31,7 @@ it("backs up SQLite and media, then migrates category associations without chang
     try { expect((await restored.execute("SELECT * FROM items ORDER BY id")).rows).toEqual(before.rows); } finally { restored.close(); }
     await applyMigrations(client,migrations);
     await applyMigrations(client,migrations);
-    expect((await client.execute("SELECT * FROM items ORDER BY id")).rows).toEqual(before.rows);
+    expect((await client.execute(`SELECT ${before.columns.join(",")} FROM items ORDER BY id`)).rows).toEqual(before.rows);
     expect((await client.execute("SELECT category FROM item_categories ORDER BY item_id")).rows.map(row=>row.category).sort()).toEqual(["  Custom original  ","electronics","electronics"]);
     expect((await client.execute("PRAGMA foreign_key_check")).rows).toHaveLength(0);
   } finally {

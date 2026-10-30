@@ -12,9 +12,14 @@ test("consistent controls, dismissible categories and unobscured collection crea
     await expect(page.locator(".nav-link.active")).toContainText("Инвентарь");
     const search = page.locator(".search-field");
     const before = await search.boundingBox();
+    await search.locator("input").fill("M33 filter geometry");
+    await expect(page).toHaveURL(/q=M33/);
+    expect((await search.boundingBox())!.width).toBe(before!.width);
+    await page.locator(".clear-filters-button").click();
+    await expect(page).not.toHaveURL(/q=/);
     await page.getByLabel("Категория", { exact: true }).selectOption("tools");
     await expect(page).toHaveURL(/category=tools/);
-    expect((await search.boundingBox())!.width).toBe(before!.width);
+    await expect(page.getByLabel("Категория", {exact:true})).toHaveAttribute("title", /Инструменты/);
     await page.locator(".clear-filters-button").click();
     await page.locator(".add-dialog-trigger").click();
     const add = page.getByRole("dialog", { name: "Добавить вещь" });

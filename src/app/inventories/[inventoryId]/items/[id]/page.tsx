@@ -9,6 +9,7 @@ import { PhotoGallery } from "@/app/components/photo-gallery";
 import { DestructiveConfirmation } from "@/app/components/destructive-confirmation";
 import { removeItem } from "@/app/actions";
 import { listCollections, listItemCollections } from "@/items/collections";
+import { priceDecimal } from "@/items/currencies";
 import { getItem } from "@/items/service";
 import { listItemPhotos } from "@/media/service";
 import { getLocale } from "@/i18n/server";
@@ -35,8 +36,8 @@ export default async function ItemPage({ params, searchParams }: Props) {
     name: item.name, model: item.model ?? "", brand: item.brand ?? "", categories: item.categories,
     originalMarking: item.original_marking ?? "", identificationStatus: item.identification_status,
     trackingMode: item.tracking_mode, saleIntent: item.sale_intent,
-    askingPrice: item.asking_price_minor == null ? "" : (item.asking_price_minor / 100).toFixed(2),
-    askingCurrency: item.asking_currency ?? "RUB", description: item.description ?? "", notes: item.notes ?? "",
+    askingPrice: item.asking_price_minor == null ? "" : priceDecimal(item.asking_price_minor, item.asking_currency, item.asking_price_exponent),
+    askingCurrency: item.asking_currency ?? "", description: item.description ?? "", notes: item.notes ?? "",
   };
   const fromCollection = z.uuid().safeParse(query.from ?? "");
   const returnTo = fromCollection.success ? `${base}/collections/${fromCollection.data}` : base;
@@ -48,7 +49,7 @@ export default async function ItemPage({ params, searchParams }: Props) {
         <section className="photo-detail-panel" aria-label={t("photo")}>
           <PhotoGallery itemId={id} photos={photos} itemName={item.name || t("unidentifiedItemName")}/>
         </section>
-        <ItemEditForm itemId={id} initial={draft} initialRows={item.stock} returnTo={returnTo}/>
+        <ItemEditForm initialPriceExponent={item.asking_price_exponent} itemId={id} initial={draft} initialRows={item.stock} returnTo={returnTo}/>
         <CollectionMembership itemId={id} collections={collections.map(({ id: collectionId, name }) => ({ id: collectionId, name }))} memberships={memberships}/>
         <DestructiveConfirmation action={removeItem} label={t("itemDelete")} description={t("itemDeleteWarning")} fields={{ id }}/>
       </div>

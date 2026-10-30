@@ -14,7 +14,7 @@ const fieldsSchema = z.object({
   originalMarking: z.string().max(160), description: z.string().max(4000), notes: z.string().max(2000),
   identificationStatus: z.enum(["unknown", "user_confirmed", "source_verified"]),
   saleIntent: z.enum(["not_for_sale", "considering", "willing_to_sell"]),
-  askingPrice: z.string().max(40), askingCurrency: z.enum(["RUB", "EUR", "USD", "HUF"]),
+  askingPrice: z.string().max(40), askingCurrency: z.string().max(80),
 });
 const blobSchema = z.object({
   data: z.instanceof(Blob).refine(value => value.size > 0 && value.size <= maxPhotoBytes && ["image/jpeg", "image/png", "image/webp"].includes(value.type)),

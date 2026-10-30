@@ -300,7 +300,7 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
         else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
       }}>
         <div className="dialog-heading"><h3 id="photo-source-title">{stream ? t("cameraCapture") : t("photo")}</h3><button type="button" className="icon-button" aria-label={t("close")} onClick={closeSources}><X size={18} aria-hidden="true"/></button></div>
-        {stream ? <>
+        <div className="dialog-scroll-body">{stream ? <>
           <video ref={videoRef} className="camera-preview" autoPlay playsInline muted aria-label={t("photo")}/>
           {cameraMessage ? <p className="form-error" role="alert">{t(cameraMessage)}</p> : null}
           <div className="dialog-actions"><button type="button" className="quiet-button" onClick={() => void capturePhoto()}>{t("cameraCapture")}</button><button type="button" className="text-button" onClick={() => { const next = facingMode === "environment" ? "user" : "environment"; setFacingMode(next); void startCamera(next); }}>{t("switchCamera")}</button></div>
@@ -308,7 +308,7 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
           <p className="dialog-copy">{t("photoOnlyDevice")}</p>
           {cameraMessage ? <p className="form-error" role="alert">{t(cameraMessage)}</p> : null}
           <div className="dialog-actions"><button type="button" className="quiet-button" onClick={() => void startCamera()}>{t("cameraOpen")}</button><button type="button" className="quiet-button" onClick={() => inputRef.current?.click()}>{t("chooseFile")}</button></div>
-        </>}
+        </>}</div>
       </section>
     </div> : null}
     {cropFile ? <PhotoCropper initialCrop={cropFile === sourceFile ? cropData : selectedFile ? null : savedCrop} file={cropFile} onConfirm={confirmCrop} onCancel={cancelCrop} onUseOriginal={useOriginalPhoto}/> : null}

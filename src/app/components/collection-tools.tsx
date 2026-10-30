@@ -39,7 +39,7 @@ export function CollectionAddItems({ collectionId, items, existingIds }: { colle
   const wasOpen = useRef(false);
   const router = useRouter();
   const existing = useMemo(() => new Set(existingIds), [existingIds]);
-  const available = useMemo(() => items.filter((item) => !existing.has(item.id) && `${item.name} ${item.model ?? ""} ${item.categories.join(" ")}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())), [items, existing, query]);
+  const available = useMemo(() => items.filter((item) => !existing.has(item.id) && `${item.name || t("unidentifiedItemName")} ${item.model ?? ""} ${item.categories.join(" ")}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())), [items, existing, query, t]);
   const close=()=>{if(!actionPending){setOpen(false);setSelected([]);setQuery("");}};
   useEffect(() => { if (open) { wasOpen.current = true; dialogRef.current?.querySelector<HTMLElement>("input")?.focus(); } else if (wasOpen.current) { wasOpen.current = false; triggerRef.current?.focus(); } }, [open]);
   useEffect(() => {

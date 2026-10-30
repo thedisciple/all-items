@@ -28,11 +28,10 @@ export default async function CollectionPage({ params, searchParams }: Props) {
   if (!parsedId.success) notFound();
   const collection = await getCollection(context, parsedId.data);
   if (!collection) notFound();
-  const presentation = await getInventoryPresentation(context);
+  const [locale, presentation] = await Promise.all([getLocale(), getInventoryPresentation(context)]);
   const customEmoji = Object.fromEntries(presentation.categories.map(value => [value.category, value.emoji]));
-  const [locale, items, members, inventory, coverOptions, storedCategories] = await Promise.all([
-    getLocale(),
-    listItems(context, { collectionId: id, search: query.q, category: query.category || undefined, status: query.status || undefined, sort: query.sort ?? presentation.preferences.sort }),
+  const [items, members, inventory, coverOptions, storedCategories] = await Promise.all([
+    listItems(context, { collectionId: id, search: query.q, unnamedLabel: translate(locale,"unidentifiedItemName"), category: query.category || undefined, status: query.status || undefined, sort: query.sort ?? presentation.preferences.sort }),
     listItems(context, { collectionId: id }),
     listItems(context),
     listCollectionCoverOptions(context, id),

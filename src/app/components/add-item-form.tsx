@@ -1,5 +1,7 @@
 "use client";
 
+import { CurrencyFields } from "./currency-fields";
+import { suggestedCurrency, validPrice } from "@/items/currencies";
 import { LockKeyhole } from "lucide-react";
 
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
@@ -19,10 +21,10 @@ const idle: ActionFeedback = { status: "idle", message: "" };
 type Draft = { name: string; model: string; brand: string; categories: string[]; trackingMode: string; originalMarking: string; description: string; notes: string; identificationStatus: string; saleIntent: string; askingPrice: string; askingCurrency: string };
 
 export function AddItemForm() {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const { base, inventory } = useInventory();
   const [feedback, action, pending] = useActionState(addItemAction, idle);
-  const [draft, setDraft] = useState<Draft>({ name: "", model: "", brand: "", categories: [], trackingMode: "unique", originalMarking: "", description: "", notes: "", identificationStatus: "unknown", saleIntent: "not_for_sale", askingPrice: "", askingCurrency: "RUB" });
+  const [draft, setDraft] = useState<Draft>({ name: "", model: "", brand: "", categories: [], trackingMode: "unique", originalMarking: "", description: "", notes: "", identificationStatus: "unknown", saleIntent: "not_for_sale", askingPrice: "", askingCurrency: "" });
   const [rows, setRows] = useState<StockDraft[]>([{ location: "", quantity: "1" }]);
   const [categoryDraft, setCategoryDraft] = useState<Presentation[]>([]);
   const [open, setOpen] = useState(false);
@@ -44,8 +46,8 @@ export function AddItemForm() {
   const [cleanupPending, setCleanupPending] = useState(false);
   const queue = useRef<Promise<void>>(Promise.resolve());
   const draftKey = `${inventory.workspaceId}:add-item`;
-  const dirty = Boolean(draft.name || draft.model || draft.brand || draft.categories.length || draft.originalMarking || draft.description || draft.notes || draft.identificationStatus !== "unknown" || draft.saleIntent !== "not_for_sale" || draft.askingPrice || draft.askingCurrency !== "RUB" || draft.trackingMode !== "unique" || rows.some(row => row.location || row.quantity !== "1")) || photoDirty;
-  const meaningful = Boolean([draft.name, draft.model, draft.brand, draft.originalMarking, draft.description, draft.notes, draft.askingPrice].some(value => value.trim()) || draft.categories.length || draft.identificationStatus !== "unknown" || draft.saleIntent !== "not_for_sale" || draft.askingCurrency !== "RUB" || draft.trackingMode !== "unique" || rows.some(row => row.location.trim() || row.quantity !== "1") || photoDraft);
+  const dirty = Boolean(draft.name || draft.model || draft.brand || draft.categories.length || draft.originalMarking || draft.description || draft.notes || draft.identificationStatus !== "unknown" || draft.saleIntent !== "not_for_sale" || draft.askingPrice || Boolean(draft.askingCurrency) || draft.trackingMode !== "unique" || rows.some(row => row.location || row.quantity !== "1")) || photoDirty;
+  const meaningful = Boolean([draft.name, draft.model, draft.brand, draft.originalMarking, draft.description, draft.notes, draft.askingPrice].some(value => value.trim()) || draft.categories.length || draft.identificationStatus !== "unknown" || draft.saleIntent !== "not_for_sale" || Boolean(draft.askingCurrency) || draft.trackingMode !== "unique" || rows.some(row => row.location.trim() || row.quantity !== "1") || photoDraft);
   const update = (key: keyof Draft) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setDraft((current) => ({ ...current, [key]: event.target.value }));
 
   function enqueue(record: DraftRecord | null) {
@@ -113,7 +115,7 @@ export function AddItemForm() {
           else if (!storageEnabled.current && (revision.current !== null || hasQueued.current)) throw new Error("Draft cleanup unavailable");
         }
         catch { setStorageError("draftSavedCleanupFailed"); }
-        setDraft({ name: "", model: "", brand: "", categories: [], trackingMode: "unique", originalMarking: "", description: "", notes: "", identificationStatus: "unknown", saleIntent: "not_for_sale", askingPrice: "", askingCurrency: "RUB" });
+        setDraft({ name: "", model: "", brand: "", categories: [], trackingMode: "unique", originalMarking: "", description: "", notes: "", identificationStatus: "unknown", saleIntent: "not_for_sale", askingPrice: "", askingCurrency: "" });
         setRows([{ location: "", quantity: "1" }]);
         setCategoryDraft([]);
         setResetToken((value) => value + 1);
@@ -165,14 +167,13 @@ export function AddItemForm() {
             <label className="field"><span>{t("itemOriginalMarking")}</span><input name="originalMarking" value={draft.originalMarking} placeholder={t("markingPlaceholder")} maxLength={160} onChange={update("originalMarking")}/></label>
             <label className="field"><span>{t("identificationStatus")}</span><select name="identificationStatus" value={draft.identificationStatus} onChange={(event) => setDraft((current) => ({ ...current, identificationStatus: event.target.value }))}><option value="unknown">{t("itemStatusUnknown")}</option><option value="user_confirmed">{t("itemStatusConfirmed")}</option><option value="source_verified">{t("itemStatusVerified")}</option></select></label>
             <label className="field"><span className="private-field-label"><LockKeyhole size={12} aria-hidden="true"/>{t("saleIntent")}</span><select name="saleIntent" value={draft.saleIntent} onChange={(event) => setDraft((current) => ({ ...current, saleIntent: event.target.value }))}><option value="not_for_sale">{t("saleNo")}</option><option value="considering">{t("saleConsidering")}</option><option value="willing_to_sell">{t("saleYes")}</option></select></label>
-            <label className="field"><span className="private-field-label"><LockKeyhole size={12} aria-hidden="true"/>{t("askingPrice")}</span><input type="number" min="0" step="0.01" name="askingPrice" value={draft.askingPrice} onChange={(event) => setDraft((current) => ({ ...current, askingPrice: event.target.value }))}/></label>
-            <label className="field"><span>{t("currency")}</span><select name="askingCurrency" value={draft.askingCurrency} onChange={(event) => setDraft((current) => ({ ...current, askingCurrency: event.target.value }))}><option>RUB</option><option>EUR</option><option>USD</option><option>HUF</option></select></label>
+            <CurrencyFields price={draft.askingPrice} currency={draft.askingCurrency} onPriceChange={askingPrice => setDraft(value => ({...value,askingPrice}))} onCurrencyChange={askingCurrency => setDraft(value => ({...value,askingCurrency}))}/>
             <label className="field full-field"><span>{t("itemDescription")}</span><textarea name="description" maxLength={4000} value={draft.description} onChange={update("description")}/></label>
             <label className="field full-field"><span className="private-field-label"><LockKeyhole size={12} aria-hidden="true"/>{t("itemNotes")}</span><textarea name="notes" maxLength={2000} value={draft.notes} onChange={update("notes")}/></label>
           </div></details>
 
           {feedback.status === "error" && feedback.message ? <p className="form-error" role="alert">{feedback.message ? t(feedback.message, feedback.values) : ""}</p> : null}
-          <div className="dialog-actions"><FormSubmitButton className="add-button" disabled={pending || !validStockDraft(rows, draft.trackingMode)} pendingLabel={t("addingItem")}><Plus size={16} aria-hidden="true"/><span>{pending ? t("addingItem") : t("saveItem")}</span></FormSubmitButton><button type="button" className="text-button" onClick={() => { setOpen(false); triggerRef.current?.focus(); }}>{t("close")}</button>{dirty ? <button type="button" className="text-button" onClick={() => { if (window.confirm(t("discardDraftConfirm"))) { if (storageEnabled.current) void enqueue(null).catch(() => {}); setDraft({ name: "", model: "", brand: "", categories: [], trackingMode: "unique", originalMarking: "", description: "", notes: "", identificationStatus: "unknown", saleIntent: "not_for_sale", askingPrice: "", askingCurrency: "RUB" }); setRows([{ location: "", quantity: "1" }]); setCategoryDraft([]); setResetToken((value) => value + 1); setPhotoDirty(false); setPhotoDraft(null); } }}>{t("discardDraft")}</button> : null}</div>
+          <div className="dialog-actions"><FormSubmitButton className="add-button" disabled={pending || !validPrice(draft.askingPrice, draft.askingCurrency || suggestedCurrency(locale)) || !validStockDraft(rows, draft.trackingMode)} pendingLabel={t("addingItem")}><Plus size={16} aria-hidden="true"/><span>{pending ? t("addingItem") : t("saveItem")}</span></FormSubmitButton><button type="button" className="text-button" onClick={() => { setOpen(false); triggerRef.current?.focus(); }}>{t("close")}</button>{dirty ? <button type="button" className="text-button" onClick={() => { if (window.confirm(t("discardDraftConfirm"))) { if (storageEnabled.current) void enqueue(null).catch(() => {}); setDraft({ name: "", model: "", brand: "", categories: [], trackingMode: "unique", originalMarking: "", description: "", notes: "", identificationStatus: "unknown", saleIntent: "not_for_sale", askingPrice: "", askingCurrency: "" }); setRows([{ location: "", quantity: "1" }]); setCategoryDraft([]); setResetToken((value) => value + 1); setPhotoDirty(false); setPhotoDraft(null); } }}>{t("discardDraft")}</button> : null}</div>
         </form>}
       </section>
     </div>

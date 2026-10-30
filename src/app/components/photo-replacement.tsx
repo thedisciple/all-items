@@ -12,7 +12,7 @@ import { useI18n } from "@/i18n/provider";
 
 const idle: PhotoActionFeedback = { status: "idle", message: "" };
 
-export function PhotoReplacement({ itemId, photoUrl, itemName, mediaId, crop, hideEmptyViewer = false, onDirtyChange }: { itemId: string; photoUrl: string | null; itemName: string; mediaId?: string; crop?: CropperJS.Data | null; hideEmptyViewer?: boolean; onDirtyChange?: (value: boolean) => void }) {
+export function PhotoReplacement({ itemId, photoUrl, itemName, mediaId, crop, hideEmptyViewer = false, onDirtyChange, announceSuccess = true }: { announceSuccess?: boolean; itemId: string; photoUrl: string | null; itemName: string; mediaId?: string; crop?: CropperJS.Data | null; hideEmptyViewer?: boolean; onDirtyChange?: (value: boolean) => void }) {
   const { t } = useI18n();
   const { base } = useInventory();
   const [feedback, action, actionPending] = useActionState(replacePhotoAction, idle);
@@ -40,6 +40,6 @@ export function PhotoReplacement({ itemId, photoUrl, itemName, mediaId, crop, hi
       {previewUrl ? <p className="photo-unsaved-note" role="status">{t("previewUnsaved")}</p> : null}
     </div> : null}
     <PhotoAcquisition key={mediaId ?? "new"} name="photo" initialCrop={crop} onDraftChange={onDirtyChange} currentPhotoUrl={savedUrl} autoSubmit savedToken={feedback.status === "success" ? feedback.mediaId : undefined} resultToken={feedback.message ? t(feedback.message, feedback.values) : ""} retryReady={feedback.status === "error"} externalPreview onPreviewChange={updatePreview}/>
-    {feedback.status === "error" && feedback.message ? <p className="inline-status error-status" role="alert">{feedback.message ? t(feedback.message, feedback.values) : ""}</p> : feedback.status === "success" && feedback.message ? <p className="visually-hidden" role="status">{feedback.message ? t(feedback.message, feedback.values) : ""}</p> : null}
+    {feedback.status === "error" && feedback.message ? <p className="inline-status error-status" role="alert">{feedback.message ? t(feedback.message, feedback.values) : ""}</p> : announceSuccess && feedback.status === "success" && feedback.message ? <p className="visually-hidden" role="status">{feedback.message ? t(feedback.message, feedback.values) : ""}</p> : null}
   </ActionForm>;
 }

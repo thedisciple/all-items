@@ -30,6 +30,7 @@ export const items = sqliteTable("items", {
   saleIntent: text("sale_intent").notNull(),
   askingPriceMinor: integer("asking_price_minor"),
   askingCurrency: text("asking_currency"),
+  askingPriceExponent: integer("asking_price_exponent").notNull().default(2),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Star } from "lucide-react";
 import type { ItemPhotoDTO } from "@/media/service";
@@ -24,6 +24,16 @@ export function PhotoGallery({ itemId, itemName, photos }: { itemId: string; ite
   const [editing, setEditing] = useState(false);
   const [adding, setAdding] = useState(false);
   const [feedback, setFeedback] = useState<ActionFeedback>({ status: "idle", message: "" });
+  const [photoSaved, setPhotoSaved] = useState(false);
+  const priorPhotos = useRef(new Set(photos.map(photo => photo.id)));
+  useEffect(() => {
+    const ids = new Set(photos.map(photo => photo.id));
+    if (photos.some(photo => !priorPhotos.current.has(photo.id))) setPhotoSaved(true);
+    else if ([...priorPhotos.current].some(id => !ids.has(id))) setPhotoSaved(false);
+    priorPhotos.current = ids;
+  }, [photos]);
+  const changeEditing = useCallback((value: boolean) => { setEditing(value); if (value) setPhotoSaved(false); }, []);
+  const changeAdding = useCallback((value: boolean) => { setAdding(value); if (value) setPhotoSaved(false); }, []);
   const locked = pending || editing || adding;
 
   function mutate(operation: "primary" | "reorder", direction?: number) {
@@ -45,7 +55,7 @@ export function PhotoGallery({ itemId, itemName, photos }: { itemId: string; ite
   }
 
   return <div className="photo-gallery" aria-label={t("gallery")} aria-busy={pending}>
-    <PhotoReplacement key={selected?.id ?? "empty"} itemId={itemId} mediaId={selected?.id} crop={selected?.crop} photoUrl={selected ? `${base}/media/${itemId}/${selected.id}?v=${selected.id}` : null} itemName={itemName} onDirtyChange={setEditing}/>
+    <PhotoReplacement key={selected?.id ?? "empty"} itemId={itemId} mediaId={selected?.id} crop={selected?.crop} photoUrl={selected ? `${base}/media/${itemId}/${selected.id}?v=${selected.id}` : null} itemName={itemName} announceSuccess={false} onDirtyChange={changeEditing}/>
     {photos.length > 0 ? <>
       <div className="gallery-strip" role="group" aria-label={t("gallery")}>
         {photos.map((photo, position) => <button type="button" className="gallery-thumbnail" key={photo.id} disabled={locked} aria-pressed={selected?.id === photo.id} aria-label={`${t("galleryPhoto", { number: position + 1 })}${photo.isPrimary ? ` — ${t("galleryPrimary")}` : ""}`} onClick={() => { setSelectedId(photo.id); setSelectedPosition(position); }}>
@@ -61,8 +71,9 @@ export function PhotoGallery({ itemId, itemName, photos }: { itemId: string; ite
         </> : null}
         {!locked && selected ? <DestructiveConfirmation key={selected.id} action={deleteGalleryPhoto} label={t("photoDelete")} description={t("galleryDeleteWarning")} fields={{ id: itemId, mediaId: selected.id }}/> : null}
       </div>
-      <div className="gallery-add"><PhotoReplacement itemId={itemId} photoUrl={null} itemName={itemName} hideEmptyViewer onDirtyChange={setAdding}/></div>
+      <div className="gallery-add"><PhotoReplacement itemId={itemId} photoUrl={null} itemName={itemName} hideEmptyViewer announceSuccess={false} onDirtyChange={changeAdding}/></div>
     </> : null}
+    {photoSaved ? <p className="visually-hidden" role="status">{t("photoSaved")}</p> : null}
     {pending ? <p role="status">{t("savingChanges")}</p> : null}
     {feedback.status === "error" && feedback.message ? <p className="form-error" role="alert">{t(feedback.message, feedback.values)}</p> : null}
   </div>;
