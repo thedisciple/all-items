@@ -21,7 +21,7 @@ const locationSchema = z.object({ id, workspace_id: id, name: z.string().min(1).
 const stockSchema = z.object({ id, item_id: id, location_id: id.nullable(), quantity: z.number().int().min(0).max(1_000_000), created_at: timestamp, updated_at: timestamp });
 const mediaSchema = z.object({ id, isPrimary: z.boolean(), displayOrder: z.number().int().nonnegative().nullable(), originalFilename: z.string().max(255), mimeType: z.literal("image/webp"), width: z.number().int().positive().max(12_000), height: z.number().int().positive().max(12_000), cropData: nullableText, createdAt: timestamp, imagePath: z.string(), thumbnailPath: z.string(), sourcePath: z.string().nullable() });
 const itemSchema = z.object({
-  id, workspace_id: id, inventory_number: z.string().regex(/^INV-\d{6,}$/), name: z.string().min(1).max(160), model: z.string().max(160).nullable(), brand: z.string().max(120).nullable(),
+  id, workspace_id: id, inventory_number: z.string().regex(/^INV-\d{6,}$/), name: z.string().max(160), model: z.string().max(160).nullable(), brand: z.string().max(120).nullable(),
   category: z.string().max(80).nullable(), categories: z.array(z.string().min(1).max(80)).max(20), original_marking:z.string().max(160).nullable(), notes:z.string().max(2000).nullable(), description:z.string().max(4000).nullable(),
   identification_status: z.enum(["unknown", "user_confirmed", "source_verified"]), tracking_mode: z.enum(["unique", "bulk", "consumable"]),
   sale_intent: z.enum(["not_for_sale", "considering", "willing_to_sell"]), asking_price_minor: z.number().int().nonnegative().nullable(), asking_currency: nullableText,

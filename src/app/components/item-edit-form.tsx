@@ -34,7 +34,7 @@ export function ItemEditForm({ itemId, initial, initialRows, returnTo }: { itemI
     <input type="hidden" name="id" value={itemId}/><input type="hidden" name="returnTo" value={returnTo}/>
     <div className="section-heading"><div><h2>{t("details")}</h2></div></div>
     <div className="detail-grid basic-item-fields">
-      <label className="field"><span>{t("itemName")} *</span><input required maxLength={160} name="name" value={draft.name} onChange={field("name")}/></label>
+      <label className="field"><span>{t("itemName")}{initial.name ? " *" : ""}</span><input required={Boolean(initial.name)} placeholder={t("unidentifiedItemName")} maxLength={160} name="name" value={draft.name} onChange={field("name")}/></label>
       <label className="field"><span>{t("itemModel")}</span><input maxLength={160} name="model" value={draft.model} onChange={field("model")}/></label>
       <label className="field"><span>{t("itemBrand")}</span><input maxLength={120} name="brand" value={draft.brand} onChange={field("brand")}/></label>
       <CategoryField values={draft.categories} onValueChange={(categories) => setDraft((value) => ({ ...value, categories }))} presentations={categoryDraft} onPresentationChange={setCategoryDraft}/>
@@ -50,7 +50,7 @@ export function ItemEditForm({ itemId, initial, initialRows, returnTo }: { itemI
       <label className="field full-field"><span>{t("itemDescription")}</span><textarea name="description" maxLength={4000} value={draft.description} onChange={field("description")}/></label>
       <label className="field full-field"><span className="private-field-label"><LockKeyhole size={12} aria-hidden="true"/>{t("itemNotes")}</span><textarea name="notes" maxLength={2000} value={draft.notes} onChange={field("notes")}/></label>
     </div></details>
-    <div className="form-action-row"><FormSubmitButton className="add-button" disabled={pending || !dirty || !draft.name.trim() || !validStockDraft(rows, draft.trackingMode)} pendingLabel={t("savingChanges")}>{pending ? t("savingChanges") : t("saveChanges")}</FormSubmitButton>
+    <div className="form-action-row"><FormSubmitButton className="add-button" disabled={pending || !dirty || (Boolean(initial.name) && !draft.name.trim()) || !validStockDraft(rows, draft.trackingMode)} pendingLabel={t("savingChanges")}>{pending ? t("savingChanges") : t("saveChanges")}</FormSubmitButton>
       <a className="quiet-button" href={returnTo}>{t("cancel")}</a>
       {feedback.status === "error" && feedback.message ? <p className="inline-status error-status" role="alert">{feedback.message ? t(feedback.message, feedback.values) : ""}</p> : null}
     </div>

@@ -42,7 +42,7 @@ test("restores and discards a scoped item draft including the cropped photo", as
   await expect(dialog.locator(".category-selection")).toContainText("🧰");
   await expect(dialog.locator(".photo-preview-frame img")).toBeVisible();
   expect(await dialog.locator('input[name="photo"]').evaluate(el => (el as HTMLInputElement).files?.[0]?.size)).toBeGreaterThan(0);
-  await dialog.getByRole("button", { name: "Добавить вещь", exact: true }).click();
+  await dialog.getByRole("button", { name: "Сохранить вещь", exact: true }).click();
   await expect(page).toHaveURL(/added=/, { timeout: 30_000 });
   await expect.poll(() => draftCount(page)).toBe(0);
   await page.reload();

@@ -9,7 +9,7 @@ async function createPhotoItem(page: Page, name: string) {
   await page.locator('input[name="photo"]').setInputFiles({ name: "synthetic.png", mimeType: "image/png", buffer: await sharp({ create: { width: 320, height: 240, channels: 3, background: "#567456" } }).png().toBuffer() });
   await page.getByRole("dialog", { name: "Редактировать фото" }).getByRole("button", { name: "Готово" }).click();
   await dialog.getByLabel("Название").fill(name);
-  await dialog.getByRole("button", { name: "Добавить вещь" }).click();
+  await dialog.getByRole("button", { name: "Сохранить вещь" }).click();
   await expect(page).toHaveURL(/added=/);
   return page.getByRole("link", { name: new RegExp(name) }).locator("xpath=../..");
 }
@@ -82,7 +82,7 @@ test("one item save retains a failed draft and commits type, stock and multiple 
   await page.locator(".add-dialog-trigger").click();
   await expect(add.getByLabel("Тип учёта")).toHaveValue("bulk");
   await expect(add.getByLabel("Количество", { exact: true })).toHaveValue("2");
-  await add.getByRole("button", { name: "Добавить вещь", exact: true }).click();
+  await add.getByRole("button", { name: "Сохранить вещь", exact: true }).click();
   await expect(page).toHaveURL(/added=/);
   await page.getByRole("link", { name: /R1 combined/ }).click();
   const form = page.locator(".item-edit-form");
@@ -130,7 +130,7 @@ test("collection filters keep uploaded cover geometry and a predictable scroll a
     await add.locator(".category-trigger").click();
     await add.locator(".category-options input").nth(index === 0 ? 0 : 2).check();
     if (index === 0) await add.locator(".category-options input").nth(2).check();
-    await add.getByRole("button", { name: "Добавить вещь", exact: true }).click();
+    await add.getByRole("button", { name: "Сохранить вещь", exact: true }).click();
     await expect(page).toHaveURL(/added=/);
   }
   await page.goto("/inventories/00000000-0000-4000-8000-000000000001/collections"); await page.locator(".collection-create-trigger").click();

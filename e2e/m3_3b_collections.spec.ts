@@ -16,7 +16,7 @@ async function addPhotoItem(page:Page,name:string,color:string) {
   await dialog.locator('input[name="photo"]').setInputFiles({name:"synthetic.png",mimeType:"image/png",buffer:await sharp({create:{width:240,height:400,channels:3,background:color}}).png().toBuffer()});
   const crop=page.getByRole("dialog",{name:"Редактировать фото"});await expect(crop.getByRole("button",{name:"Готово"})).toBeEnabled();
   await crop.getByRole("button",{name:"Готово"}).click();
-  await dialog.getByRole("button",{name:"Добавить вещь",exact:true}).click();await expect(page).toHaveURL(/added=/);
+  await dialog.getByRole("button",{name:"Сохранить вещь",exact:true}).click();await expect(page).toHaveURL(/added=/);
 }
 
 test("collection tile, staged membership and every cover type remain independently editable",async({page})=>{

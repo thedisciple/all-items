@@ -55,7 +55,7 @@ describe("M1 inventory", () => {
   });
   it("validates item fields and trims user input", () => {
     expect(itemFields.parse({ name: "  Вольтметр  " }).name).toBe("Вольтметр");
-    expect(photoFirstItemValues({ name: "", model: " HC-12 " }, true, "Неизвестный предмет")).toMatchObject({ name: "Неизвестный предмет", model: " HC-12 ", identificationStatus: "unknown" });
+    expect(photoFirstItemValues({ name: "", model: " HC-12 " }, true)).toMatchObject({ name: "", model: " HC-12 ", identificationStatus: "unknown" });
     expect(() => itemFields.parse({ name: "  " })).toThrow();
     expect(itemFields.parse({ name: "Тестер", saleIntent: "willing_to_sell" }).saleIntent).toBe("willing_to_sell");
   });
@@ -368,5 +368,21 @@ describe("private image storage", () => {
     expect(await getItem(inventory, withPhoto.id)).toBeNull();
     await expect(access(attachedFile)).rejects.toThrow();
     await expect(access(attachedSourceFile)).rejects.toThrow();
+  });
+});
+
+
+describe("M3.4 unnamed photo items", () => {
+  it("persists empty automatic names, preserves literal names and still rejects photo-less empty creation", async () => {
+    await expect(createItem(inventory, { name: " " })).rejects.toThrow();
+    const bytes = await sharp({create:{width:160,height:120,channels:3,background:"#546a78"}}).png().toBuffer();
+    const created = await createItemWithPhoto(inventory, photoFirstItemValues({name:"",model:"Synthetic unnamed"},true), new File([new Uint8Array(bytes)],"unnamed.png",{type:"image/png"}));
+    expect((await getItem(inventory,created.id))?.name).toBe("");
+    expect((await listItems(inventory,{search:"Synthetic unnamed",sort:"name"})).map(row=>row.id)).toContain(created.id);
+    await updateItem(inventory,created.id,{name:"",model:"Changed unnamed"});
+    expect((await getItem(inventory,created.id))?.name).toBe("");
+    await updateItem(inventory,created.id,{name:"Unidentified item"});
+    expect((await getItem(inventory,created.id))?.name).toBe("Unidentified item");
+    await expect(updateItem(inventory,created.id,{name:""})).rejects.toThrow();
   });
 });

@@ -8,6 +8,7 @@ import { aspectRatioForPreset, getCropperImageMetrics, isValidCropCoordinates, s
 import { useI18n } from "@/i18n/provider";
 
 type Props = {
+  initialCrop?: CropperJS.Data | null;
   file: File; sourceUrl: string; onConfirm: (file: File, crop: CropperJS.Data) => void; onCancel: () => void; onUseOriginal: () => void;
   cancelLabel: string; sourceAlt: string; title: string; confirmLabel: string; resetLabel: string; originalLabel: string;
   zoomLabel: string; aspectLabel: string; aspectFree: string; aspectOriginal: string; rotateLabel: string; rotateCounterclockwiseLabel: string;
@@ -99,6 +100,7 @@ export default function PhotoCropperEditor(props: Props) {
       readyRef.current = true;
       setIsReady(true);
       setError("");
+      if (props.initialCrop && isValidCropCoordinates(props.initialCrop)) instance.setData(props.initialCrop);
       if (instance.getImageData().width <= 0 || instance.getImageData().height <= 0) {
         readyRef.current = false;
         setIsReady(false);
@@ -200,7 +202,7 @@ export default function PhotoCropperEditor(props: Props) {
       instance.setData(kind === "move"
         ? { ...data, x: data.x + dx * stepX, y: data.y + dy * stepY }
         : { ...data, x: data.x - dx * stepX / 2, y: data.y - dy * stepY / 2, width: data.width + dx * stepX, height: data.height + dy * stepY });
-      setError("");
+      onCrop();
     } catch { setError("failed"); }
   }
 
@@ -240,7 +242,17 @@ export default function PhotoCropperEditor(props: Props) {
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
   }
 
-  const instanceReady = isReady && !error;
+  function onCrop() {
+    const instance = getReadyCropper();
+    if (!instance) return;
+    try {
+      const data = instance.getData(true);
+      const valid = isValidCropCoordinates(data) && data.width >= 64 && data.height >= 64;
+      setError(current => current === "small" && valid ? "" : current);
+    } catch { /* Initialization and output errors have separate recovery paths. */ }
+  }
+
+  const instanceReady = isReady && error !== "unavailable";
   return <div className="photo-source-overlay crop-overlay" role="presentation">
     <CropperErrorBoundary onCancel={props.onCancel} onUseOriginal={props.onUseOriginal} unavailableLabel={props.unavailableLabel} cancelLabel={props.cancelLabel} originalLabel={props.originalLabel}>
       <section ref={dialogRef} className="photo-source-dialog crop-dialog" role="dialog" aria-modal="true" aria-labelledby="crop-dialog-title" onKeyDown={onDialogKeyDown}>
@@ -271,6 +283,7 @@ export default function PhotoCropperEditor(props: Props) {
           ready={onReady}
           onError={onCropperError}
           zoom={onZoom}
+          crop={onCrop}
         />
         {!isReady && !error ? <p className="crop-load-status" role="status">{props.busyLabel}</p> : null}
         <div className="crop-controls">
@@ -307,7 +320,7 @@ export default function PhotoCropperEditor(props: Props) {
         </div>
         <div className="dialog-actions crop-actions">
           <button type="button" className="text-button" onClick={props.onCancel}>{props.cancelLabel}</button>
-          <button type="button" className="add-button" disabled={!instanceReady || busy} onClick={() => void confirm()}>{busy ? props.busyLabel : props.confirmLabel}</button>
+          <button type="button" className="add-button" disabled={!instanceReady || busy || error === "small"} onClick={() => void confirm()}>{busy ? props.busyLabel : props.confirmLabel}</button>
         </div>
       </section>
     </CropperErrorBoundary>

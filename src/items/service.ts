@@ -25,12 +25,14 @@ export const itemFields = z.object({
 });
 export type ItemFields = z.input<typeof itemFields>;
 
-export function photoFirstItemValues(input: ItemFields, hasPhoto: boolean, fallbackName = "Unidentified item"): ItemFields {
+const photoItemFields = itemFields.extend({ name: z.string().trim().max(160) });
+
+export function photoFirstItemValues(input: ItemFields, hasPhoto: boolean): ItemFields {
   const suppliedName = input.name.trim();
   return {
     ...input,
-    name: suppliedName || (hasPhoto ? fallbackName : ""),
-    identificationStatus: suppliedName ? input.identificationStatus : "unknown",
+    name: suppliedName,
+    identificationStatus: suppliedName || !hasPhoto ? input.identificationStatus : "unknown",
   };
 }
 
@@ -97,7 +99,7 @@ async function beginWriteTransaction(db: Awaited<ReturnType<typeof inventoryData
 
 export async function createItem(context: InventoryContext, input: ItemFields, stock?: unknown, attach?: (tx: Pick<Client, "execute">, id: string) => Promise<void>) {
   return serializeLocalWrite(async () => {
-  const parsed = itemFields.parse(input);
+  const parsed = (attach ? photoItemFields : itemFields).parse(input);
   const rows = normalizedStock(stock ?? [{ location: "", quantity: parsed.trackingMode === "unique" ? 1 : 0 }], parsed.trackingMode);
   const { db, workspaceId } = await inventoryDatabase(context);
   const tx = await beginWriteTransaction(db);
@@ -266,13 +268,14 @@ async function replaceStock(tx: Awaited<ReturnType<typeof beginWriteTransaction>
 
 export async function updateItem(context: InventoryContext, id: string, input: ItemFields, stock?: unknown) {
   id = itemIdInput.parse(id);
-  const parsed = itemFields.parse(input);
+  const parsed = photoItemFields.parse(input);
   return serializeLocalWrite(async () => {
     const { db, workspaceId } = await inventoryDatabase(context);
     const tx = await beginWriteTransaction(db);
     try {
-      const existing = await tx.execute({ sql: "SELECT id FROM items WHERE id=? AND workspace_id=?", args: [id,workspaceId] });
+      const existing = await tx.execute({ sql: "SELECT id,name FROM items WHERE id=? AND workspace_id=?", args: [id,workspaceId] });
       if (!existing.rows.length) throw new Error("Item not found");
+      if (!parsed.name && existing.rows[0]!.name !== "") itemFields.parse(input);
       const current = await tx.execute({ sql: "SELECT s.quantity,l.name AS location FROM stock_entries s LEFT JOIN locations l ON l.id=s.location_id WHERE s.item_id=?", args: [id] });
       const rows = normalizedStock(stock ?? current.rows.map(row => ({quantity: Number(row.quantity), location: String(row.location ?? "")})), parsed.trackingMode);
       const now = new Date().toISOString();

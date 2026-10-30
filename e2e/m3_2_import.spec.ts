@@ -19,7 +19,7 @@ test("downloads a complete archive and imports it twice as new inventories while
   await add.locator(".category-trigger").click();
   await add.locator(".category-options input").nth(0).check();
   await add.locator(".category-options input").nth(2).check();
-  await add.getByRole("button", { name: "Добавить вещь" }).click();
+  await add.getByRole("button", { name: "Сохранить вещь" }).click();
   await expect(page).toHaveURL(/added=/);
 
   await page.goto("/inventories/00000000-0000-4000-8000-000000000001/collections");

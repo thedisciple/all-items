@@ -78,7 +78,7 @@ test("crop output, contained preview and saved image preserve marked edges and a
       expect(retained).toContain("portrait");
     }
     await dialog.getByLabel("Название").fill(`Marked ${fixture.name}`);
-    await dialog.getByRole("button",{name:"Добавить вещь",exact:true}).click();
+    await dialog.getByRole("button",{name:"Сохранить вещь",exact:true}).click();
     await expect(page).toHaveURL(/added=/);
     await page.getByRole("link",{name:`Marked ${fixture.name}`,exact:true}).click();
     const image=page.locator(".photo-viewer-image img");await expect(image).toBeVisible();

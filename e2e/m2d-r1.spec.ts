@@ -50,7 +50,7 @@ async function createWithCrop(page: Page, name: string) {
   await page.setViewportSize({ width: 1365, height: 900 });
   await editor.getByRole("button", { name: "Готово" }).click();
   await addDialog.getByLabel("Название").fill(name);
-  await addDialog.getByRole("button", { name: "Добавить вещь" }).click();
+  await addDialog.getByRole("button", { name: "Сохранить вещь" }).click();
   await expect(page).toHaveURL(/added=/);
   await page.getByRole("link", { name: new RegExp(name) }).click();
   await expect(page.locator(".photo-viewer-image img")).toBeVisible();
@@ -66,7 +66,7 @@ async function createNoPhotoItem(page: Page, name: string, category: string) {
     await dialog.getByLabel("Своя категория").fill("Electronics");
     await dialog.locator(".custom-category-row button").click();
   } else await dialog.locator(".category-options input").nth(category === "electronics" ? 0 : 10).check();
-  await dialog.getByRole("button", { name: "Добавить вещь" }).click();
+  await dialog.getByRole("button", { name: "Сохранить вещь" }).click();
   await expect(page).toHaveURL(/added=/);
 }
 
@@ -137,7 +137,7 @@ test("waits for image readiness, applies zoom and aspect controls, crops, and op
   await expect(aspect).toHaveValue("free");
   await editor.getByRole("button", { name: "Готово" }).click();
   await addDialog.getByLabel("Название").fill("M2D-R1 cropped item");
-  await addDialog.getByRole("button", { name: "Добавить вещь" }).click();
+  await addDialog.getByRole("button", { name: "Сохранить вещь" }).click();
   await expect(page).toHaveURL(/added=/);
   await page.getByRole("link", { name: /M2D-R1 cropped item/ }).click();
 
@@ -355,7 +355,7 @@ test("rejects invalid crop coordinates and allows item creation with the origina
   await expect(editor.getByText(/Кадр слишком маленький/)).toBeVisible();
   await editor.getByRole("button", { name: "Продолжить без кадрирования" }).click();
   await addDialog.getByLabel("Название").fill("M2D-R1 original fallback item");
-  await addDialog.getByRole("button", { name: "Добавить вещь" }).click();
+  await addDialog.getByRole("button", { name: "Сохранить вещь" }).click();
   await expect(page).toHaveURL(/added=/);
   await page.getByRole("link", { name: /M2D-R1 original fallback item/ }).click();
   await expect(page.locator(".photo-viewer-image img.detail-photo")).toBeVisible();

@@ -32,7 +32,7 @@ test("consistent controls, dismissible categories and unobscured collection crea
     await add.getByLabel("Название").click();
     await expect(add.locator(".category-popover")).toHaveCount(0);
     await expect(add.locator(".category-selection .category-chip")).toHaveCount(1);
-    await add.getByRole("button", { name: "Добавить вещь", exact: true }).click();
+    await add.getByRole("button", { name: "Сохранить вещь", exact: true }).click();
     await expect(page).toHaveURL(/added=/);
     await page.goto("/inventories/00000000-0000-4000-8000-000000000001/collections");
     await page.locator(".collection-create-trigger").click();

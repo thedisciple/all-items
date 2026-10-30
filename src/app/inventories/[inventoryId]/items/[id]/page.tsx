@@ -44,9 +44,9 @@ export default async function ItemPage({ params, searchParams }: Props) {
     <AppSidebar active="items" locale={locale}/>
     <section className="main-content"><AppHeader/>
       <div className="content-wrap detail-wrap">
-        <div className="item-hero"><h1>{item.name}</h1><span className="item-number-badge">{item.inventory_number}</span></div>
+        <div className="item-hero"><h1>{item.name || t("unidentifiedItemName")}</h1><span className="item-number-badge">{item.inventory_number}</span></div>
         <section className="photo-detail-panel" aria-label={t("photo")}>
-          <PhotoReplacement itemId={id} photoUrl={photo ? `${base}/media/${id}/${photo.id}?v=${photo.id}` : null} itemName={item.name}/>
+          <PhotoReplacement itemId={id} photoUrl={photo ? `${base}/media/${id}/${photo.id}?v=${photo.id}` : null} itemName={item.name || t("unidentifiedItemName")}/>
           {photo ? <DestructiveConfirmation action={removePhoto} label={t("photoDelete")} description={t("photoDeleteWarning")} fields={{ id }}/> : null}
         </section>
         <ItemEditForm itemId={id} initial={draft} initialRows={item.stock} returnTo={returnTo}/>

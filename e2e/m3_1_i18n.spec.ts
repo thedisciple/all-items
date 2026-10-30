@@ -20,7 +20,7 @@ test("five local languages render on inventory, details, collections, and photo 
   await page.locator(".add-dialog-trigger").click();
   const addDialog = page.getByRole("dialog", { name: "Добавить вещь" });
   await addDialog.getByLabel("Название").fill("Мітка Srpski 中文");
-  await addDialog.getByRole("button", { name: "Добавить вещь" }).click();
+  await addDialog.getByRole("button", { name: "Сохранить вещь" }).click();
   await expect(page).toHaveURL(/added=/);
   const detailPath = await page.getByRole("link", { name: /Мітка Srpski 中文/ }).getAttribute("href");
   if (!detailPath?.includes("/items/")) throw new Error("The newly added item detail link was not found");

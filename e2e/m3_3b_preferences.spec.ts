@@ -11,12 +11,12 @@ test("custom category emoji and default sort persist in the current inventory", 
   await dialog.getByLabel("Эмодзи категории").fill("🧰");
   await dialog.getByRole("button", { name: "Добавить", exact: true }).click();
   await expect(dialog.locator(".category-selection")).toContainText("🧰");
-  await dialog.getByRole("button", { name: "Добавить вещь", exact: true }).click();
+  await dialog.getByRole("button", { name: "Сохранить вещь", exact: true }).click();
   await expect(page).toHaveURL(/added=/);
   await expect(page.locator(".item-row").filter({ hasText: "Zulu synthetic" }).locator(".item-category-filter")).toContainText("🧰");
   await page.locator(".add-dialog-trigger").click();
   await dialog.getByLabel("Название").fill("Alpha synthetic");
-  await dialog.getByRole("button", { name: "Добавить вещь", exact: true }).click();
+  await dialog.getByRole("button", { name: "Сохранить вещь", exact: true }).click();
   await expect(page).toHaveURL(/added=/);
   await page.goto(`${base}/settings`);
   await page.getByLabel("Сортировка по умолчанию").selectOption("name");

@@ -40,7 +40,7 @@ function cameraErrorKey(error: unknown) {
 }
 
 export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoSubmit = false, savedToken, resultToken, retryReady = false, externalPreview = false, onPreviewChange, onDraftChange, resetToken, recovery, onRecoveryChange }: Props) {
-  const { locale, t } = useI18n();
+  const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const sourceInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -180,6 +180,13 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
   }
 
   async function editCurrentPhoto() {
+    if (selectedFile) {
+      const original = sourceFile ?? selectedFile;
+      setSelectionError("");
+      setCropFile(original);
+      onRecoveryChange?.({ selected: selectedFile, source: original, pending: original, crop: cropData });
+      return;
+    }
     if (!currentPhotoUrl) return;
     setSelectionError("");
     try {
@@ -272,12 +279,11 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
         {currentPhotoUrl ? <RefreshCw size={16} aria-hidden="true"/> : <ImagePlus size={16} aria-hidden="true"/>}
         <span>{pending ? t("savingPhoto") : selectedFile ? t("chooseAnotherPhoto") : currentPhotoUrl ? t("replacePhoto") : t("addPhoto")}</span>
       </button>
-      {currentPhotoUrl && !pending && !selectedFile ? <button type="button" className="photo-acquisition-primary photo-edit-primary" onClick={() => void editCurrentPhoto()}><Pencil size={16} aria-hidden="true"/><span>{t("editCrop")}</span></button> : null}
+      {(currentPhotoUrl || selectedFile) && !pending ? <button type="button" className="photo-acquisition-primary photo-edit-primary" onClick={() => void editCurrentPhoto()}><Pencil size={16} aria-hidden="true"/><span>{t("editCrop")}</span></button> : null}
       {selectedFile && !pending && !autoSubmit ? <button type="button" className="text-button" onClick={clearSelection}>{t("removeSelection")}</button> : null}
       {selectedFile && !pending && autoSubmit ? <button type="button" className="text-button" onClick={clearSelection}>{t("cancelSelection")}</button> : null}
       {selectedFile && retryReady && !pending ? <button type="button" className="quiet-button" onClick={() => { submittingRef.current = true; inputRef.current?.form?.requestSubmit(); }}>{t("retryUpload")}</button> : null}
     </div>
-    {selectedFile ? <p className="photo-file-caption">{t("photoChosen", { name: selectedFile.name, size: new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(selectedFile.size / (1024 * 1024)) })}</p> : null}
     {selectionError ? <p className="form-error" role="alert">{t(selectionError)}</p> : null}
     {pending ? <p className="inline-status" role="status" aria-live="polite">{t("photoPending")}</p> : null}
     {sourceOpen ? <div className="photo-source-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeSources(); }}>
@@ -300,6 +306,6 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
         </>}
       </section>
     </div> : null}
-    {cropFile ? <PhotoCropper file={cropFile} onConfirm={confirmCrop} onCancel={cancelCrop} onUseOriginal={useOriginalPhoto}/> : null}
+    {cropFile ? <PhotoCropper initialCrop={cropFile === sourceFile ? cropData : null} file={cropFile} onConfirm={confirmCrop} onCancel={cancelCrop} onUseOriginal={useOriginalPhoto}/> : null}
   </div>;
 }

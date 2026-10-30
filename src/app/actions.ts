@@ -10,9 +10,9 @@ import { addItemToCollection, addItemsToCollection, createCollection, deleteColl
 import { replaceCollectionCoverUpload } from "@/media/collection-covers";
 import { resolveInventory } from "@/items/inventories";
 import { inventoryPath, inventoryReturnPath } from "@/items/inventory-context";
-import { locales, translate, type MessageKey } from "@/i18n/messages";
+import { locales, type MessageKey } from "@/i18n/messages";
 
-import { getLocale } from "@/i18n/server";
+
 
 export type ActionFeedback = { status: "idle" | "success" | "error"; message: MessageKey | ""; values?: Record<string,string|number>; itemId?: string; collectionId?: string; count?: number };
 export type PhotoActionFeedback = ActionFeedback & { mediaId?: string };
@@ -58,7 +58,7 @@ export async function addItemAction(_previous: ActionFeedback, formData: FormDat
   const cropValue = String(formData.get("crop") ?? "");
   let item: { id: string };
   try {
-    const values = photoFirstItemValues(formValues(formData) as ItemFields, file !== null, translate(await getLocale(), "unidentifiedItemName"));
+    const values = photoFirstItemValues(formValues(formData) as ItemFields, file !== null);
     if (!values.name.trim() && !file) return { status: "error", message: "invalidItem" };
     item = file
       ? await createItemWithPhoto(context, values as ItemFields, file, sourceFile ?? file, cropValue, JSON.parse(String(formData.get("stock") ?? "[]")))

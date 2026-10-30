@@ -18,7 +18,7 @@ async function addItem(page:Page,name:string,quantity:string) {
   await dialog.getByLabel("Название").fill(name);
   await dialog.getByLabel("Тип учёта").selectOption("bulk");
   await dialog.getByLabel("Количество",{exact:true}).fill(quantity);
-  await dialog.getByRole("button",{name:"Добавить вещь",exact:true}).click();
+  await dialog.getByRole("button",{name:"Сохранить вещь",exact:true}).click();
   await expect(page).toHaveURL(/added=/);
   const row=page.getByRole("link",{name:new RegExp(name)});
   await expect(row).toContainText("INV-000001");
@@ -79,7 +79,7 @@ test("header navigation, scoped counts and category links remain usable at 360px
   await dialog.locator(".category-trigger").click();
   await dialog.locator(".category-options input").first().check();
   await dialog.locator(".category-trigger").click();
-  await dialog.getByRole("button",{name:"Добавить вещь",exact:true}).click();
+  await dialog.getByRole("button",{name:"Сохранить вещь",exact:true}).click();
   await expect(page).toHaveURL(/added=/);
   await expect(page.locator(".side-navigation .nav-link").first().locator(".nav-count")).toHaveText("1");
   const row=page.locator(".item-grid-row").filter({hasText:"Synthetic row"});

@@ -16,7 +16,7 @@ test("downloads an independently verifiable archive and a separate CSV without c
   await photoDialog.getByRole("button", { name: "Готово" }).click();
   await expect(dialog).toBeVisible();
   await dialog.getByLabel("Название").fill("Archive export Проверка 中文");
-  await dialog.getByRole("button", { name: "Добавить вещь" }).click();
+  await dialog.getByRole("button", { name: "Сохранить вещь" }).click();
   await expect(page).toHaveURL(/added=/);
   await page.goto("/inventories/00000000-0000-4000-8000-000000000001/data");
   await page.setViewportSize({ width: 360, height: 800 });
