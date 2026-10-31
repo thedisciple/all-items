@@ -5,6 +5,7 @@ import type { InventoryContext } from "@/items/inventory-context";
 import { canonicalCategories, categoryKeyForStoredValue } from "./categories";
 import { categoryPresentations, saveCategoryPresentations } from "./inventory-presentation";
 import type { Client } from "@libsql/client";
+import { insertWriteReceipt, readWriteReceipt, type WriteIdentity } from "./write-receipts";
 
 const optionalText = (max: number) => z.string().trim().max(max).optional().transform((value) => value || null);
 export const itemFields = z.object({
@@ -99,20 +100,31 @@ async function beginWriteTransaction(db: Awaited<ReturnType<typeof inventoryData
   }
 }
 
-export async function createItem(context: InventoryContext, input: ItemFields, stock?: unknown, attach?: (tx: Pick<Client, "execute">, id: string) => Promise<void>) {
-  return serializeLocalWrite(async () => {
-  const parsed = (attach ? photoItemFields : itemFields).parse(input);
+export function validateItemCreation(input:ItemFields,stock:unknown,hasPhoto:boolean){
+  const parsed = (hasPhoto ? photoItemFields : itemFields).parse(input);
   const price = parsePriceMinor(parsed.askingPrice, parsed.askingCurrency);
   if (price !== null && !isSupportedCurrency(parsed.askingCurrency)) throw new Error("Unsupported currency");
   const rows = normalizedStock(stock ?? [{ location: "", quantity: parsed.trackingMode === "unique" ? 1 : 0 }], parsed.trackingMode);
+  return {parsed,price,rows};
+}
+
+export async function createItem(context: InventoryContext, input: ItemFields, stock?: unknown, attach?: (tx: Pick<Client, "execute">, id: string) => Promise<void>, write?: {id:string;identity:WriteIdentity}) {
+  return serializeLocalWrite(async () => {
+  const {parsed,price,rows}=validateItemCreation(input,stock,Boolean(attach));
   const { db, workspaceId } = await inventoryDatabase(context);
   const tx = await beginWriteTransaction(db);
   try {
+    if(write){
+      itemIdInput.parse(write.id);
+      if(write.identity.kind!=="item_create")throw new Error("Invalid creation receipt kind");
+      const previous=await readWriteReceipt(tx,context,write.identity);
+      if(previous){await tx.commit();return{id:previous.itemId,inventoryNumber:previous.inventoryNumber};}
+    }
     const allocated = await tx.execute({ sql: "UPDATE workspaces SET next_inventory_number = next_inventory_number + 1 WHERE id = ?", args: [workspaceId] });
     if (!allocated.rowsAffected) throw new Error("Рабочее пространство не найдено");
     const sequenceResult = await tx.execute({ sql: "SELECT next_inventory_number - 1 AS inventory_sequence FROM workspaces WHERE id = ?", args: [workspaceId] });
     const sequence = Number(sequenceResult.rows[0].inventory_sequence);
-    const id = crypto.randomUUID();
+    const id = write?.id ?? crypto.randomUUID();
     const now = new Date().toISOString();
     await tx.execute({
       sql: `INSERT INTO items (id, workspace_id, name, model, inventory_number, brand, category, original_marking, notes, description, identification_status, tracking_mode, sale_intent, asking_price_minor, asking_currency, asking_price_exponent, created_at, updated_at)
@@ -129,6 +141,7 @@ export async function createItem(context: InventoryContext, input: ItemFields, s
       const photo = await tx.execute({sql:"SELECT id FROM media_assets WHERE item_id=? LIMIT 1",args:[id]});
       if (!photo.rows.length) throw new Error("An unnamed new item requires a photo");
     }
+    if(write)await insertWriteReceipt(tx,context,write.identity,{itemId:id,mediaId:null,inventoryNumber:`INV-${String(sequence).padStart(6,"0")}`});
     await tx.commit();
     return { id, inventoryNumber: `INV-${String(sequence).padStart(6, "0")}` };
   } catch (error) {

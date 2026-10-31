@@ -30,7 +30,7 @@ test("restores and discards a scoped item draft including the cropped photo", as
   await dialog.locator('input[name="photo"]').setInputFiles({ name: "synthetic.png", mimeType: "image/png", buffer: await sharp({ create: { width: 180, height: 300, channels: 3, background: "#638798" } }).png().toBuffer() });
   await page.getByRole("dialog", { name: "Редактировать фото" }).getByRole("button", { name: "Готово" }).click();
   await expect.poll(() => draftCount(page)).toBe(1);
-  await expect.poll(() => page.evaluate(() => new Promise<boolean>((resolve, reject) => { const open = indexedDB.open("all-items-drafts", 1); open.onerror = () => reject(open.error); open.onsuccess = () => { const db = open.result; const q = db.transaction("drafts").objectStore("drafts").getAll(); q.onsuccess = () => { resolve(Boolean(q.result[0]?.photo?.selected)); db.close(); }; }; }))).toBe(true);
+  await expect.poll(() => page.evaluate(() => new Promise<boolean>((resolve, reject) => { const open = indexedDB.open("all-items-drafts", 1); open.onerror = () => reject(open.error); open.onsuccess = () => { const db = open.result; const q = db.transaction("drafts").objectStore("drafts").getAll(); q.onsuccess = () => { resolve(Boolean(q.result[0]?.photos?.[0]?.selected)); db.close(); }; }; }))).toBe(true);
   await page.reload();
   await page.locator(".add-dialog-trigger").click();
   dialog = page.getByRole("dialog", { name: "Добавить вещь" });
@@ -41,7 +41,7 @@ test("restores and discards a scoped item draft including the cropped photo", as
   await expect(dialog.locator(".category-selection")).toContainText("Recovered category");
   await expect(dialog.locator(".category-selection")).toContainText("🧰");
   await expect(dialog.locator(".photo-preview-frame img")).toBeVisible();
-  expect(await dialog.locator('input[name="photo"]').evaluate(el => (el as HTMLInputElement).files?.[0]?.size)).toBeGreaterThan(0);
+  expect(await dialog.locator('input[name="selectedPhoto"]').evaluate(el => (el as HTMLInputElement).files?.[0]?.size)).toBeGreaterThan(0);
   await dialog.getByRole("button", { name: "Сохранить вещь", exact: true }).click();
   await expect(page).toHaveURL(/added=/, { timeout: 30_000 });
   await expect.poll(() => draftCount(page)).toBe(0);
@@ -107,13 +107,13 @@ test("a committed draft with a photo survives a browser restart", async () => {
     await dialog.getByRole("button", { name: "Добавить фото", exact: true }).click();
     await dialog.locator('input[name="photo"]').setInputFiles({name:"restart.png",mimeType:"image/png",buffer:await sharp({create:{width:100,height:160,channels:3,background:"#567899"}}).png().toBuffer()});
     await page.getByRole("dialog", { name: "Редактировать фото" }).getByRole("button", { name: "Готово" }).click();
-    await expect.poll(() => page.evaluate(() => new Promise<boolean>((resolve, reject) => { const open = indexedDB.open("all-items-drafts", 1); open.onerror = () => reject(open.error); open.onsuccess = () => { const db = open.result; const q = db.transaction("drafts").objectStore("drafts").getAll(); q.onsuccess = () => { resolve(Boolean(q.result[0]?.photo?.selected)); db.close(); }; }; }))).toBe(true);
+    await expect.poll(() => page.evaluate(() => new Promise<boolean>((resolve, reject) => { const open = indexedDB.open("all-items-drafts", 1); open.onerror = () => reject(open.error); open.onsuccess = () => { const db = open.result; const q = db.transaction("drafts").objectStore("drafts").getAll(); q.onsuccess = () => { resolve(Boolean(q.result[0]?.photos?.[0]?.selected)); db.close(); }; }; }))).toBe(true);
     await context.close(); context = await launch(); page = await context.newPage();
     await page.goto(base); await page.locator(".add-dialog-trigger").click();
     await page.getByRole("button", { name: "Восстановить" }).click();
     await expect(page.getByLabel("Название")).toHaveValue("Restart recovery synthetic");
     await expect(page.locator(".photo-preview-frame img")).toBeVisible();
-    expect(await page.locator('input[name="photo"]').evaluate(el => (el as HTMLInputElement).files?.[0]?.size)).toBeGreaterThan(0);
+    expect(await page.locator('input[name="selectedPhoto"]').evaluate(el => (el as HTMLInputElement).files?.[0]?.size)).toBeGreaterThan(0);
   } finally {
     await context?.close();
     if (path.dirname(path.resolve(profile)) !== path.resolve(os.tmpdir()) || !path.basename(profile).startsWith("all-items-draft-profile-")) throw new Error("Unexpected browser profile path");

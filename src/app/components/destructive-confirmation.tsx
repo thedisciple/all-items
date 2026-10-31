@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import {createPortal} from "react-dom";
 import { Trash2, X } from "lucide-react";
 import { ActionForm } from "./action-form";
 import type { ActionFeedback } from "@/app/actions";
@@ -10,7 +11,8 @@ import { useI18n } from "@/i18n/provider";
 
 type FormAction = (formData: FormData) => void | ActionFeedback | Promise<void | ActionFeedback>;
 
-export function DestructiveConfirmation({ action, label, description, fields, children, iconOnly = false }: {
+export function DestructiveConfirmation({ action, label, description, fields, children, iconOnly = false, refreshOnSuccess=true }: {
+  refreshOnSuccess?:boolean;
   iconOnly?: boolean;
   action: FormAction;
   label: string;
@@ -22,7 +24,7 @@ export function DestructiveConfirmation({ action, label, description, fields, ch
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [feedback, submit, pending] = useActionState(async (_previous:ActionFeedback,data:FormData):Promise<ActionFeedback> => {try{return await action(data) ?? {status:"idle",message:""};}catch{return {status:"error",message:"operationFailed"};}}, {status:"idle",message:""});
-  useEffect(() => { if (feedback.status === "success") { setOpen(false); router.refresh(); } }, [feedback, router]);
+  useEffect(() => { if (feedback.status === "success") { setOpen(false); if(refreshOnSuccess)router.refresh(); } }, [feedback, router,refreshOnSuccess]);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
   const didOpen = useRef(false);
@@ -48,18 +50,18 @@ export function DestructiveConfirmation({ action, label, description, fields, ch
 
   return <>
     <button ref={triggerRef} type="button" className={`delete-button${iconOnly ? " icon-button photo-delete-icon" : ""}`} aria-label={label} title={label} onClick={() => setOpen(true)}><Trash2 size={16} aria-hidden="true"/>{iconOnly ? null : <span>{label}</span>}</button>
-    {open ? <div className="photo-source-overlay destructive-overlay" role="presentation" onMouseDown={(event) => { if (!pending && event.target === event.currentTarget) setOpen(false); }}>
+    {open ? createPortal(<div className="photo-source-overlay destructive-overlay" role="presentation" onMouseDown={(event) => { if (!pending && event.target === event.currentTarget) setOpen(false); }}>
       <section ref={dialogRef} className="photo-source-dialog destructive-dialog" role="alertdialog" aria-modal="true" aria-labelledby="destructive-title" aria-describedby="destructive-description" onKeyDown={onKeyDown}>
         <div className="dialog-heading"><h2 id="destructive-title">{label}</h2><button type="button" className="icon-button" aria-label={t("close")} disabled={pending} onClick={() => setOpen(false)}><X size={18} aria-hidden="true"/></button></div>
         <p id="destructive-description">{description}</p>
         {children}
-        <ActionForm action={submit} pending={pending} className="destructive-form">
+        <ActionForm action={submit} pending={pending} onSubmit={event=>event.stopPropagation()} className="destructive-form">
           {Object.entries(fields).map(([name, value]) => <input key={name} type="hidden" name={name} value={value}/>)}
           <InventoryField/><input type="hidden" name="confirm" value="on"/>
           {feedback.status === "error" && feedback.message ? <p role="alert" className="form-error">{t(feedback.message, feedback.values)}</p> : null}
           <div className="dialog-actions"><button type="button" className="text-button" disabled={pending} onClick={() => setOpen(false)}>{t("cancel")}</button><button type="submit" className="delete-button" disabled={pending}><Trash2 size={16} aria-hidden="true"/><span>{pending ? t("deleting") : label}</span></button></div>
         </ActionForm>
       </section>
-    </div> : null}
+    </div>,document.body) : null}
   </>;
 }

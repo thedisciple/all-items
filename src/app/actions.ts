@@ -5,13 +5,15 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { createItem, photoFirstItemValues, updateItem, type ItemFields } from "@/items/service";
-import { createItemWithPhoto, deleteItemWithMedia, removePrimaryPhoto, replacePrimaryPhoto, MediaValidationError, addItemPhoto, replaceItemPhoto, setItemPrimaryPhoto, reorderItemPhotos, removeItemPhoto } from "@/media/service";
+import { createItemWithPhoto, deleteItemWithMedia, removePrimaryPhoto, MediaValidationError, addItemPhoto, replaceItemPhoto, setItemPrimaryPhoto, reorderItemPhotos, removeItemPhoto } from "@/media/service";
 import { addItemToCollection, addItemsToCollection, createCollection, deleteCollection, removeItemFromCollection, renameCollection, setCollectionCover } from "@/items/collections";
 import { replaceCollectionCoverUpload } from "@/media/collection-covers";
 import { resolveInventory } from "@/items/inventories";
 import { inventoryPath, inventoryReturnPath } from "@/items/inventory-context";
 import { locales, type MessageKey } from "@/i18n/messages";
 import { PhotoLimitError, NEW_ITEM_PHOTO_LIMIT } from "@/media/limits";
+import {MediaProcessingBusy} from "@/media/service";
+import {WriteReceiptConflict,WriteReceiptDeleted} from "@/items/write-receipts";
 
 
 
@@ -84,13 +86,15 @@ export async function replacePhotoAction(_previous: PhotoActionFeedback, formDat
   const cropValue = String(formData.get("crop") ?? "");
   try {
     const operation = z.enum(["add", "replace"]).parse(formData.get("photoOperation") ?? "replace");
+    const writeId=z.uuid().parse(formData.get("photoWriteId"));
     const mediaId = formData.get("mediaId");
-    const saved = operation === "add" ? await addItemPhoto(context, id.data, file, sourceFile, cropValue)
-      : mediaId ? await replaceItemPhoto(context, id.data, z.string().uuid().parse(mediaId), file, sourceFile, cropValue)
-      : await replacePrimaryPhoto(context, id.data, file, sourceFile, cropValue);
+    const saved = operation === "add" ? await addItemPhoto(context, id.data, file, sourceFile, cropValue,writeId)
+      : await replaceItemPhoto(context, id.data, z.string().uuid().parse(mediaId), file, sourceFile, cropValue,writeId);
     revalidatePath(inventoryPath(context), "layout"); revalidatePath(inventoryPath(context,`/items/${id.data}`));
     return { status: "success", message: "photoSaved", mediaId: saved.id };
   } catch (error) {
+    if(error instanceof MediaProcessingBusy)return{status:"error",message:"photoProcessingBusy"};
+    if(error instanceof WriteReceiptConflict||error instanceof WriteReceiptDeleted)return{status:"error",message:"photoWriteConflict"};
     if (error instanceof PhotoLimitError) return {status:"error",message:"galleryLimit",values:{count:NEW_ITEM_PHOTO_LIMIT}};
     const message = error instanceof MediaValidationError ? "invalidPhoto" : errorMessage(error, "photoSaveGeneric");
     return { status: "error", message };

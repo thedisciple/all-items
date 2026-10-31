@@ -2,6 +2,7 @@ import { assertPrivatePath } from "@/media/private-paths";
 import sharp, { type Metadata } from "sharp";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import {createHash} from "node:crypto";
 import { z } from "zod";
 import { dataDirectory } from "@/db/client";
 import { inventoryDatabase } from "@/items/inventories";
@@ -9,6 +10,8 @@ import type { InventoryContext } from "@/items/inventory-context";
 import { createItem, type ItemFields } from "@/items/service";
 import { cropDataSchema } from "@/media/crop-data";
 import { NEW_ITEM_PHOTO_LIMIT, PhotoLimitError } from "./limits";
+import {canonicalJSON,safePhotoName} from "@/items/creation-command";
+import {insertWriteReceipt,readWriteReceipt,WriteReceiptDeleted,type WriteIdentity} from "@/items/write-receipts";
 
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 export const MAX_IMAGE_SIDE = 12_000;
@@ -28,15 +31,29 @@ type StoredAsset = { id: string; item_id: string; storage_path: string; thumbnai
 export class MediaValidationError extends Error {
   constructor(message: string) { super(message); this.name = "MediaValidationError"; }
 }
+export class MediaProcessingBusy extends Error{constructor(){super("Photo processing is busy");}}
+const processingState=globalThis as typeof globalThis&{__allItemsImageQueue?:{tail:Promise<unknown>;count:number}};
 
-function mediaRoot() {
-  return path.resolve(dataDirectory(), "media", "items");
+async function processImage(file:File,sourceFile:File=file,cropValue="",keepEditableSource=true){
+  const selected=uploadedFileSchema.safeParse(file),source=uploadedFileSchema.safeParse(sourceFile);
+  if(!selected.success)throw new MediaValidationError(selected.error.issues[0]?.message??"Invalid photo input size");
+  if(!source.success)throw new MediaValidationError("Invalid editable source size");
+  const queue=processingState.__allItemsImageQueue??={tail:Promise.resolve(),count:0};
+  if(queue.count>=4)throw new MediaProcessingBusy();
+  queue.count++;
+  const operation=queue.tail.then(()=>normalizeImage(file,sourceFile,cropValue,keepEditableSource));
+  queue.tail=operation.catch(()=>{});
+  try{return await operation;}finally{queue.count--;}
 }
 
-function assetPaths(itemId: string, mediaId: string): AssetPaths {
+function mediaRoot(directory=dataDirectory()) {
+  return path.resolve(directory, "media", "items");
+}
+
+function assetPaths(itemId: string, mediaId: string, directory=dataDirectory()): AssetPaths {
   const safeItemId = mediaIdSchema.parse(itemId);
   const safeMediaId = mediaIdSchema.parse(mediaId);
-  const root = mediaRoot();
+  const root = mediaRoot(directory);
   const relativeFull = `${safeItemId}/${safeMediaId}.webp`;
   const relativeThumbnail = `${safeItemId}/${safeMediaId}-thumb.webp`;
   const relativeSource = `${safeItemId}/${safeMediaId}-source.webp`;
@@ -71,9 +88,11 @@ export async function removeAssetFiles(context: InventoryContext, row: StoredAss
   await Promise.all([rm(paths.full, { force: true }), rm(paths.thumbnail, { force: true }), rm(paths.source, { force: true })]);
 }
 
-async function processImage(file: File, sourceFile: File = file, cropValue = "", keepEditableSource = true) {
+async function normalizeImage(file: File, sourceFile: File = file, cropValue = "", keepEditableSource = true) {
   const validFile = uploadedFileSchema.safeParse(file);
   if (!validFile.success) throw new MediaValidationError(validFile.error.issues[0]?.message ?? "Файл фотографии недопустим.");
+  const validSource = uploadedFileSchema.safeParse(sourceFile);
+  if (!validSource.success) throw new MediaValidationError("Invalid editable source size");
   const input = Buffer.from(await file.arrayBuffer());
   if (input.byteLength < 1 || input.byteLength > MAX_IMAGE_BYTES) {
     throw new MediaValidationError("Размер фотографии должен быть не более 10 МиБ.");
@@ -102,7 +121,6 @@ async function processImage(file: File, sourceFile: File = file, cropValue = "",
       .rotate().resize({ width: 480, height: 480, fit: "inside", withoutEnlargement: true })
       .webp({ quality: 76, effort: 4 }).toBuffer();
     const sourceInput = Buffer.from(await sourceFile.arrayBuffer());
-    const validSource = uploadedFileSchema.safeParse(sourceFile);
     if (!validSource.success || sourceInput.length < 1 || sourceInput.length > MAX_IMAGE_BYTES) throw new MediaValidationError("Исходная фотография недопустима.");
     const sourceMetadata = await sharp(sourceInput, { failOn: "error", limitInputPixels: MAX_IMAGE_PIXELS, pages: 1 }).metadata();
     if (!sourceMetadata.format || !supportedFormats.has(sourceMetadata.format) || !dimensionsSchema.safeParse({ width: sourceMetadata.width ?? 0, height: sourceMetadata.height ?? 0 }).success) throw new MediaValidationError("Размер исходной фотографии недопустим.");
@@ -127,16 +145,22 @@ export async function preparePrivateImage(file: File) {
   return processImage(file, file, "", false);
 }
 
+export async function normalizeItemPhoto(file:File,source:File=file,crop=""){
+  return processImage(file,source,crop);
+}
+export const privateItemAssetPaths=assetPaths;
+
 async function writeAssetFiles(itemId: string, mediaId: string, image: Awaited<ReturnType<typeof processImage>>) {
   const paths = assetPaths(itemId, mediaId);
   for(const file of [paths.full,paths.thumbnail,paths.source]) await assertPrivatePath(dataDirectory(),file);
   await mkdir(path.dirname(paths.full), { recursive: true });
+  const created:string[]=[];
   try {
-    await writeFile(paths.full, image.full, { flag: "wx" });
-    await writeFile(paths.thumbnail, image.thumbnail, { flag: "wx" });
-    await writeFile(paths.source, image.source, { flag: "wx" });
+    for(const [file,bytes]of [[paths.full,image.full],[paths.thumbnail,image.thumbnail],[paths.source,image.source]] as const){
+      await writeFile(file,bytes,{flag:"wx"});created.push(file);
+    }
   } catch (error) {
-    await Promise.all([rm(paths.full, { force: true }), rm(paths.thumbnail, { force: true }), rm(paths.source, { force: true })]);
+    await Promise.all(created.map(file=>rm(file,{force:true})));
     throw error;
   }
   return paths;
@@ -176,18 +200,42 @@ async function assignPhotoOrder(tx: MediaTransaction, rows: GalleryRow[], ids: s
   for (const [index, id] of ids.entries()) await tx.execute({ sql: "UPDATE media_assets SET display_order=? WHERE id=?", args: [index, id] });
 }
 
-async function persistItemPhoto(context: InventoryContext, itemId: string, image: Awaited<ReturnType<typeof processImage>>, replaceId?: string) {
+async function photoWriteIdentity(itemId:string,file:File,source:File,cropValue:string,operationId?:string,replaceId?:string):Promise<WriteIdentity|undefined>{
+  if(!operationId)return undefined;
+  mediaIdSchema.parse(operationId);
+  const descriptor=async(input:File)=>{
+    if(!uploadedFileSchema.safeParse(input).success)throw new MediaValidationError("Invalid photo write input");
+    return{sha256:createHash("sha256").update(new Uint8Array(await input.arrayBuffer())).digest("hex"),size:input.size,name:safePhotoName(input.name),type:input.type};
+  };
+  const selected=await descriptor(file),original=source===file?selected:await descriptor(source);
+  const crop=cropValue?cropDataSchema.parse(JSON.parse(cropValue)):null;
+  const kind=replaceId?"photo_replace":"photo_add";
+  return{operationId,kind,requestHash:createHash("sha256").update(canonicalJSON({kind,itemId,mediaId:replaceId??null,selected,source:original,crop})).digest("hex")};
+}
+async function savedPhotoResult(context:InventoryContext,itemId:string,mediaId:string){
+  const {db,workspaceId}=await inventoryDatabase(context);
+  const result=await db.$client.execute({sql:"SELECT m.id,m.width,m.height,m.created_at FROM media_assets m JOIN items i ON i.id=m.item_id WHERE m.id=? AND i.id=? AND i.workspace_id=?",args:[mediaId,itemId,workspaceId]});
+  const row=result.rows[0];if(!row)throw new WriteReceiptDeleted(itemId);
+  return{id:String(row.id),width:Number(row.width),height:Number(row.height),createdAt:String(row.created_at)};
+}
+
+async function persistItemPhoto(context: InventoryContext, itemId: string, image: Awaited<ReturnType<typeof processImage>>, replaceId?: string,write?:WriteIdentity) {
   mediaIdSchema.parse(itemId);
   if (replaceId) mediaIdSchema.parse(replaceId);
   const { db, workspaceId } = await inventoryDatabase(context);
   const owner = await db.$client.execute({ sql: "SELECT id FROM items WHERE id=? AND workspace_id=?", args: [itemId, workspaceId] });
   if (!owner.rows.length) throw new Error("Item not found");
+  const prior=write?await readWriteReceipt(db.$client,context,write):null;
+  if(prior)return savedPhotoResult(context,itemId,prior.mediaId!);
   const mediaId = crypto.randomUUID();
   const paths = await writeAssetFiles(itemId, mediaId, image);
   const newAsset = { id: mediaId, item_id: itemId, storage_path: paths.relativeFull, thumbnail_path: paths.relativeThumbnail, source_storage_path: paths.relativeSource };
   let previous: GalleryRow | undefined;
+  let savedId=mediaId;
   try {
-    await galleryWrite(context, itemId, async (tx, rows) => {
+    savedId=await galleryWrite(context, itemId, async (tx, rows) => {
+      const acknowledged=write?await readWriteReceipt(tx,context,write):null;
+      if(acknowledged)return acknowledged.mediaId!;
       if (!replaceId && rows.length >= NEW_ITEM_PHOTO_LIMIT) throw new PhotoLimitError("Photo addition limit reached");
       previous = replaceId ? rows.find(row => row.id === replaceId) : undefined;
       if (replaceId && !previous) throw new Error("Photo not found");
@@ -204,26 +252,40 @@ async function persistItemPhoto(context: InventoryContext, itemId: string, image
         await tx.execute({ sql: "UPDATE collections SET cover_media_id=? WHERE cover_media_id=? AND workspace_id=? AND cover_item_id=?", args: [mediaId,previous.id,workspaceId,itemId] });
         await tx.execute({ sql: "DELETE FROM media_assets WHERE id=?", args: [previous.id] });
       }
+      if(write){const item=(await tx.execute({sql:"SELECT inventory_number FROM items WHERE id=? AND workspace_id=?",args:[itemId,workspaceId]})).rows[0]!;await insertWriteReceipt(tx,context,write,{itemId,mediaId,inventoryNumber:String(item.inventory_number)});}
+      return mediaId;
     });
   } catch (error) {
-    try { await removeAssetFiles(context, newAsset); } catch { /* Preserve a referenced asset after an ambiguous commit acknowledgement. */ }
-    throw error;
+    let acknowledged:null|Awaited<ReturnType<typeof readWriteReceipt>>=null;
+    if(write)try{acknowledged=await readWriteReceipt(db.$client,context,write);}catch{/* Cleanup still checks live references; ambiguity preserves files. */}
+    if(acknowledged)savedId=acknowledged.mediaId!;
+    else{try { await removeAssetFiles(context, newAsset); } catch { /* Preserve a referenced asset after an ambiguous commit acknowledgement. */ }throw error;}
   }
+  if(savedId!==mediaId)try{await removeAssetFiles(context,newAsset);}catch{console.error("Duplicate photo preparation cleanup remains pending");}
   if (previous) try { await removeAssetFiles(context, previous); } catch { console.error("Private photo cleanup remains pending after replacement"); }
-  return { id: mediaId, width: image.width, height: image.height, createdAt: new Date().toISOString() };
+  return savedPhotoResult(context,itemId,savedId);
 }
 
-export async function addItemPhoto(context: InventoryContext, itemId: string, file: File, sourceFile: File = file, cropValue = "") {
+export async function addItemPhoto(context: InventoryContext, itemId: string, file: File, sourceFile: File = file, cropValue = "",operationId?:string) {
   mediaIdSchema.parse(itemId);
   const { db, workspaceId } = await inventoryDatabase(context);
   const count = await db.$client.execute({sql:"SELECT COUNT(m.id) AS count FROM items i LEFT JOIN media_assets m ON m.item_id=i.id WHERE i.id=? AND i.workspace_id=? GROUP BY i.id",args:[itemId,workspaceId]});
   if (!count.rows.length) throw new Error("Item not found");
+  const write=await photoWriteIdentity(itemId,file,sourceFile,cropValue,operationId);
+  const prior=write?await readWriteReceipt(db.$client,context,write):null;
+  if(prior)return savedPhotoResult(context,itemId,prior.mediaId!);
   if (Number(count.rows[0]!.count) >= NEW_ITEM_PHOTO_LIMIT) throw new PhotoLimitError("Photo addition limit reached");
-  return persistItemPhoto(context, itemId, await processImage(file, sourceFile, cropValue));
+  return persistItemPhoto(context, itemId, await processImage(file, sourceFile, cropValue),undefined,write);
 }
 
-export async function replaceItemPhoto(context: InventoryContext, itemId: string, mediaId: string, file: File, sourceFile: File = file, cropValue = "") {
-  return persistItemPhoto(context, itemId, await processImage(file, sourceFile, cropValue), mediaId);
+export async function replaceItemPhoto(context: InventoryContext, itemId: string, mediaId: string, file: File, sourceFile: File = file, cropValue = "",operationId?:string) {
+  mediaIdSchema.parse(itemId);mediaIdSchema.parse(mediaId);
+  const {db,workspaceId}=await inventoryDatabase(context);
+  const owner=await db.$client.execute({sql:"SELECT id FROM items WHERE id=? AND workspace_id=?",args:[itemId,workspaceId]});if(!owner.rows.length)throw new Error("Item not found");
+  const write=await photoWriteIdentity(itemId,file,sourceFile,cropValue,operationId,mediaId);
+  const prior=write?await readWriteReceipt(db.$client,context,write):null;if(prior)return savedPhotoResult(context,itemId,prior.mediaId!);
+  const target=await db.$client.execute({sql:"SELECT id FROM media_assets WHERE item_id=? AND id=?",args:[itemId,mediaId]});if(!target.rows.length)throw new Error("Photo not found");
+  return persistItemPhoto(context, itemId, await processImage(file, sourceFile, cropValue), mediaId,write);
 }
 
 export async function setItemPrimaryPhoto(context: InventoryContext, itemId: string, mediaId: string) {

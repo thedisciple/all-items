@@ -42,6 +42,8 @@ async function migrate() {
     await recoverInventoryImports(client, directory);
     const { recoverInventoryDeletions } = await import("@/items/inventory-deletion");
     await recoverInventoryDeletions(client, directory);
+    const { recoverItemCreations } = await import("@/items/creation");
+    await recoverItemCreations(client,directory);
   } finally {
     await client.close();
   }

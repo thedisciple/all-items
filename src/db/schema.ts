@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 export const workspaces = sqliteTable("workspaces", {
@@ -74,6 +74,17 @@ export const mediaAssets = sqliteTable("media_assets", {
   uniqueIndex("media_assets_item_order_idx").on(table.itemId, table.displayOrder),
   uniqueIndex("media_assets_one_primary_per_item_idx").on(table.itemId).where(sql`${table.isPrimary} = 1`),
 ]);
+
+export const itemWriteReceipts = sqliteTable("item_write_receipts", {
+  workspaceId: text("workspace_id").notNull().references(() => workspaces.id, {onDelete:"cascade"}),
+  operationId: text("operation_id").notNull(),
+  kind: text("kind").notNull(),
+  requestHash: text("request_hash").notNull(),
+  itemId: text("item_id").references(() => items.id, {onDelete:"set null"}),
+  mediaId: text("media_id").references(() => mediaAssets.id, {onDelete:"set null"}),
+  inventoryNumber: text("inventory_number").notNull(),
+  createdAt: text("created_at").notNull(),
+}, table=>[primaryKey({columns:[table.workspaceId,table.operationId]})]);
 
 export const collections = sqliteTable("collections", {
   id: text("id").primaryKey(),

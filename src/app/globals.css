@@ -852,3 +852,12 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .photo-detail-panel,.photo-gallery,.photo-replacement-form { grid-template-columns: minmax(0,1fr); }
 .photo-gallery > *,.gallery-rail-region { min-width: 0; max-width: 100%; }
 .gallery-strip { width: 100%; max-width: 100%; min-width: 0; }
+
+.draft-photo-gallery { display: grid; gap: 12px; min-width: 0; grid-template-columns: minmax(0,1fr); }
+.photo-add-form { min-width: 0; grid-template-columns: minmax(0,1fr); }
+.draft-photo-gallery > * { min-width: 0; max-width: 100%; }
+.draft-main-preview { width: 100%; border: 0; overflow: visible; }
+.draft-main-preview .photo-viewer:not(.photo-viewer-open) .photo-viewer-image { height: min(32vh,260px); }
+.draft-main-preview .photo-viewer:not(.photo-viewer-open) .detail-photo { max-height: min(32vh,260px); }
+.draft-thumbnail-placeholder { display: block; width: 64px; height: 64px; border-radius: 4px; background: #252a22; }
+.creation-error .dialog-actions { padding-inline: 0; }

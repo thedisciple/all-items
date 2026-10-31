@@ -8,8 +8,9 @@ import { aspectRatioForPreset, getCropperImageMetrics, isValidCropCoordinates, s
 import { useI18n } from "@/i18n/provider";
 
 type Props = {
+  onCropChange?:(crop:CropperJS.Data)=>void;
   initialCrop?: CropperJS.Data | null;
-  file: File; sourceUrl: string; onConfirm: (file: File, crop: CropperJS.Data) => void; onCancel: () => void; onUseOriginal: () => void;
+  file: File; sourceUrl: string; onConfirm: (file: File, crop: CropperJS.Data) => void|boolean; onCancel: () => void; onUseOriginal: () => void|boolean;
   cancelLabel: string; sourceAlt: string; title: string; confirmLabel: string; resetLabel: string; originalLabel: string;
   zoomLabel: string; aspectLabel: string; aspectFree: string; aspectOriginal: string; rotateLabel: string; rotateCounterclockwiseLabel: string;
   errorLabel: string; smallLabel: string; busyLabel: string; keyboardLabel: string; unavailableLabel: string;
@@ -39,7 +40,7 @@ class CropperErrorBoundary extends Component<BoundaryProps, BoundaryState> {
 const readyTimeoutMs = 12_000;
 
 export default function PhotoCropperEditor(props: Props) {
-  const { locale } = useI18n();
+  const { locale,t } = useI18n();
   const cropper = useRef<CropperJS | null>(null);
   const alive = useRef(true);
   const readyRef = useRef(false);
@@ -48,8 +49,11 @@ export default function PhotoCropperEditor(props: Props) {
   const [zoom, setZoom] = useState(1);
   const [ratio, setRatio] = useState("free");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<""|"unavailable"|"failed"|"small">("");
+  const [error, setError] = useState<""|"unavailable"|"failed"|"small"|"large"|"capacity">("");
   const dialogRef = useRef<HTMLElement>(null);
+  const geometryAllowed=useRef(true);
+  const geometryTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
+  const geometryCallback=useRef(props.onCropChange);geometryCallback.current=props.onCropChange;
 
   useEffect(() => {
     alive.current = true;
@@ -60,6 +64,7 @@ export default function PhotoCropperEditor(props: Props) {
       readyRef.current = false;
       cropper.current = null;
       window.clearTimeout(timeout);
+      if(geometryTimer.current)clearTimeout(geometryTimer.current);
     };
   }, [props.unavailableLabel]);
 
@@ -206,14 +211,20 @@ export default function PhotoCropperEditor(props: Props) {
     } catch { setError("failed"); }
   }
 
+  function stopGeometry(){geometryAllowed.current=false;if(geometryTimer.current){clearTimeout(geometryTimer.current);geometryTimer.current=null;}}
+  function cancel(){stopGeometry();props.onCancel();}
+  function useOriginal(){stopGeometry();if(props.onUseOriginal()===false){geometryAllowed.current=true;setError("capacity");}}
+
   async function confirm() {
     const instance = getReadyCropper();
     if (!instance || busy) return;
+    stopGeometry();
     setBusy(true);
     setError("");
     try {
       const data = instance.getData(true);
       if (!isValidCropCoordinates(data) || data.width < 64 || data.height < 64) throw new Error("invalid-crop");
+      if(data.width>12_000||data.height>12_000||data.width*data.height>40_000_000)throw new Error("large-crop");
       const canvas = instance.getCroppedCanvas({ maxWidth: 12_000, maxHeight: 12_000, imageSmoothingEnabled: true, imageSmoothingQuality: "high" });
       if (!canvas || !Number.isFinite(canvas.width) || !Number.isFinite(canvas.height) || canvas.width < 1 || canvas.height < 1) throw new Error("invalid-canvas");
       const blob = await new Promise<Blob | null>((resolve, reject) => {
@@ -226,15 +237,16 @@ export default function PhotoCropperEditor(props: Props) {
       const stem = props.file.name.replace(/\.[^.]+$/, "") || "photo";
       const file = new File([blob], `crop-${stem}.${extension}`, { type: blob.type, lastModified: Date.now() });
       if (!file.size || file.size > 10 * 1024 * 1024 || !["image/webp", "image/png"].includes(file.type)) throw new Error("invalid-file");
-      if (alive.current) props.onConfirm(file, data);
+      if (alive.current&&props.onConfirm(file, data)===false)throw new Error("draft-capacity");
     } catch (cause) {
-      setError(cause instanceof Error && cause.message === "invalid-crop" ? "small" : "failed");
+      geometryAllowed.current=true;
+      setError(cause instanceof Error && cause.message === "invalid-crop" ? "small" : cause instanceof Error&&cause.message==="large-crop"?"large":cause instanceof Error&&cause.message==="draft-capacity"?"capacity":"failed");
       if (alive.current) setBusy(false);
     }
   }
 
   function onDialogKeyDown(event: KeyboardEvent<HTMLElement>) {
-    if (event.key === "Escape") { props.onCancel(); return; }
+    if (event.key === "Escape") { event.preventDefault();cancel(); return; }
     if (event.key !== "Tab") return;
     const focusable = Array.from(event.currentTarget.querySelectorAll<HTMLElement>("button:not([disabled]),input:not([disabled]),select:not([disabled]),summary"));
     const first = focusable[0]; const last = focusable.at(-1);
@@ -248,15 +260,20 @@ export default function PhotoCropperEditor(props: Props) {
     try {
       const data = instance.getData(true);
       const valid = isValidCropCoordinates(data) && data.width >= 64 && data.height >= 64;
-      setError(current => current === "small" && valid ? "" : current);
+      const bounded=data.width<=12_000&&data.height<=12_000&&data.width*data.height<=40_000_000;
+      setError(current => (current === "small" && valid||current==="large"&&bounded) ? "" : current);
+      if(geometryAllowed.current&&geometryCallback.current&&isValidCropCoordinates(data)){
+        if(geometryTimer.current)clearTimeout(geometryTimer.current);
+        geometryTimer.current=setTimeout(()=>{if(alive.current&&geometryAllowed.current)geometryCallback.current?.(data);},150);
+      }
     } catch { /* Initialization and output errors have separate recovery paths. */ }
   }
 
   const instanceReady = isReady && error !== "unavailable";
   return <div className="photo-source-overlay crop-overlay" role="presentation">
-    <CropperErrorBoundary onCancel={props.onCancel} onUseOriginal={props.onUseOriginal} unavailableLabel={props.unavailableLabel} cancelLabel={props.cancelLabel} originalLabel={props.originalLabel}>
+    <CropperErrorBoundary onCancel={cancel} onUseOriginal={useOriginal} unavailableLabel={props.unavailableLabel} cancelLabel={props.cancelLabel} originalLabel={props.originalLabel}>
       <section ref={dialogRef} className="photo-source-dialog crop-dialog" role="dialog" aria-modal="true" aria-labelledby="crop-dialog-title" onKeyDown={onDialogKeyDown}>
-        <div className="dialog-heading"><h3 id="crop-dialog-title">{props.title}</h3><button type="button" className="icon-button crop-close-button" aria-label={props.cancelLabel} title={props.cancelLabel} onClick={props.onCancel}><X size={18} aria-hidden="true"/></button></div>
+        <div className="dialog-heading"><h3 id="crop-dialog-title">{props.title}</h3><button type="button" className="icon-button crop-close-button" aria-label={props.cancelLabel} title={props.cancelLabel} onClick={cancel}><X size={18} aria-hidden="true"/></button></div>
         <div className="crop-editor-body"><Cropper
           src={props.sourceUrl}
           style={{ height: "min(54vh, 470px)", width: "100%" }}
@@ -309,7 +326,7 @@ export default function PhotoCropperEditor(props: Props) {
             </div>
           </div>
         </details>
-        {error ? <div className="crop-recovery" role="alert"><p>{error === "unavailable" ? props.unavailableLabel : error === "small" ? props.smallLabel : props.errorLabel}</p><button type="button" className="text-button" disabled={busy} onClick={props.onUseOriginal}>{props.originalLabel}</button></div> : null}
+        {error ? <div className="crop-recovery" role="alert"><p>{error === "unavailable" ? props.unavailableLabel : error === "small" ? props.smallLabel : error==="large"?t("photoPixelLimit"):error==="capacity"?t("creationByteLimit",{size:64}):props.errorLabel}</p><button type="button" className="text-button" disabled={busy} onClick={useOriginal}>{props.originalLabel}</button></div> : null}
         <div className="crop-toolbar" aria-label={props.title}>
           <div className="crop-tool-group" aria-label={props.rotateLabel}>
             <button type="button" className="icon-button crop-tool-button" aria-label={props.rotateLabel} title={props.rotateLabel} disabled={!instanceReady || busy} onClick={() => rotate(1)}><RotateCw size={17} aria-hidden="true"/></button>
@@ -319,8 +336,8 @@ export default function PhotoCropperEditor(props: Props) {
         </div>
         </div>
         <div className="dialog-actions crop-actions">
-          <button type="button" className="text-button" onClick={props.onCancel}>{props.cancelLabel}</button>
-          <button type="button" className="add-button" disabled={!instanceReady || busy || error === "small"} onClick={() => void confirm()}>{busy ? props.busyLabel : props.confirmLabel}</button>
+          <button type="button" className="text-button" onClick={cancel}>{props.cancelLabel}</button>
+          <button type="button" className="add-button" disabled={!instanceReady || busy || error === "small"||error==="large"} onClick={() => void confirm()}>{busy ? props.busyLabel : props.confirmLabel}</button>
         </div>
       </section>
     </CropperErrorBoundary>
