@@ -383,10 +383,9 @@ test("recovers from canvas encoding failure and keeps an existing saved photo on
 
   await page.getByRole("button", { name: "Заменить фото" }).click();
   await page.locator('input[name="photo"]').first().setInputFiles({ name: "broken.png", mimeType: "image/png", buffer: Buffer.from("not an image") });
-  const fallback = page.getByRole("button", { name: "Продолжить без кадрирования" });
-  await expect(fallback).toBeVisible();
-  await fallback.click();
-  await expect(page.locator(".photo-replacement-form [role='alert']")).toBeVisible();
+  await expect(page.getByRole("dialog",{name:"Редактировать фото",exact:true})).toHaveCount(0);
+  await expect(page.getByRole("dialog",{name:"Фотография",exact:true}).getByRole("alert")).toBeVisible();
+  await expect(page.locator(".photo-viewer-image img.detail-photo")).toHaveAttribute("src",recoveredSavedUrl!);
   await page.reload();
   await expect(page.locator(".photo-viewer-image img.detail-photo")).toHaveAttribute("src", recoveredSavedUrl!);
   await expect.poll(() => page.locator(".photo-viewer-image img.detail-photo").evaluate((element) => (element as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);

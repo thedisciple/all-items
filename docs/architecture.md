@@ -1,5 +1,13 @@
 # Architecture
 
+## M4A creation, retry and interaction reliability
+
+The current creation workflow stages bounded metadata-stripped photos privately without inserting an item, then promotes generated destinations and commits item, stock, categories, order, primary and a durable write receipt together. Migration 0013 is additive; installation-local receipts cover creation and saved-gallery additions/replacements, bind inventory/kind/operation/hash and retain deletion tombstones. Resolve ambiguous commit status before cleanup. Startup journals and expiry cleanup coordinate files with SQLite without claiming cross-device atomicity. See [creation architecture](architecture/m4a-creation-plan.md) for budgets and failure behavior.
+
+Browser draft shape 2 stores the ordered photo graph, sources, accepted/pending derivatives and crop state. Shape 1 upgrades in memory while preserving revision/CAS identity; unknown records are retained, not overwritten. Drafts, write receipts and staging are excluded from ZIP revision 6. Legacy revisions 2–5 remain tested recovery contracts. The shared gallery separates viewing, primary and order, and a persistent exit coordinator protects navigation across detail/editor lifecycles. See [gallery interactions](architecture/m4a-gallery.md) and [validation](architecture/m4a-validation.md). Earlier milestone sections below are historical and are superseded where stated here.
+
+Localized title/description/icon metadata is inexpensive and now delivered in the initial head using Next 15's documented blocking-metadata setting. Production traces observed late body metadata with intermittent hydration errors and favicon fallback; initial-head assertions and repeated five-locale full navigation guard this boundary without suppressing browser errors.
+
 ## M3.4 ordered media and exact prices
 
 Migration 0011 adds deterministic contiguous photo order and a unique (item, order) index without changing valid legacy IDs, paths or primary choices. Gallery writes verify explicit inventory/item ownership and exactly one primary for non-empty lists inside the write transaction. Reordering never deletes assets. Replacement stages a new media UUID, transfers the target position/primary and explicit cover references transactionally, then cleans the old unreferenced files. Deletion promotes the first surviving ordered photo and deliberately resets covers referencing the removed UUID. Controlled routes now serve any owned gallery media ID, including its stripped editable source, with generated-path and private-path checks. Legacy sources remain optional.

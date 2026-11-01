@@ -1,6 +1,8 @@
 import {test,expect} from "./helpers/browser-reliability";
 import type {Page} from "@playwright/test";
 import sharp from "sharp";
+import os from "node:os";
+import path from "node:path";
 import {messages,locales} from "../src/i18n/messages";
 import {readInventoryArchive} from "../src/export/archive";
 import type {PortableInventory} from "../src/export/import";
@@ -8,7 +10,7 @@ import {expectPageFits} from "./helpers/layout-gate";
 
 const base="/inventories/00000000-0000-4000-8000-000000000001";
 async function files(count:number){return Promise.all(Array.from({length:count},async(_,index)=>({name:`synthetic-${index}.png`,mimeType:"image/png",buffer:await sharp({create:{width:640,height:400,channels:3,background:["#64836e","#977456","#587397"][index%3]!}}).png().toBuffer()})));}
-async function inventory(page:Page){return(readInventoryArchive(await(await page.request.get(base+"/api/export/archive")).body()).inventory as PortableInventory);}
+async function inventory(page:Page){return(readInventoryArchive(await(await page.request.get(base+"/api/export/archive",{maxRetries:1})).body()).inventory as PortableInventory);}
 async function open(page:Page){await page.goto(base);await page.locator(".add-dialog-trigger").click();return page.getByRole("dialog",{name:messages.ru.addItem,exact:true});}
 async function accept(page:Page){const crop=page.getByRole("dialog",{name:messages.ru.cropTitle,exact:true});await expect(crop.getByRole("button",{name:messages.ru.cropConfirm,exact:true})).toBeEnabled();await crop.getByRole("button",{name:messages.ru.cropConfirm,exact:true}).click();}
 
@@ -75,7 +77,7 @@ test("M4A unsaved touch hold reorders locally while a short touch only browses",
 test("M4A multi-photo controls fit at 360px in all five locales and support keyboard cancellation",async({page,context})=>{
   test.setTimeout(240_000);await page.setViewportSize({width:360,height:740});await page.emulateMedia({reducedMotion:"reduce"});
   for(const locale of locales){
-    await context.addCookies([{name:"all-items-language",value:locale,url:"http://127.0.0.1:3100"}]);await page.goto(base);await page.locator(".add-dialog-trigger").click();const dialog=page.getByRole("dialog",{name:messages[locale].addItem,exact:true});await dialog.locator('input[name="photo"]').setInputFiles(await files(3));await expect(dialog.locator(".gallery-thumbnail")).toHaveCount(3);await expectPageFits(page);
+    await context.addCookies([{name:"all-items-language",value:locale,url:"http://127.0.0.1:3100"}]);await page.goto(base);await page.locator(".add-dialog-trigger").click();const dialog=page.getByRole("dialog",{name:messages[locale].addItem,exact:true});await dialog.locator('input[name="photo"]').setInputFiles(await files(3));await expect(dialog.locator(".gallery-thumbnail")).toHaveCount(3);await expectPageFits(page);if(locale==="ru")await page.screenshot({path:path.join(os.tmpdir(),"all-items-m4a-multiphoto-360.png")});
     const stars=dialog.locator(".gallery-primary-button");expect(await stars.count()).toBe(3);await stars.nth(2).focus();await page.keyboard.press("Enter");await expect(stars.nth(2)).toHaveAttribute("aria-pressed","true");expect(await dialog.locator('.gallery-primary-button[aria-pressed="true"]').count()).toBe(1);
     const order=await dialog.locator(".gallery-thumb-wrap").evaluateAll(nodes=>nodes.map(node=>(node as HTMLElement).dataset.photoId));await dialog.locator(".gallery-thumbnail").last().focus();await page.keyboard.press("Space");await expect(dialog.locator(".gallery-rail-region")).toHaveAttribute("data-sorting","true");await page.keyboard.press("ArrowLeft");await page.keyboard.press("Escape");await expect(dialog.locator(".gallery-rail-region")).toHaveAttribute("data-sorting","false");expect(await dialog.locator(".gallery-thumb-wrap").evaluateAll(nodes=>nodes.map(node=>(node as HTMLElement).dataset.photoId))).toEqual(order);
     await dialog.getByRole("button",{name:messages[locale].photoDelete,exact:true}).click();const confirmation=page.getByRole("alertdialog");await expect(confirmation).toBeVisible();await page.keyboard.press("Escape");await expect(confirmation).toHaveCount(0);await expect(dialog.locator(".gallery-thumbnail")).toHaveCount(3);

@@ -1,6 +1,6 @@
 import { assertPrivatePath } from "@/media/private-paths";
 import sharp, { type Metadata } from "sharp";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, open } from "node:fs/promises";
 import path from "node:path";
 import {createHash} from "node:crypto";
 import { z } from "zod";
@@ -157,7 +157,8 @@ async function writeAssetFiles(itemId: string, mediaId: string, image: Awaited<R
   const created:string[]=[];
   try {
     for(const [file,bytes]of [[paths.full,image.full],[paths.thumbnail,image.thumbnail],[paths.source,image.source]] as const){
-      await writeFile(file,bytes,{flag:"wx"});created.push(file);
+      const handle=await open(file,"wx");created.push(file);
+      try{await handle.writeFile(bytes);await handle.sync();}finally{await handle.close();}
     }
   } catch (error) {
     await Promise.all(created.map(file=>rm(file,{force:true})));

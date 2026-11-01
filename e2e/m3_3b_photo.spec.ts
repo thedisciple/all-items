@@ -42,24 +42,15 @@ test("crop output, contained preview and saved image preserve marked edges and a
     await crop.getByRole("button",{name:"Готово"}).click();
     const preview=dialog.locator(".photo-preview-frame");
     await expect(preview.locator('[data-image-state="loaded"]')).toBeVisible();
-    const fileState=await dialog.locator('input[name="photo"]').evaluate(async element=>{
+    const fileState=await dialog.locator('input[name="selectedPhoto"]').evaluate(async element=>{
       const file=(element as HTMLInputElement).files![0]!,image=await createImageBitmap(file),canvas=document.createElement("canvas");
       canvas.width=image.width;canvas.height=image.height;const ctx=canvas.getContext("2d")!;ctx.drawImage(image,0,0);
       const pixels=[[.15,.15],[.85,.15],[.15,.85],[.85,.85]].map(([x,y])=>Array.from(ctx.getImageData(Math.floor(image.width*x!),Math.floor(image.height*y!),1,1).data).slice(0,3));
       return {width:image.width,height:image.height,pixels};
     });
     expect(fileState.width).toBe(fixture.crop.width);expect(fileState.height).toBe(fixture.crop.height);checkMarkers(fileState.pixels);
-    if(fixture.name==="portrait") {
-      const previous=await preview.evaluate(frame=>{
-        const image=frame.querySelector("img")!,container=frame.querySelector<HTMLElement>(".media-preview")!,imageStyle=image.style.cssText,containerStyle=container.style.cssText;
-        container.style.gridTemplateRows="auto";container.style.gridTemplateColumns="auto";image.style.minHeight="auto";image.style.minWidth="auto";image.style.maxHeight="none";
-        const result={imageHeight:image.getBoundingClientRect().height,frameHeight:container.getBoundingClientRect().height};
-        image.style.cssText=imageStyle;container.style.cssText=containerStyle;return result;
-      });
-      expect(previous.imageHeight).toBeGreaterThan(previous.frameHeight);
-    }
-    const geometry=await preview.evaluate(frame=>{const image=frame.querySelector("img")!,container=frame.querySelector(".media-preview")!,a=image.getBoundingClientRect(),b=container.getBoundingClientRect(),c=frame.getBoundingClientRect();return {image:{x:a.x,y:a.y,width:a.width,height:a.height},container:{x:b.x,y:b.y,width:b.width,height:b.height},frame:{x:c.x,y:c.y,width:c.width,height:c.height},fit:getComputedStyle(image).objectFit};});
-    expect(geometry.fit).toBe("contain");expect(geometry.image.height).toBeLessThanOrEqual(geometry.container.height+1);
+    const geometry=await preview.evaluate(frame=>{const image=frame.querySelector("img")!,container=frame.querySelector(".media-detail")!,a=image.getBoundingClientRect(),b=container.getBoundingClientRect(),c=frame.getBoundingClientRect();return {image:{x:a.x,y:a.y,width:a.width,height:a.height},container:{x:b.x,y:b.y,width:b.width,height:b.height},frame:{x:c.x,y:c.y,width:c.width,height:c.height},fit:getComputedStyle(image).objectFit};});
+    expect(geometry.fit).toBe("contain");expect(geometry.image.height).toBeLessThanOrEqual(geometry.container.height+1);expect(geometry.container.height).toBeLessThanOrEqual(geometry.frame.height+1);expect(geometry.image.y).toBeGreaterThanOrEqual(geometry.frame.y-1);expect(geometry.image.y+geometry.image.height).toBeLessThanOrEqual(geometry.frame.y+geometry.frame.height+1);
     const bitmap=await sharp(await preview.screenshot()).removeAlpha().raw().toBuffer({resolveWithObject:true});
     const scale=Math.min(geometry.image.width/fileState.width,geometry.image.height/fileState.height);
     const rendered={width:fileState.width*scale,height:fileState.height*scale};
@@ -68,13 +59,13 @@ test("crop output, contained preview and saved image preserve marked edges and a
     const shown=[[.15,.15],[.85,.15],[.15,.85],[.85,.85]].map(([x,y])=>{const px=Math.floor(left+rendered.width*x!),py=Math.floor(top+rendered.height*y!),offset=(py*bitmap.info.width+px)*bitmap.info.channels;return [...bitmap.data.subarray(offset,offset+3)];});
     checkMarkers(shown);
     if(fixture.name==="portrait") {
-      await dialog.getByRole("button",{name:"Выбрать другое фото"}).click();
+      await dialog.getByRole("button",{name:"Добавить фото"}).click();
       await dialog.locator('input[name="photo"]').setInputFiles({name:"replacement.png",mimeType:"image/png",buffer:await synthetic(400,800,fixture.crop)});
       const replacement=page.getByRole("dialog",{name:"Редактировать фото"});
       await expect(replacement.getByRole("button",{name:"Готово"})).toBeEnabled();
       await replacement.locator(".crop-actions").getByRole("button",{name:"Отмена"}).click();
       await expect(preview.locator('[data-image-state="loaded"]')).toBeVisible();
-      const retained=await dialog.locator('input[name="photo"]').evaluate(element=>(element as HTMLInputElement).files![0]!.name);
+      const retained=await dialog.locator('input[name="selectedPhoto"]').evaluate(element=>(element as HTMLInputElement).files![0]!.name);
       expect(retained).toContain("portrait");
     }
     await dialog.getByLabel("Название").fill(`Marked ${fixture.name}`);

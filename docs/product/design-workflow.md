@@ -60,3 +60,5 @@ Keep display conventions separate from storage contracts. M3.4 found a real ISO/
 ## M4A regression gate
 
 Measure complete tasks at 1440/1100/900/760/560/390/360px in all five locales. Assert page/control bounds, selected-label fit, stable header vertical center, shared dialog insets, keyboard paths and reduced motion. Use synthetic screenshots as diagnostic artifacts outside Git, not OS/font-specific pixel snapshots. Record actual viewport/device emulation separately from physical browser zoom, camera or touch testing. Distinguish browsing, primary selection, draft order and committed order in gesture tests.
+
+For multi-photo changes, verify the stored result rather than thumbnail appearance alone: exactly one item, ordered UUIDs, explicit primary, retained sources, independent crop metadata and byte-faithful archive recovery. Inject failure before persistence and after commit but before acknowledgement. Confirm original draft revision/Blobs survive, then retry without duplication. Test browser restart separately from an uncommitted-write crash.

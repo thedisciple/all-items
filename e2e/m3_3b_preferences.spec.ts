@@ -18,6 +18,7 @@ test("custom category emoji and default sort persist in the current inventory", 
   await dialog.getByLabel("Название").fill("Alpha synthetic");
   await dialog.getByRole("button", { name: "Сохранить вещь", exact: true }).click();
   await expect(page).toHaveURL(/added=/);
+  await expect(page.getByRole("link",{name:"Alpha synthetic",exact:true})).toBeVisible();
   await page.goto(`${base}/settings`);
   await page.getByLabel("Сортировка по умолчанию").selectOption("name");
   const preference = page.locator("form").filter({ has: page.getByLabel("Сортировка по умолчанию") });

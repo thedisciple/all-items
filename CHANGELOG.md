@@ -1,5 +1,14 @@
 # Changelog
 
+## M4A - Photo-first creation parity and UX quality gate
+
+- Completed multi-file and sequential-camera Add Item with individual source-preserving crops, compact navigation, one primary star, local hold/drag and keyboard order, confirmed removal and one final Save. Ten is a new-addition cap; legacy galleries remain uncapped for reading/editing/recovery.
+- Added bounded sequential private preparation and atomic item/stock/category/media completion. Migration 0013 adds local create/add/replace receipts; lost acknowledgements retry the same result, while changed completed commands require deliberate recovery. ZIP stays at revision 6.
+- Upgraded browser drafts to ordered photo graphs with source/selected/pending Blobs and crop geometry, preserving legacy revision identity, cross-tab CAS, quotas and explicit restore/discard.
+- Fixed the header toggle, shared toolbar, dialog insets and concise currency labels; separated browsing from sorting and protected Done/Back, dirty editors and pending writes.
+- Hardened crop-session completion, partial-file cleanup and initial-head localized metadata delivery without suppressing hydration errors.
+- Added synthetic Edge layout/keyboard/mouse/touch/camera/failure/restart checks and independent resource tests. Reconciled the complete roadmap and historical architecture; M4B, AI and hosting remain future work. See [validation](docs/architecture/m4a-validation.md), including the usage-limit interruption and resumed verification.
+
 ## M3.4 - Private photo galleries and continuous UX reliability
 
 - Added ordered per-item photo galleries, independent crop/replacement, explicit primary selection, deterministic promotion after deletion and safe collection-cover reference transitions. Migration 0011 preserves existing media IDs, paths and bytes.

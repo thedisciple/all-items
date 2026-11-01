@@ -109,3 +109,12 @@ Crop validation errors leave correction controls ready. Correcting a small selec
 Search stays visible; selected-label filter widths wrap intrinsically while clear-control space remains reserved. Chips never split words. Collapsed desktop navigation retains names/tooltips and a brand mark; a server-seeded browser preference avoids a width flash, and only user toggles animate. Mobile navigation keeps labels, reduced motion minimizes transitions, and scrollable dialog bodies stay inside rounded outer frames.
 
 Locale supplies an overridable initial currency suggestion. Once a price or manual choice fixes a currency, language changes do not convert it. Blank prices persist no arbitrary code; exact stored exponent travels through edit, CSV and ZIP. Existing price meanings remain unchanged. There is no last-used currency preference or AI ranking.
+
+## M4A current photo and exit transitions (supersedes M3.4 controls above)
+
+- Thumbnail click/short tap selects; image/lightbox arrows and swipe browse. Neither writes order nor primary. One sibling star per thumbnail selects primary.
+- Hold 200ms with mouse or 350ms with touch, within 6px tolerance, then drag to reorder; rail ends auto-scroll. Keyboard Space/Enter picks up, arrows move, Space/Enter commits and Escape cancels. Blur/pointer cancellation aborts. Sorting locks conflicting controls, and rejected persisted order restores the confirmed array and focus.
+- Add Item appends a validated bounded batch or successive camera captures. Single-file intake opens the crop flow; a batch does not require ten mandatory confirmations. Each photo can be edited, removed with confirmation and made primary. Before Save all changes are local.
+- Save freezes the command, awaits the draft write when available, prepares photos sequentially and commits once. A preparation error keeps every input and creates no item. A lost acknowledgement retries the same operation. A changed completed command offers Open saved item or an explicit Use draft for a new item; it never silently chooses a new identity.
+- Restore covers all ordered photos, primary/view selection, accepted/pending crop and sources. Legacy records retain revision identity during read/upgrade; another tab cannot be overwritten without conflict feedback.
+- Saved-media crop confirmation persists immediately. Done returns to a validated inventory/collection origin; independent Details Save stays disabled if unchanged. Dirty editors offer Save/Discard/Stay. Pending operations block unsafe exit.

@@ -153,14 +153,14 @@ Follow [the architecture decision](docs/architecture/adr-multiple-inventories.md
 
 ## M4 — Quality and release — IN PROGRESS
 
-M4A is the current scoped UX/create-flow milestone; it is not a public release. See [planning audit](docs/product/m4a-planning-audit.md).
+M4A is complete as a scoped UX/create-flow milestone; it is not a public release. M4B recovery and usability checks remain next. See [planning audit](docs/product/m4a-planning-audit.md).
 
-### M4A — Photo-first creation parity and UX gate — IN PROGRESS
+### M4A — Photo-first creation parity and UX gate — COMPLETE
 
 - [x] Header-owned sidebar toggle, shared responsive toolbar, dialog insets and ISO-only currency labels
 - [x] Separate photo browsing, primary selection and accessible hold/drag ordering; safe detail exit
-- [ ] Multi-photo creation, complete local draft recovery, bounded private staging and retry-safe final commit
-- [ ] Synthetic Edge/keyboard/touch-mock regression gate and documentation reconciliation
+- [x] Multi-photo creation, complete local draft recovery, bounded private staging and retry-safe final commit
+- [x] Synthetic Edge/keyboard/touch-mock regression gate and documentation reconciliation
 
 ### M4B — Reliable recovery and usability release checks — PLANNED
 
@@ -173,7 +173,8 @@ M4A is the current scoped UX/create-flow milestone; it is not a public release. 
 - [ ] Real task-based usability tests and interaction-count/form-completion measures
 - [ ] Error-recovery, performance, responsive consistency, and microcopy reviews
 - [x] CI for typecheck, lint, isolated unit tests and build
-- [ ] Synthetic-data visual gate and v0.1 release preparation
+- [x] Reusable synthetic-data geometry and interaction acceptance gate (M4A)
+- [ ] v0.1 release preparation after recovery/security/usability gates
 - [ ] Optional authenticated LAN access only after server-side authentication and origin protections are complete
 
 ## Authenticated private pilot — NOT STARTED (historical M3.5 label)
@@ -205,9 +206,11 @@ The old number is not execution order. Recovery/usability groundwork and a separ
 
 - [x] **M3.4 media foundation:** additive `display_order` migration preserving existing media IDs and primaries; multiple media assets per item; exactly one primary when any exist; transactional next-primary promotion on primary deletion; retain per-image private editable source, crop, derivatives, and collection-cover reference integrity
 - [x] **M3.4 media UI:** primary photograph plus secondary thumbnail gallery, add/reorder/choose-primary/edit/delete individual images, and full-screen viewer with file/camera acquisition
-- [ ] Batch acquisition and multiple-object extraction (ordered archive media lists are implemented in M3.4)
+- [x] M4A bounded multi-file and sequential-camera acquisition for one item
+- [ ] Multiple-object extraction and separately scoped general batch workflows
 - [ ] Upload queue with cancel/retry, client-side compression, large-image handling, and resumable uploads where justified
-- [ ] Efficient local thumbnails/caching and portable image bundles
+- [x] Sequential small browser draft thumbnails and full-fidelity portable image bundles
+- [ ] Broader measured caching/performance refinements for very large galleries
 - [ ] Non-destructive photo annotations: pencil/brush, arrows, rectangles, circles, text, blur/redaction, hardware highlights, undo/redo, and normalized coordinate operations
 - [ ] Optional AI-guided annotation using a clean source, crop, highlighted region, text prompt, and human-reviewed result
 
@@ -230,7 +233,7 @@ The old number is not execution order. Recovery/usability groundwork and a separ
 - [ ] Optional managed hosting/marketplace monetization; keep the self-hosted personal core useful and free and preserve GPLv3
 - [ ] Legal, regulatory, trust, privacy, identity, moderation, support, and payment-partner review before implementation
 
-AI identification, marketplace, sharing, synchronization, achievements, rankings, analytics, payments, and transactions remain future directions after M3.4.
+AI identification, marketplace, sharing, synchronization, achievements, rankings, analytics, payments, and transactions remain future directions after M4A, each with its own prerequisites.
 
 ## Retained follow-up decisions
 

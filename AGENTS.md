@@ -32,3 +32,7 @@
 
 - Return semantic dictionary keys and separate parameters from server actions; translate errors at render time. Preserve fields and File state on recoverable failures.
 - Inventory deletion requires a verified private database/media backup, explicit target/counts/confirmation, scoped transactional deletion, reference-checked cleanup and an interruption journal. Never recreate a deleted final inventory.
+
+- Multi-photo creation uses the shared gallery and a bounded inventory-scoped private staging command followed by one item/stock/category/media transaction. Keep create/add/replace operation receipts installation-local and out of ZIP; resolve ambiguous commits before file cleanup, retain tombstones and reject changed completed payloads. A new operation after an uncertain result requires explicit recovery.
+- Keep the ten-photo policy an intake cap, checked transactionally for saved additions; never truncate legacy galleries or constrain their reorder/edit/import/export. Preserve independent request, file, decoded-pixel, draft and staging budgets.
+- Run the synthetic layout/interaction gate in e2e/helpers with current Edge for changed flows; record mocks separately from physical camera/touch/zoom acceptance.

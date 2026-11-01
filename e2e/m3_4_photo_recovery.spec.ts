@@ -2,6 +2,7 @@ import { expect, test } from "./helpers/browser-reliability";
 import type { Locator } from "@playwright/test";
 import sharp from "sharp";
 import { messages, locales } from "../src/i18n/messages";
+import {draftSnapshot} from "./helpers/draft-state";
 
 const base = "/inventories/00000000-0000-4000-8000-000000000001";
 async function setCrop(editor: Locator, rect: { x: number; y: number; width: number; height: number }) {
@@ -11,7 +12,9 @@ async function setCrop(editor: Locator, rect: { x: number; y: number; width: num
   }, rect);
 }
 async function dimensions(dialog: Locator) {
-  return dialog.locator('input[name="photo"]').evaluate(async el => {
+  await expect(dialog.page().getByRole("dialog",{name:messages.ru.cropTitle,exact:true})).toHaveCount(0);
+  await expect.poll(()=>dialog.locator('input[name="selectedPhoto"]').evaluate((input:HTMLInputElement)=>input.files?.length)).toBe(1);
+  return dialog.locator('input[name="selectedPhoto"]').evaluate(async el => {
     const image = await createImageBitmap((el as HTMLInputElement).files![0]!);
     const value = { width: image.width, height: image.height }; image.close(); return value;
   });
@@ -19,6 +22,7 @@ async function dimensions(dialog: Locator) {
 
 test("invalid short crop recovers, repeated source edits and recovered drafts retain accepted pixels", async ({ page }) => {
   test.setTimeout(120_000);
+  const savedName="M3.4 recovered crop "+test.info().repeatEachIndex;
   await page.goto(base); await page.locator(".add-dialog-trigger").click();
   let dialog = page.getByRole("dialog", { name: messages.ru.addItem });
   const source = await sharp({ create: { width: 800, height: 600, channels: 3, background: "#54947c" } }).png().toBuffer();
@@ -42,12 +46,11 @@ test("invalid short crop recovers, repeated source edits and recovered drafts re
   editor = page.getByRole("dialog", { name: messages.ru.cropTitle });
   await expect(editor.getByRole("button", { name: messages.ru.cropConfirm })).toBeEnabled();
   await setCrop(editor, { x: 20, y: 20, width: 500, height: 400 });
+  await expect.poll(async()=>{const photo=(await draftSnapshot(page))?.photos[0];return Boolean(photo?.selected&&photo.pending&&photo.pendingCrop?.width===500&&photo.pendingCrop.height===400);}).toBe(true);
+  const pendingRevision=(await draftSnapshot(page))!.revision;
   await editor.locator(".crop-actions").getByRole("button", { name: messages.ru.cancel, exact: true }).click();
   expect(await dimensions(dialog)).toEqual({ width: 300, height: 208 });
-  await page.waitForFunction(() => new Promise<boolean>(resolve => {
-    const open = indexedDB.open("all-items-drafts", 1);
-    open.onsuccess = () => { const db = open.result; const q = db.transaction("drafts").objectStore("drafts").getAll(); q.onsuccess = () => { resolve(q.result.some(r => r.photo?.selected && !r.photo.pending)); db.close(); }; };
-  }));
+  await expect.poll(async()=>{const record=await draftSnapshot(page),photo=record?.photos[0];return Boolean(record?.revision!==pendingRevision&&photo?.selected&&photo.source&&!photo.pending&&photo.crop?.width===300&&photo.crop.height===208);}).toBe(true);
   await page.reload(); await page.locator(".add-dialog-trigger").click();
   dialog = page.getByRole("dialog", { name: messages.ru.addItem });
   await dialog.getByRole("button", { name: messages.ru.draftRestore }).click();
@@ -62,10 +65,10 @@ test("invalid short crop recovers, repeated source edits and recovered drafts re
   await expect(editor.getByRole("button", { name: messages.ru.cropConfirm })).toBeEnabled();
   await editor.getByRole("button", { name: messages.ru.cropConfirm }).click();
   expect(await dimensions(dialog)).toEqual({ width: 600, height: 400 });
-  await dialog.getByLabel(messages.ru.itemName, { exact: true }).fill("M3.4 recovered crop");
+  await dialog.getByLabel(messages.ru.itemName, { exact: true }).fill(savedName);
   await dialog.getByRole("button", { name: messages.ru.saveItem, exact: true }).click();
   await expect(page).toHaveURL(/added=/);
-  await page.getByRole("link", { name: "M3.4 recovered crop", exact: true }).click();
+  await page.getByRole("link", { name: savedName, exact: true }).click();
   const src = await page.locator(".photo-viewer-image img").getAttribute("src");
   const saved = await sharp(await (await page.request.get(src!)).body()).metadata();
   expect({ width: saved.width, height: saved.height }).toEqual({ width: 600, height: 400 });
@@ -93,12 +96,14 @@ test("photo-only names and crop validation follow the locale without rewriting l
       await dialog.getByRole("button", { name: copy.saveItem, exact: true }).click();
       await expect(page).toHaveURL(/added=/); savedId = new URL(page.url()).searchParams.get("added")!;
     } else {
-      await dialog.getByRole("button", { name: copy.removeSelection, exact: true }).click();
+      await dialog.getByRole("button", { name: copy.photoDelete, exact: true }).click();
+      await page.getByRole("alertdialog").getByRole("button",{name:copy.photoDelete,exact:true}).click();
       await dialog.getByRole("button", { name: copy.close, exact: true }).first().click();
       await expect.poll(() => page.evaluate(() => new Promise<number>(resolve => { const open = indexedDB.open("all-items-drafts", 1); open.onsuccess = () => { const db = open.result; const q = db.transaction("drafts").objectStore("drafts").count(); q.onsuccess = () => { resolve(q.result); db.close(); }; }; }))).toBe(0);
     }
     await page.goto(`${base}?q=${encodeURIComponent(copy.unidentifiedItemName)}`);
-    await expect(page.getByRole("link", {name:copy.unidentifiedItemName,exact:true})).toBeVisible();
+    const savedLink=page.locator('a.item-row-link[href="'+base+'/items/'+savedId+'"]');
+    await expect(savedLink).toBeVisible();await expect(savedLink).toHaveAccessibleName(copy.unidentifiedItemName);
     await page.goto(`${base}/items/${savedId}`);
     await expect(page.locator("h1")).toHaveText(copy.unidentifiedItemName);
     await expect(page.locator('input[name="name"]')).toHaveValue("");

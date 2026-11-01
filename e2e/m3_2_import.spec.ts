@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import sharp from "sharp";
+import {createHash} from "node:crypto";
+import type {PortableInventory} from "../src/export/import";
 import { readInventoryArchive, verifyInventoryArchive } from "../src/export/archive";
 import { previewInventoryArchive } from "../src/export/import";
 
@@ -13,8 +15,8 @@ test("downloads a complete archive and imports it twice as new inventories while
   await page.locator(".add-dialog-trigger").click();
   const add = page.getByRole("dialog", { name: "Добавить вещь" });
   await add.getByRole("button", { name: "Добавить фото" }).click();
-  await page.locator('input[name="photo"]').setInputFiles({ name: "synthetic.png", mimeType: "image/png", buffer: image });
-  await page.getByRole("dialog", { name: "Редактировать фото" }).getByRole("button", { name: "Готово" }).click();
+  await add.locator('input[name="photo"]').setInputFiles(await Promise.all([image, ...await Promise.all(["#89784f","#4f7389"].map(background=>sharp({create:{width:300,height:220,channels:3,background}}).png().toBuffer()))].map(async(buffer,index)=>({name:`synthetic-${index}.png`,mimeType:"image/png",buffer}))));
+  await expect(add.locator(".gallery-thumbnail")).toHaveCount(3);
   await add.getByLabel("Название").fill("Restored gadget 中文");
   await add.locator(".category-trigger").click();
   await add.locator(".category-options input").nth(0).check();
@@ -22,18 +24,12 @@ test("downloads a complete archive and imports it twice as new inventories while
   await add.getByRole("button", { name: "Сохранить вещь" }).click();
   await expect(page).toHaveURL(/added=/);
   await page.getByRole("link",{name:"Restored gadget 中文",exact:true}).click();
-  for(const [index,color] of ["#89784f","#4f7389"].entries()) {
-    await page.locator('.gallery-add input[name="photo"]').setInputFiles({name:"synthetic-more.png",mimeType:"image/png",buffer:await sharp({create:{width:300,height:220,channels:3,background:color}}).png().toBuffer()});
-    const crop=page.getByRole("dialog",{name:"Редактировать фото"}); await expect(crop.getByRole("button",{name:"Готово"})).toBeEnabled(); await crop.getByRole("button",{name:"Готово"}).click();
-    await expect(page.locator(".gallery-thumbnail")).toHaveCount(index+2);
-    await expect(page.locator('.gallery-add input[name="photo"]')).toBeEnabled();
-    await expect(page.locator(".gallery-add .photo-edit-primary")).toHaveCount(0);
-  }
   await expect(page.locator(".gallery-thumbnail")).toHaveCount(3);
   await page.getByRole("button",{name:"Фото 2",exact:true}).click();
-  await page.getByRole("button",{name:"Сделать основным",exact:true}).click();
+  await page.locator(".gallery-primary-button").nth(1).click();
   await expect(page.getByRole("button",{name:"Фото 2 — Основное фото",exact:true})).toBeVisible();
-  await page.getByRole("button",{name:"Переместить раньше",exact:true}).click();
+  await page.locator('.gallery-thumbnail[aria-current="true"]').focus();
+  await page.keyboard.press("Space");await page.keyboard.press("ArrowLeft");await page.keyboard.press("Space");
   await expect(page.getByRole("button",{name:"Фото 1 — Основное фото",exact:true})).toBeVisible();
 
   await page.goto("/inventories/00000000-0000-4000-8000-000000000001/collections");
@@ -66,6 +62,14 @@ test("downloads a complete archive and imports it twice as new inventories while
   expect((await previewInventoryArchive(archive)).items).toBe(1);
   expect((await previewInventoryArchive(archive)).photos).toBe(3);
 
+  const originalContents=readInventoryArchive(archive),originalItem=(originalContents.inventory as PortableInventory).items[0]!;
+  async function verifyRestoredGallery(url:string){
+    const copy=readInventoryArchive(new Uint8Array(await(await page.request.get(url+"/api/export/archive")).body())),item=(copy.inventory as PortableInventory).items.find(value=>value.inventory_number===originalItem.inventory_number)!;
+    expect(item.mediaAssets.map(photo=>({primary:photo.isPrimary,order:photo.displayOrder,crop:photo.cropData}))).toEqual(originalItem.mediaAssets.map(photo=>({primary:photo.isPrimary,order:photo.displayOrder,crop:photo.cropData})));
+    expect(item.primaryMediaId).toBe(item.mediaAssets.find(photo=>photo.isPrimary)!.id);
+    for(const [index,photo]of item.mediaAssets.entries())for(const variant of ["imagePath","thumbnailPath","sourcePath"] as const){const source=originalItem.mediaAssets[index]![variant],target=photo[variant];expect(Boolean(target)).toBe(Boolean(source));if(source&&target)expect(createHash("sha256").update(copy.files[target]!).digest("hex")).toBe(createHash("sha256").update(originalContents.files[source]!).digest("hex"));}
+  }
+
   const targetOriginal="http://127.0.0.1:3103/inventories/00000000-0000-4000-8000-000000000001";
   await page.goto(targetOriginal);
   await page.locator(".add-dialog-trigger").click();
@@ -88,7 +92,7 @@ test("downloads a complete archive and imports it twice as new inventories while
   }
   await page.goto(`${targetOriginal}/data`);
   const first=await importCopy("Recovered \u4e2d\u6587");
-  expect(first).not.toBe(targetOriginal);
+  expect(first).not.toBe(targetOriginal);await verifyRestoredGallery(first);
   await page.getByRole("link",{name:/Restored gadget/}).click();
   expect(new URL(page.url()).pathname.split("/").at(-1)).not.toBe((readInventoryArchive(archive).inventory.items as Array<{id:string}>)[0]!.id);
   await expect(page.locator(".category-selection .category-chip")).toHaveCount(2);
@@ -106,7 +110,7 @@ test("downloads a complete archive and imports it twice as new inventories while
   await next.getByRole("button",{name:"Сохранить вещь",exact:true}).click();
   await expect(page.getByRole("link",{name:/After restore/})).toContainText("INV-000002");
   await page.goto(`${first}/data`);
-  const second=await importCopy("Recovered second");expect(second).not.toBe(first);
+  const second=await importCopy("Recovered second");expect(second).not.toBe(first);await verifyRestoredGallery(second);
   await expect(page.getByRole("link",{name:/After restore/})).toHaveCount(0);
   await expect(page.getByRole("link",{name:/Restored gadget/})).toContainText("INV-000001");
   const secondPath=new URL(second).pathname,firstPath=new URL(first).pathname;
@@ -122,7 +126,8 @@ test("downloads a complete archive and imports it twice as new inventories while
   await page.getByRole("button",{name:"Удалить фотографию",exact:true}).click();
   await page.getByRole("alertdialog").getByRole("button",{name:"Удалить фотографию",exact:true}).click();
   await expect(page.locator(".gallery-thumbnail")).toHaveCount(2);
-  await page.getByRole("button",{name:"Переместить позже",exact:true}).click();
+  await page.locator('.gallery-thumbnail[aria-current="true"]').focus();
+  await page.keyboard.press("Space");await page.keyboard.press("ArrowRight");await page.keyboard.press("Space");
   await expect(page.getByRole("button",{name:"Фото 2 — Основное фото",exact:true})).toBeVisible();
   await page.goto(`${second}/collections`);
   await page.locator(".collection-card").filter({hasText:"Portable DIY"}).click();

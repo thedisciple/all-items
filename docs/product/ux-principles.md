@@ -54,3 +54,5 @@ An explicit route identifies the current organizational space. Switching clears 
 The header identifies the current inventory and places creation in the inventory menu. The same scoped counts appear on all inventory routes; settings does not pretend to be the item list. Item identity, categories, stock and status occupy stable zones. Category activation filters the current list, while item activation opens the item. Keep these actions independently reachable by keyboard and retain query history.
 
 Category tokens and the transient option panel should behave as one field without pushing neighboring content. Preview the entire selected crop within the available frame; preserve the prior selection when a replacement crop is cancelled.
+
+M4A extends these rules to complete photo sets: select/capture, inspect, independently crop, order, choose primary and save once. Closing retains the entire draft. A local storage warning describes the actual limit; a successful ZIP download never implies automatic backup. Existing galleries above the intake cap remain usable.

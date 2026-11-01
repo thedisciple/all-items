@@ -73,3 +73,9 @@ A suggested currency is not inferred residence. Keep manual choices, original am
 ## M4A measurable interaction gate
 
 Keep the sidebar toggle in one 44px header target immediately before inventory selection; toggling does not change its vertical center. Place Add Item and persistent Search in the same wrapping toolbar; at least 15rem of search space is reserved when the region permits it, with no horizontal page overflow from 360px. Actions use stable hit boxes and color/border feedback. Dialog footers use the same inset token as the frame sides (20px desktop, 16px narrow) plus safe-area bottom padding. Verify controls at short viewports and effective zoom widths; a polished screenshot alone is not acceptance. Currency options show ISO codes with localized names as accessible context.
+
+## M4A gallery and creation rules
+
+Thumbnail viewing, primary choice and persisted order are separate actions. One visible star per photo owns primary selection; carousel arrows browse only. Hold/drag has pickup feedback, cancellation, rail auto-scroll and keyboard announcements, with 44px targets and reduced motion. Reuse the same rail before and after creation. A pending write blocks conflicting actions; a rejected write restores confirmed order and retains entered files. Done is navigation, and meaningful unsaved edits offer Save/Discard/Stay.
+
+A multi-photo draft is one unfinished item, not a set of hidden saved items. Show available slots before intake, reject an oversized batch without replacing existing selections, preserve accepted pixels during failed recropping and keep retry/cancel honest after uncertain acknowledgement.

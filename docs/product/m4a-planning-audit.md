@@ -19,3 +19,7 @@ Keep the existing intrinsic persistent filters; a shared wrapping toolbar makes 
 ## Future dependency order
 
 Reliable local recovery/restore drills and measured usability precede a release/pilot claim. Optional AI identification uses reviewable proposals, provider adapters and explicit local/cloud consent; original marking remains authoritative. Accounts/roles and authenticated HTTPS are required before sharing/network access. Cross-inventory projects keep composite references and revocation/privacy semantics; listings remain a separate explicitly public representation; stock reservations, legal/payment/operator decisions precede commerce. E2EE synchronization is a separate threat-model decision, not an automatic consequence of accounts. Goals/achievements remain optional and non-manipulative.
+
+## Implementation follow-up
+
+The lost-acknowledgement finding also applies to saved-gallery photo addition/replacement. Migration 0013 and the same inventory-scoped receipt policy therefore cover these writes. A mounted browser controller retains the operation ID through an unacknowledged correction; a changed completed payload is rejected, retaining the file and offering explicit cancellation/recovery. This follow-up was appended to the supplied prompt separately from its original text. Postcommit-aborted-response tests exposed and fixed a real hidden crop-field timing race before automatic submission.
