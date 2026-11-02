@@ -1,5 +1,12 @@
 # Changelog
 
+## M4B.1 - Media, item and collection UX
+
+- Fixed centered contained gallery thumbnails for extreme aspect ratios and made newly added photos the viewing selection without changing the primary. Photo edit and confirmed deletion share a compact action row.
+- Made item-field actions contextual and return navigation explicit; documented a future unified edit session without changing the immediate persistence of photos.
+- Added a grouped, searchable and paginated thumbnail chooser for collection covers, with a preview and access from the collection editor. Preserved membership checks and distinct cover and primary identities.
+- Removed inactive filter dead space, preserved search focus on clear, and documented the design decisions and remaining M4B.2 recovery scope. Tests use isolated synthetic data; physical device acceptance remains separate.
+
 ## M4A - Photo-first creation parity and UX quality gate
 
 - Completed multi-file and sequential-camera Add Item with individual source-preserving crops, compact navigation, one primary star, local hold/drag and keyboard order, confirmed removal and one final Save. Ten is a new-addition cap; legacy galleries remain uncapped for reading/editing/recovery.

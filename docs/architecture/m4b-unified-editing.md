@@ -1,0 +1,9 @@
+# Future unified item edit session
+
+Status: design proposal, not implemented in M4B.1. Today item fields and each photo operation persist independently; the exit guard protects unsaved fields and in-flight work.
+
+A future unified editor should create a scoped, private session tied to an inventory and item. Metadata, stock, category assignments, gallery order and primary identity would be staged alongside generated media identifiers and metadata-free sources outside the repository. An explicit Save validates the complete proposed state and ownership; Cancel discards only that session's uncommitted staging. Do not delete or replace any committed source on Cancel.
+
+A durable journal records staged files, proposed identifiers and operation identity before promotion. Promote files to generated destinations and commit item fields, stock, categories, media references, order and an idempotent receipt in a short SQLite transaction. The filesystem and SQLite do not share an atomic transaction: record each transition, reconcile receipt and database references after interruption, and clean unreferenced staged/promoted files only after determining the commit outcome. Repeated Save with the same operation ID and payload returns the same receipt; changed payloads require a new deliberate operation. Deletion and replacement clean old files only after the transaction and reference checks succeed.
+
+Recovery must retain enough draft and journal information to offer resume or discard after a crash, resolve ambiguous acknowledgements before retry or cleanup, bound storage, and handle concurrent editors with revision checks. Browser-local drafts and private staging remain inventory-scoped and outside portable exports. Establish failure-injection tests for every journal boundary and restore drill before changing the current persistence model.

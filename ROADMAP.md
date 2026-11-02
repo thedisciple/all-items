@@ -162,7 +162,10 @@ M4A is complete as a scoped UX/create-flow milestone; it is not a public release
 - [x] Multi-photo creation, complete local draft recovery, bounded private staging and retry-safe final commit
 - [x] Synthetic Edge/keyboard/touch-mock regression gate and documentation reconciliation
 
-### M4B — Reliable recovery and usability release checks — PLANNED
+### M4B — Reliable recovery and usability release checks — IN PROGRESS
+
+- [x] M4B.1 UX refinement: contained gallery previews, contextual item actions and visual collection cover choice
+- [ ] M4B.2 verified local backup and recovery (separate milestone)
 
 - [ ] Verified automatic local backups, retention and restore drills on isolated data
 - [ ] Physical camera/touch/zoom and task-based usability acceptance; release compatibility policy
