@@ -1,5 +1,12 @@
 # Changelog
 
+## M4B.2 - Verified local backup and recovery
+
+- Added format-1 installation snapshots with identifier-checked immutable media, bounded streaming copies, SHA-256 manifests and verified completion markers. Short-lived SQLite workers avoid retained native Windows file handles.
+- Added create/list/verify CLI commands, explicit optional daily/weekly retention protecting pinned and migration backups, and manually configured Windows scheduling instructions.
+- Added real isolated restore drills with database/media checks and domain-service reads, plus private Data-page backup controls in all five languages. Documented offline recovery and remaining release gates.
+- Kept photo deletion visible and confirmation available while changing the primary; silent field-operation pending no longer introduces photo-upload status or vertical layout jumps.
+
 ## M4B.1 - Media, item and collection UX
 
 - Fixed centered contained gallery thumbnails for extreme aspect ratios and made newly added photos the viewing selection without changing the primary. Photo edit and confirmed deletion share a compact action row.

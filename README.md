@@ -60,3 +60,7 @@ Microsoft Edge browser checks use isolated temporary inventories and media: `npx
 Run `npm run typecheck`, `npm run lint`, `npm test` and `npm run build`. With the completed build, `npx playwright test --config playwright.acceptance.config.ts` runs the ordinary Edge suite in production mode on loopback port 3100 with a fresh temporary inventory. `npx playwright test` retains the development-mode gate. The separate production archive and restart checks use `playwright.import.config.ts` and `playwright.restart.config.ts`. All fixtures use synthetic records/media and isolated directories; these commands never migrate configured owner data. The production acceptance command requires a build first.
 
 Reuse `e2e/helpers/layout-gate.ts` for geometry and `browser-reliability.ts` for unexpected browser errors. Keep screenshots/traces synthetic and outside version control; avoid font/OS-specific pixel snapshots. Camera streams and CDP touch are simulations; physical camera, touch, browser zoom and screen-reader task testing remain M4B acceptance work.
+
+## Installation backup and recovery
+
+Use `npm run backup -- create`, `list`, `verify UUID` and `drill UUID` for verified local installation copies and isolated restoration tests. The Data page offers manual creation and verification. These copies include all inventories and committed private media; portable ZIP export covers one inventory and browser drafts are separate. See [local backup commands, Windows scheduling, retention and offline recovery](docs/architecture/local-backups.md).

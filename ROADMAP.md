@@ -165,9 +165,9 @@ M4A is complete as a scoped UX/create-flow milestone; it is not a public release
 ### M4B — Reliable recovery and usability release checks — IN PROGRESS
 
 - [x] M4B.1 UX refinement: contained gallery previews, contextual item actions and visual collection cover choice
-- [ ] M4B.2 verified local backup and recovery (separate milestone)
+- [x] M4B.2 verified installation backups, optional scheduled CLI/retention and isolated restore drills
 
-- [ ] Verified automatic local backups, retention and restore drills on isolated data
+- [x] Local backup service, opt-in Windows scheduling instructions, retention preview and isolated restoration drills
 - [ ] Physical camera/touch/zoom and task-based usability acceptance; release compatibility policy
 
 ### Release groundwork (gated; no release implied)

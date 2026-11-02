@@ -1,4 +1,12 @@
 const ru = {
+  installationBackups: "Резервные копии установки",
+  installationBackupScope: "Все инвентари и сохранённые фото на этом компьютере.",
+  installationBackupNone: "Проверенных копий пока нет.",
+  installationBackupCreate: "Создать копию",
+  installationBackupVerify: "Проверить копию",
+  installationBackupPending: "Проверка копии…",
+  installationBackupSuccess: "Копия проверена.",
+  installationBackupFailure: "Не удалось проверить копию. Попробуйте ещё раз; подробная проверка доступна через локальную команду backup.",
   creationAcknowledgementFailed: "Не удалось подтвердить сохранение. Данные и фото остаются в форме. Повторите попытку — уже сохранённая вещь не будет создана заново.",
   photoProcessingBusy: "Сейчас обрабатываются другие фото. Выбранное фото остаётся в форме; повторите попытку.",
   photoWriteConflict: "Предыдущая попытка уже завершена. Выбранное фото остаётся в форме. Отмените выбор, чтобы обновить галерею.",
@@ -335,6 +343,14 @@ const ru = {
 } as const;
 
 const en: Record<MessageKey, string> = {
+  installationBackups: "Installation backups",
+  installationBackupScope: "All inventories and saved photos on this computer.",
+  installationBackupNone: "No verified backups yet.",
+  installationBackupCreate: "Create backup",
+  installationBackupVerify: "Verify backup",
+  installationBackupPending: "Checking backup…",
+  installationBackupSuccess: "Backup verified.",
+  installationBackupFailure: "Backup verification failed. Retry or use the local backup command for details.",
   creationAcknowledgementFailed: "Saving could not be confirmed. Your entries and photos are still here. Retry to check the result without creating the same item again.",
   photoProcessingBusy: "Other photos are being processed. Your selection is still here; retry shortly.",
   photoWriteConflict: "The previous attempt already completed. Your selected photo is still here. Cancel the selection to refresh the gallery.",
@@ -504,6 +520,14 @@ const en: Record<MessageKey, string> = {
 };
 
 const uk: Record<MessageKey, string> = {
+  installationBackups: "Резервні копії встановлення",
+  installationBackupScope: "Усі інвентарі та збережені фото на цьому комп’ютері.",
+  installationBackupNone: "Перевірених копій поки немає.",
+  installationBackupCreate: "Створити копію",
+  installationBackupVerify: "Перевірити копію",
+  installationBackupPending: "Перевірка копії…",
+  installationBackupSuccess: "Копію перевірено.",
+  installationBackupFailure: "Не вдалося перевірити копію. Повторіть або скористайтеся локальною командою backup.",
   creationAcknowledgementFailed: "Не вдалося підтвердити збереження. Дані та фото залишаються у формі. Повторіть спробу — збережену річ не буде створено знову.",
   photoProcessingBusy: "Зараз обробляються інші фото. Вибране фото залишається у формі; повторіть спробу.",
   photoWriteConflict: "Попередню спробу вже завершено. Вибране фото залишається у формі. Скасуйте вибір, щоб оновити галерею.",
@@ -612,6 +636,14 @@ const uk: Record<MessageKey, string> = {
 };
 
 const srLatn: Record<MessageKey, string> = {
+  installationBackups: "Rezervne kopije instalacije",
+  installationBackupScope: "Svi inventari i sačuvane fotografije na ovom računaru.",
+  installationBackupNone: "Još nema proverenih kopija.",
+  installationBackupCreate: "Napravi kopiju",
+  installationBackupVerify: "Proveri kopiju",
+  installationBackupPending: "Provera kopije…",
+  installationBackupSuccess: "Kopija je proverena.",
+  installationBackupFailure: "Provera kopije nije uspela. Pokušajte ponovo ili koristite lokalnu komandu backup.",
   creationAcknowledgementFailed: "Čuvanje nije potvrđeno. Podaci i fotografije ostaju u obrascu. Pokušajte ponovo da proverite rezultat bez ponovnog stvaranja iste stvari.",
   photoProcessingBusy: "Druge fotografije se trenutno obrađuju. Vaš izbor ostaje u obrascu; pokušajte ponovo.",
   photoWriteConflict: "Prethodni pokušaj je već završen. Izabrana fotografija ostaje u obrascu. Otkažite izbor da osvežite galeriju.",
@@ -720,6 +752,14 @@ const srLatn: Record<MessageKey, string> = {
 };
 
 const zhHans: Record<MessageKey, string> = {
+  installationBackups: "安装备份",
+  installationBackupScope: "此电脑上的所有库存和已保存照片。",
+  installationBackupNone: "尚无已验证的备份。",
+  installationBackupCreate: "创建备份",
+  installationBackupVerify: "验证备份",
+  installationBackupPending: "正在验证备份…",
+  installationBackupSuccess: "备份已验证。",
+  installationBackupFailure: "备份验证失败。请重试或使用本地 backup 命令查看详情。",
   creationAcknowledgementFailed: "无法确认保存结果。填写的数据和照片仍在表单中。请重试以核实结果，已保存的物品不会重复创建。",
   photoProcessingBusy: "正在处理其他照片。已选照片仍在表单中，请稍后重试。",
   photoWriteConflict: "上次操作已完成。已选照片仍在表单中。请取消当前选择以刷新图库。",

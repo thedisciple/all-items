@@ -11,7 +11,8 @@ import { useI18n } from "@/i18n/provider";
 
 type FormAction = (formData: FormData) => void | ActionFeedback | Promise<void | ActionFeedback>;
 
-export function DestructiveConfirmation({ action, label, description, fields, children, iconOnly = false, refreshOnSuccess=true }: {
+export function DestructiveConfirmation({ action, label, description, fields, children, iconOnly = false, refreshOnSuccess=true, blocked=false }: {
+  blocked?:boolean;
   refreshOnSuccess?:boolean;
   iconOnly?: boolean;
   action: FormAction;
@@ -59,7 +60,7 @@ export function DestructiveConfirmation({ action, label, description, fields, ch
           {Object.entries(fields).map(([name, value]) => <input key={name} type="hidden" name={name} value={value}/>)}
           <InventoryField/><input type="hidden" name="confirm" value="on"/>
           {feedback.status === "error" && feedback.message ? <p role="alert" className="form-error">{t(feedback.message, feedback.values)}</p> : null}
-          <div className="dialog-actions"><button type="button" className="text-button" disabled={pending} onClick={() => setOpen(false)}>{t("cancel")}</button><button type="submit" className="delete-button" disabled={pending}><Trash2 size={16} aria-hidden="true"/><span>{pending ? t("deleting") : label}</span></button></div>
+          <div className="dialog-actions"><button type="button" className="text-button" disabled={pending} onClick={() => setOpen(false)}>{t("cancel")}</button><button type="submit" className="delete-button" disabled={pending||blocked}><Trash2 size={16} aria-hidden="true"/><span>{pending ? t("deleting") : label}</span></button></div>
         </ActionForm>
       </section>
     </div>,document.body) : null}

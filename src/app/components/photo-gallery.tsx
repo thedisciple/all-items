@@ -64,7 +64,7 @@ export function PhotoGallery({ itemId, itemName, photos }: { itemId: string; ite
     });
   }
   return <div className="photo-gallery" aria-label={t("gallery")} aria-busy={pending}>
-    <div inert={pending||dragging||adding}><PhotoReplacement itemId={itemId} mediaId={selected?.id} crop={selected?.crop} photoUrl={selected?`${base}/media/${itemId}/${selected.id}?v=${selected.id}`:null} itemName={itemName} announceSuccess={false} onDirtyChange={changeEditing} navigation={{index,total:ordered.length,disabled:locked,select}} trailingAction={!locked&&selected?<DestructiveConfirmation iconOnly key={selected.id} action={deleteGalleryPhoto} label={t("photoDelete")} description={t("galleryDeleteWarning")} fields={{id:itemId,mediaId:selected.id}}/>:null}/></div>
+    <div inert={dragging||adding}><PhotoReplacement disabled={pending} itemId={itemId} mediaId={selected?.id} crop={selected?.crop} photoUrl={selected?`${base}/media/${itemId}/${selected.id}?v=${selected.id}`:null} itemName={itemName} announceSuccess={false} onDirtyChange={changeEditing} navigation={{index,total:ordered.length,disabled:locked,select}} trailingAction={!editing&&!adding&&!dragging&&selected?<DestructiveConfirmation blocked={pending} iconOnly key={selected.id} action={deleteGalleryPhoto} label={t("photoDelete")} description={t("galleryDeleteWarning")} fields={{id:itemId,mediaId:selected.id}}/>:null}/></div>
     {ordered.length>0?<>
       <GalleryRail key={railEpoch} restoreFocusId={restoreFocusId} photos={ordered.map(photo=>({id:photo.id,primary:photo.isPrimary,preview:<PrivateImage variant="thumbnail" src={`${base}/media/${itemId}/${photo.id}?variant=thumbnail`} alt="" width={64} height={64}/>}))} selectedId={selected?.id} disabled={pending||editing||adding} onSelect={id=>select(ordered.findIndex(photo=>photo.id===id))} onPrimary={id=>mutate("primary",id)} onReorder={(ids,sourceId)=>{movedId.current=sourceId;mutate("reorder",undefined,ids);}} onDraggingChange={setDragging}/>
       <div className="gallery-add" inert={pending||dragging||editing}>
@@ -73,7 +73,7 @@ export function PhotoGallery({ itemId, itemName, photos }: { itemId: string; ite
       </div>
     </>:null}
     {photoSaved?<p className="visually-hidden" role="status">{t("photoSaved")}</p>:null}
-    {pending?<p role="status">{t("savingChanges")}</p>:null}
+    {pending?<p className="visually-hidden" role="status">{t("savingChanges")}</p>:null}
     {feedback.message?<p className={feedback.status==="error"?"form-error":"visually-hidden"} role={feedback.status==="error"?"alert":"status"}>{t(feedback.message,feedback.values)}</p>:null}
   </div>;
 }

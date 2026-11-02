@@ -17,6 +17,7 @@ type CropData = CropperJS.Data;
 export type PhotoDraft = { selected: File | null; source: File | null; pending: File | null; crop: CropData | null; pendingCrop?:CropData|null };
 
 type Props = {
+  quietDisabled?: boolean;
   trailingAction?: React.ReactNode;
   multiple?:boolean;
   disabled?:boolean;
@@ -48,7 +49,7 @@ function cameraErrorKey(error: unknown) {
   return "cameraUnavailable";
 }
 
-export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoSubmit = false, savedToken, resultToken, retryReady = false, externalPreview = false, initialCrop, onPreviewChange, onDraftChange, resetToken, recovery, onRecoveryChange, multiple=false, disabled=false, active=true, hideAcquire=false, hideRemove=false, onAcquireFiles, trailingAction }: Props) {
+export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoSubmit = false, savedToken, resultToken, retryReady = false, externalPreview = false, initialCrop, onPreviewChange, onDraftChange, resetToken, recovery, onRecoveryChange, multiple=false, disabled=false, active=true, hideAcquire=false, hideRemove=false, onAcquireFiles, trailingAction, quietDisabled=false }: Props) {
   const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const sourceInputRef = useRef<HTMLInputElement>(null);
@@ -316,21 +317,21 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
   const displayedUrl = externalPreview ? null : previewUrl ?? currentPhotoUrl;
 
   return <div className="photo-acquisition">
-    <input ref={inputRef} className="visually-hidden" type="file" name={name} accept="image/jpeg,image/png,image/webp" capture={multiple?undefined:"environment"} multiple={multiple} aria-hidden="true" tabIndex={-1} disabled={pending} onChange={(event) => {
+    <input ref={inputRef} className="visually-hidden" type="file" name={name} accept="image/jpeg,image/png,image/webp" capture={multiple?undefined:"environment"} multiple={multiple} aria-hidden="true" tabIndex={-1} disabled={pending||quietDisabled} onChange={(event) => {
       if(onAcquireFiles){const input=event.currentTarget;closeSources();void Promise.resolve(onAcquireFiles([...input.files??[]])).catch(()=>setSelectionError("photoSelectionFailed")).finally(()=>{input.value="";});return;}
       const file = event.currentTarget.files?.[0];
       if (file) void selectFile(file);
     }}/>
-    <input ref={sourceInputRef} className="visually-hidden" type="file" name={`${name}Source`} aria-hidden="true" tabIndex={-1} disabled={pending}/>
+    <input ref={sourceInputRef} className="visually-hidden" type="file" name={`${name}Source`} aria-hidden="true" tabIndex={-1} disabled={pending||quietDisabled}/>
     <input ref={cropInputRef} type="hidden" name="crop" value={cropData ? JSON.stringify(cropData) : ""}/>
     {displayedUrl ? <div className="photo-preview-frame"><PrivateImage variant="preview" className="photo-preview" src={displayedUrl} alt={selectedFile ? t("photoPreviewSelected") : t("photo")}/></div> : null}
     <div className="photo-acquisition-actions">
-      {!hideAcquire?<button ref={triggerRef} type="button" className={currentPhotoUrl ? "photo-acquisition-secondary" : "photo-acquisition-primary photo-add-primary"} disabled={pending} onClick={() => { setSourceOpen(true); setCameraMessage(""); }}>
+      {!hideAcquire?<button ref={triggerRef} type="button" className={currentPhotoUrl ? "photo-acquisition-secondary" : "photo-acquisition-primary photo-add-primary"} disabled={pending||quietDisabled} onClick={() => { setSourceOpen(true); setCameraMessage(""); }}>
         {currentPhotoUrl ? <RefreshCw size={16} aria-hidden="true"/> : <ImagePlus size={16} aria-hidden="true"/>}
         <span>{checking?t("creationReadingPhotos"):pending&&autoSubmit ? t("savingPhoto") : selectedFile ? t("chooseAnotherPhoto") : currentPhotoUrl ? t("replacePhoto") : t("addPhoto")}</span>
       </button>:null}
-      {(currentPhotoUrl || selectedFile) && !pending ? <button ref={hideAcquire?triggerRef:undefined} type="button" className="photo-acquisition-primary photo-edit-primary" onClick={() => void editCurrentPhoto()}><Pencil size={16} aria-hidden="true"/><span>{t("editCrop")}</span></button> : null}
-      {!pending ? trailingAction : null}
+      {(currentPhotoUrl || selectedFile) && !pending ? <button ref={hideAcquire?triggerRef:undefined} type="button" className="photo-acquisition-primary photo-edit-primary" disabled={quietDisabled} onClick={() => void editCurrentPhoto()}><Pencil size={16} aria-hidden="true"/><span>{t("editCrop")}</span></button> : null}
+      {trailingAction}
       {selectedFile && !pending && !autoSubmit&&!hideRemove ? <button type="button" className="text-button" onClick={clearSelection}>{t("removeSelection")}</button> : null}
       {selectedFile && !pending && autoSubmit&&!hideRemove ? <button type="button" className="text-button" onClick={clearSelection}>{t("cancelSelection")}</button> : null}
       {selectedFile && retryReady && !pending ? <button type="button" className="quiet-button" onClick={() => { submittingRef.current = true; inputRef.current?.form?.requestSubmit(); }}>{t("retryUpload")}</button> : null}
@@ -355,7 +356,7 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
           {cameraMessage ? <p className="form-error" role="alert">{t(cameraMessage)}</p> : null}
           {selectionError?<p className="form-error" role="alert">{t(selectionError)}</p>:null}
           {checking?<p role="status">{t("creationReadingPhotos")}</p>:null}
-          <div className="dialog-actions"><button type="button" className="quiet-button" disabled={pending} onClick={() => void startCamera()}>{t("cameraOpen")}</button><button type="button" className="quiet-button" disabled={pending} onClick={() => inputRef.current?.click()}>{t("chooseFile")}</button></div>
+          <div className="dialog-actions"><button type="button" className="quiet-button" disabled={pending||quietDisabled} onClick={() => void startCamera()}>{t("cameraOpen")}</button><button type="button" className="quiet-button" disabled={pending||quietDisabled} onClick={() => inputRef.current?.click()}>{t("chooseFile")}</button></div>
         </>}</div>
       </section>
     </div> : null}

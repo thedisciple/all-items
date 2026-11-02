@@ -29,7 +29,10 @@ test("three-photo gallery updates primary, order and one crop, then promotes a s
   await expect(page.locator(".gallery-thumbnail")).toHaveCount(3);
   await page.getByRole("button", { name: "Фото 2", exact: true }).click();
   const second = await page.locator('.gallery-thumbnail[aria-current="true"] img').getAttribute("src");
-  await page.locator(".gallery-primary-button").nth(1).click();
+  const height=(await page.locator(".photo-gallery").boundingBox())!.height;
+  let release!:()=>void,resume!:()=>void,intercepted=false;const resumed=new Promise<void>(resolve=>{resume=resolve;});const gate=new Promise<void>(resolve=>{release=resolve;});
+  await page.route("**/items/**",async route=>{if(route.request().method()==="POST"&&route.request().headers()["next-action"]){intercepted=true;await gate;await route.continue();resume();return;}await route.continue();});
+  try{await page.locator(".gallery-primary-button").nth(1).click();await expect.poll(()=>intercepted).toBe(true);await expect(page.locator(".photo-delete-icon")).toBeVisible();await expect(page.locator(".photo-delete-icon")).toBeEnabled();expect((await page.locator(".photo-gallery").boundingBox())!.height).toBe(height);await expect(page.locator(".photo-gallery > p[role=status]").filter({hasText:"Сохранение"})).not.toBeVisible();}finally{release();await resumed;await page.unroute("**/items/**");}
   await expect(page.getByRole("button", { name: "Фото 2 — Основное фото", exact: true })).toHaveAttribute("aria-current", "true");
   await page.locator('.gallery-thumbnail[aria-current="true"]').focus();
   await page.keyboard.press("Space");await page.keyboard.press("ArrowLeft");await page.keyboard.press("Space");
