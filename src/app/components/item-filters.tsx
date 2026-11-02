@@ -65,6 +65,8 @@ export function ItemFilters({ categories, statuses, searchPlaceholder, actions }
   }, [query, paramsString]);
 
   const clear = () => {
+    editedSinceNavigation.current = false;
+    setQuery("");
     const next = new URLSearchParams(params);
     for (const key of filterKeys) next.delete(key);
     next.delete("added");
@@ -92,6 +94,6 @@ export function ItemFilters({ categories, statuses, searchPlaceholder, actions }
     </label><label className="filter-select"><span aria-hidden="true">{sortLabel}</span><select aria-label={t("sortLabel")} value={params.get("sort") ?? presentation.preferences.sort} onChange={(event) => navigate("sort", event.target.value)}>
       <option value="date">{t("sortNewest")}</option><option value="name">{t("sortName")}</option><option value="quantity">{t("sortQuantity")}</option>
     </select><ChevronDown className="filter-chevron" size={16} aria-hidden="true"/>
-    </label>{<button type="button" className="quiet-button clear-filters-button" disabled={!activeFilters} onClick={clear}><X size={15} aria-hidden="true"/>{t("clearFilters")}</button>}
+    </label>{activeFilters ? <button type="button" className="quiet-button clear-filters-button" onClick={clear}><X size={15} aria-hidden="true"/>{t("clearFilters")}</button> : null}
   </div>;
 }

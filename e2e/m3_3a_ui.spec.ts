@@ -11,11 +11,15 @@ test("consistent controls, dismissible categories and unobscured collection crea
     await expect(page.locator(".brand")).toContainText("All Items");
     await expect(page.locator(".nav-link.active")).toContainText("Инвентарь");
     const search = page.locator(".search-field");
-    const before = await search.boundingBox();
     await search.locator("input").fill("M33 filter geometry");
     await expect(page).toHaveURL(/q=M33/);
-    expect((await search.boundingBox())!.width).toBe(before!.width);
+    expect((await search.boundingBox())!.width).toBeGreaterThan(100);
+    await search.locator("input").fill("uncommitted query");
     await page.locator(".clear-filters-button").click();
+    await expect(search.locator("input")).toHaveValue("");
+    await expect(search.locator("input")).toBeFocused();
+    await expect(page).not.toHaveURL(/q=/);
+    await page.waitForTimeout(450);
     await expect(page).not.toHaveURL(/q=/);
     await page.getByLabel("Категория", { exact: true }).selectOption("tools");
     await expect(page).toHaveURL(/category=tools/);

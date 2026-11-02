@@ -60,8 +60,8 @@ export function ItemEditForm({ itemId, initial, initialRows, returnTo, initialPr
       <label className="field full-field"><span>{t("itemDescription")}</span><textarea name="description" maxLength={4000} value={draft.description} onChange={field("description")}/></label>
       <label className="field full-field"><span className="private-field-label"><LockKeyhole size={12} aria-hidden="true"/>{t("itemNotes")}</span><textarea name="notes" maxLength={2000} value={draft.notes} onChange={field("notes")}/></label>
     </div></details>
-    <div className="form-action-row"><FormSubmitButton className="add-button" disabled={pending || !dirty || (Boolean(initial.name) && !draft.name.trim()) || !validPrice(draft.askingPrice, draft.askingCurrency || suggestedCurrency(locale), draft.askingCurrency === initial.askingCurrency ? initialPriceExponent : undefined) || !validStockDraft(rows, draft.trackingMode)} pendingLabel={t("savingChanges")}>{pending ? t("savingChanges") : t("saveChanges")}</FormSubmitButton>
-      <a className="quiet-button" href={returnTo}>{t("cancel")}</a>
+    <div className="form-action-row" hidden={!dirty && !pending && feedback.status !== "error"}><FormSubmitButton className="add-button" disabled={pending || !dirty || (Boolean(initial.name) && !draft.name.trim()) || !validPrice(draft.askingPrice, draft.askingCurrency || suggestedCurrency(locale), draft.askingCurrency === initial.askingCurrency ? initialPriceExponent : undefined) || !validStockDraft(rows, draft.trackingMode)} pendingLabel={t("savingChanges")}>{pending ? t("savingChanges") : t("saveChanges")}</FormSubmitButton>
+      <button type="button" className="quiet-button" disabled={pending} onClick={() => { setDraft(initial); setRows(initialStock); setCategoryDraft([]); }}>{t("cancel")}</button>
       {feedback.status === "error" && feedback.message ? <p className="inline-status error-status" role="alert">{feedback.message ? t(feedback.message, feedback.values) : ""}</p> : null}
     </div>
   </form>;

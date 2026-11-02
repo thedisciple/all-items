@@ -168,13 +168,13 @@ export async function listCollectionCoverOptions(context: InventoryContext, coll
   const collectionId = collectionIdSchema.parse(collectionIdValue);
   const { db, workspaceId } = await inventoryDatabase(context);
   const result = await db.$client.execute({
-    sql: `SELECT i.id AS itemId, i.name, i.model, m.id AS mediaId
+    sql: `SELECT i.id AS itemId, i.name, i.model, i.inventory_number AS inventoryNumber, m.id AS mediaId
           FROM item_collection_memberships cm JOIN items i ON i.id = cm.item_id
           JOIN media_assets m ON m.item_id = i.id
           WHERE cm.collection_id = ? AND i.workspace_id = ? AND EXISTS(SELECT 1 FROM collections c WHERE c.id=cm.collection_id AND c.workspace_id=i.workspace_id) ORDER BY lower(i.name), i.id, m.display_order, m.id`,
     args: [collectionId, workspaceId],
   });
-  return result.rows.map((row) => ({ itemId: String(row.itemId), name: String(row.name), model: row.model == null ? null : String(row.model), mediaId: String(row.mediaId) }));
+  return result.rows.map((row) => ({ itemId: String(row.itemId), name: String(row.name), model: row.model == null ? null : String(row.model), inventoryNumber: String(row.inventoryNumber), mediaId: String(row.mediaId) }));
 }
 
 export async function setCollectionCover(context: InventoryContext, collectionIdValue: unknown, input: unknown) {

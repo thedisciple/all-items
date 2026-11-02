@@ -46,7 +46,7 @@ test("downloads a complete archive and imports it twice as new inventories while
   await page.getByRole("button", { name: /(?:Изменить|Добавить) обложку/ }).click();
   const coverDialog = page.getByRole("dialog", { name: "Обложка коллекции" });
   await coverDialog.getByLabel("Обложка коллекции").selectOption("item_photo");
-  await coverDialog.locator('select[name="selectedPhoto"]').selectOption({index:2});
+  await coverDialog.locator('input[name="coverPhotoChoice"]').nth(1).check();
   await expect(coverDialog.getByRole("img", { name: "Предпросмотр обложки" })).toBeVisible();
   await coverDialog.getByRole("button", { name: "Сохранить обложку" }).click();
   await expect(page.locator(".collection-detail-cover")).toBeVisible();

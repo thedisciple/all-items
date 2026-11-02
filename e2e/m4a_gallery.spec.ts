@@ -76,20 +76,20 @@ test("M4A browsing, primary, hold sorting, cancellation and long rails keep sepa
 
 test("M4A exit: Done protects meaningful edits, restores focus, saves once and validates origin",async({page})=>{
   test.setTimeout(120_000);const doneName="M4A synthetic exit seed";await seed(page,doneName);await page.getByRole("link",{name:doneName,exact:true}).click();await expect(page).toHaveURL(/\/items\/[a-f0-9-]{36}$/, {timeout:30_000});const itemUrl=page.url();
-  await expect(page.getByRole("button",{name:messages.ru.saveChanges,exact:true})).toBeDisabled();
-  await page.getByRole("link",{name:messages.ru.itemDone,exact:true}).click();await expect(page).toHaveURL(base);
+  await expect(page.locator(".item-edit-form .form-action-row")).toBeHidden();
+  await page.getByRole("link",{name:messages.ru.itemBackInventory,exact:true}).click();await expect(page).toHaveURL(base);
   await page.getByRole("link",{name:doneName,exact:true}).click();await expect(page).toHaveURL(itemUrl);await page.getByLabel(messages.ru.itemModel,{exact:true}).fill("Pending model");
   await expect(page.getByRole("button",{name:messages.ru.saveChanges,exact:true})).toBeEnabled();// A prevented traversal has no load event; assert the guard, then the unchanged route.
   await page.evaluate(()=>history.back());await expect(page.getByRole("alertdialog")).toBeVisible();await expect(page).toHaveURL(itemUrl);await page.getByRole("alertdialog").getByRole("button",{name:messages.ru.itemLeaveStay,exact:true}).click();
   await expect(page.getByLabel(messages.ru.itemModel,{exact:true})).toHaveValue("Pending model");
-  const done=page.getByRole("link",{name:messages.ru.itemDone,exact:true});await done.click();let dialog=page.getByRole("alertdialog");await dialog.getByRole("button",{name:messages.ru.itemLeaveStay,exact:true}).click();await expect(done).toBeFocused();
+  const done=page.getByRole("link",{name:messages.ru.itemBackInventory,exact:true});await done.click();let dialog=page.getByRole("alertdialog");await dialog.getByRole("button",{name:messages.ru.itemLeaveStay,exact:true}).click();await expect(done).toBeFocused();
   await expect(page.getByLabel(messages.ru.itemModel,{exact:true})).toHaveValue("Pending model");
   await done.click();dialog=page.getByRole("alertdialog");await dialog.getByRole("button",{name:messages.ru.itemLeaveSave,exact:true}).click();await expect(page).toHaveURL(base);
   await page.goto(itemUrl);await expect(page.getByLabel(messages.ru.itemModel,{exact:true})).toHaveValue("Pending model");
-  await page.getByLabel(messages.ru.itemModel,{exact:true}).fill("Discarded model");await page.getByRole("link",{name:messages.ru.itemDone,exact:true}).click();await page.getByRole("alertdialog").getByRole("button",{name:messages.ru.itemLeaveDiscard,exact:true}).click();await expect(page).toHaveURL(base);
-  await page.goto(itemUrl+"?from=11111111-1111-4111-8111-111111111111");await expect(page.getByRole("link",{name:messages.ru.itemDone,exact:true})).toHaveAttribute("href",base);
+  await page.getByLabel(messages.ru.itemModel,{exact:true}).fill("Discarded model");await page.getByRole("link",{name:messages.ru.itemBackInventory,exact:true}).click();await page.getByRole("alertdialog").getByRole("button",{name:messages.ru.itemLeaveDiscard,exact:true}).click();await expect(page).toHaveURL(base);
+  await page.goto(itemUrl+"?from=11111111-1111-4111-8111-111111111111");await expect(page.getByRole("link",{name:messages.ru.itemBackInventory,exact:true})).toHaveAttribute("href",base);
   await expect(page.getByLabel(messages.ru.itemModel,{exact:true})).toHaveValue("Pending model");
-  await page.goto(base+"/collections");await page.locator(".collection-create-trigger").click();const create=page.getByRole("dialog",{name:messages.ru.collectionCreate,exact:true});await create.getByLabel(messages.ru.collectionName).fill("M4A safe return origin");await create.getByRole("button",{name:messages.ru.collectionCreate,exact:true}).click();await expect(page).toHaveURL(/\/collections\/[a-f0-9-]{36}$/, {timeout:30_000});const origin=new URL(page.url()).pathname;await page.goto(itemUrl+"?from="+origin.split("/").at(-1));await expect(page.getByRole("link",{name:messages.ru.itemDone,exact:true})).toHaveAttribute("href",origin);await page.getByRole("link",{name:messages.ru.itemDone,exact:true}).click();await expect(page).toHaveURL(origin);
+  await page.goto(base+"/collections");await page.locator(".collection-create-trigger").click();const create=page.getByRole("dialog",{name:messages.ru.collectionCreate,exact:true});await create.getByLabel(messages.ru.collectionName).fill("M4A safe return origin");await create.getByRole("button",{name:messages.ru.collectionCreate,exact:true}).click();await expect(page).toHaveURL(/\/collections\/[a-f0-9-]{36}$/, {timeout:30_000});const origin=new URL(page.url()).pathname;await page.goto(itemUrl+"?from="+origin.split("/").at(-1));await expect(page.getByRole("link",{name:messages.ru.itemBackCollection,exact:true})).toHaveAttribute("href",origin);await page.getByRole("link",{name:messages.ru.itemBackCollection,exact:true}).click();await expect(page).toHaveURL(origin);
 });
 
 
@@ -122,8 +122,8 @@ test("M4A pending photo exit waits for persistence and never enables an unrelate
   try{
     await page.locator('.gallery-add input[name="photo"]').setInputFiles({name:"synthetic-pending.png",mimeType:"image/png",buffer:await sharp({create:{width:300,height:240,channels:3,background:"#6b825a"}}).png().toBuffer()});
     const crop=page.getByRole("dialog",{name:messages.ru.cropTitle,exact:true});await expect(crop.getByRole("button",{name:messages.ru.cropConfirm,exact:true})).toBeEnabled();await crop.getByRole("button",{name:messages.ru.cropConfirm,exact:true}).click();
-    await expect.poll(()=>intercepted).toBe(true);await expect(page.getByRole("button",{name:messages.ru.saveChanges,exact:true})).toBeDisabled();
-    await page.getByRole("link",{name:messages.ru.itemDone,exact:true}).click();const dialog=page.getByRole("alertdialog");await expect(dialog).toContainText(messages.ru.itemLeavePending);await expect(dialog.getByRole("button",{name:messages.ru.itemLeaveDiscard,exact:true})).toHaveCount(0);
+    await expect.poll(()=>intercepted).toBe(true);await expect(page.locator(".item-edit-form .form-action-row")).toBeHidden();
+    await page.getByRole("link",{name:messages.ru.itemBackInventory,exact:true}).click();const dialog=page.getByRole("alertdialog");await expect(dialog).toContainText(messages.ru.itemLeavePending);await expect(dialog.getByRole("button",{name:messages.ru.itemLeaveDiscard,exact:true})).toHaveCount(0);
     release();await expect(page).toHaveURL(base,{timeout:30_000});const inventory=readInventoryArchive(await(await page.request.get(base+"/api/export/archive")).body()).inventory as PortableInventory;expect(inventory.items.find(item=>item.name===label)!.mediaAssets).toHaveLength(2);
   }finally{release();await page.unroute("**/items/**");}
 });
@@ -147,8 +147,8 @@ test.describe("explicit transport fault",()=>{
       const crop=page.getByRole("dialog",{name:messages.ru.cropTitle,exact:true});await expect(crop.getByRole("button",{name:messages.ru.cropConfirm,exact:true})).toBeEnabled();await crop.getByRole("button",{name:messages.ru.cropConfirm,exact:true}).click();
       await expect(add.getByRole("alert")).toContainText(messages.ru.photoSaveGeneric);await expect.poll(()=>failed).toBe(true);
       expect(await add.locator('input[name="photo"]').evaluate((element:HTMLInputElement)=>element.files?.length)).toBe(1);expect(await add.locator('input[name="photoSource"]').evaluate((element:HTMLInputElement)=>element.files?.length)).toBe(1);await expect(add.locator('img[src^="blob:"]')).toBeVisible();await expect(page.locator(".gallery-thumbnail")).toHaveCount(1);
-      await page.getByRole("link",{name:messages.ru.itemDone,exact:true}).click();await page.getByRole("alertdialog").getByRole("button",{name:messages.ru.itemLeaveStay,exact:true}).click();await add.getByRole("button",{name:messages.ru.retryUpload,exact:true}).click();
-      await expect(page.locator(".gallery-thumbnail")).toHaveCount(2);expect(await add.locator('input[name="photo"]').evaluate((element:HTMLInputElement)=>element.files?.length)).toBe(0);await expect(page.getByRole("button",{name:messages.ru.saveChanges,exact:true})).toBeDisabled();
+      await page.getByRole("link",{name:messages.ru.itemBackInventory,exact:true}).click();await page.getByRole("alertdialog").getByRole("button",{name:messages.ru.itemLeaveStay,exact:true}).click();await add.getByRole("button",{name:messages.ru.retryUpload,exact:true}).click();
+      await expect(page.locator(".gallery-thumbnail")).toHaveCount(2);expect(await add.locator('input[name="photo"]').evaluate((element:HTMLInputElement)=>element.files?.length)).toBe(0);await expect(page.locator(".item-edit-form .form-action-row")).toBeHidden();
     }finally{await page.unroute("**/items/**");}
   });
 });

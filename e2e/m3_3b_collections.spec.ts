@@ -16,7 +16,7 @@ async function addPhotoItem(page:Page,name:string,color:string) {
   await dialog.locator('input[name="photo"]').setInputFiles({name:"synthetic.png",mimeType:"image/png",buffer:await sharp({create:{width:240,height:400,channels:3,background:color}}).png().toBuffer()});
   const crop=page.getByRole("dialog",{name:"Редактировать фото"});await expect(crop.getByRole("button",{name:"Готово"})).toBeEnabled();
   await crop.getByRole("button",{name:"Готово"}).click();
-  await dialog.getByRole("button",{name:"Сохранить вещь",exact:true}).click();await expect(page).toHaveURL(/added=/);
+  await dialog.getByRole("button",{name:"Сохранить вещь",exact:true}).click();await expect(page.getByRole("link",{name,exact:true})).toBeVisible({timeout:30_000});
 }
 
 test("collection tile, staged membership and every cover type remain independently editable",async({page})=>{
@@ -42,6 +42,15 @@ test("collection tile, staged membership and every cover type remain independent
   await picker.locator('.collection-item-option input[type="checkbox"]').nth(1).check();
   await picker.getByRole("button",{name:/Добавить вещи \(2\)/}).click();
   await expect(page.locator(".item-grid-row")).toHaveCount(2);
+  await page.getByRole("button",{name:"Редактировать коллекцию"}).click();
+  const editor=page.getByRole("dialog",{name:"Редактировать коллекцию"});
+  await editor.getByLabel("Переименовать коллекцию").fill("Synthetic project draft");
+  await editor.getByRole("button",{name:"Изменить обложку"}).click();
+  await expect(page.getByRole("dialog",{name:"Редактировать коллекцию"})).toHaveCount(0);
+  await page.getByRole("dialog",{name:"Обложка коллекции"}).getByRole("button",{name:"Закрыть"}).click();
+  await expect(editor.getByLabel("Переименовать коллекцию")).toHaveValue("Synthetic project draft");
+  await expect(editor.getByRole("button",{name:"Изменить обложку"})).toBeFocused();
+  await editor.getByRole("button",{name:"Закрыть"}).click();
   await page.getByRole("button",{name:"Добавить обложку"}).click();
   let manager=page.getByRole("dialog",{name:"Обложка коллекции"});
   await expect(manager.locator(".cover-choice-preview svg")).toBeVisible();
@@ -53,8 +62,13 @@ test("collection tile, staged membership and every cover type remain independent
   await expect(page.locator(".collection-detail-heading h1")).toContainText("📷");
   await page.getByRole("button",{name:"Изменить обложку"}).click();manager=page.getByRole("dialog",{name:"Обложка коллекции"});
   await manager.getByLabel("Обложка коллекции").selectOption("item_photo");
-  const photoSelect=manager.locator('select[name="selectedPhoto"]');const choices=await photoSelect.locator("option").all();
-  await photoSelect.selectOption(await choices[1]!.getAttribute("value") ?? "");
+  const number=(await manager.locator(".cover-photo-options legend").first().innerText()).match(/INV-\d+/)![0];
+  await manager.getByLabel("Поиск вещей").fill(number);
+  await expect(manager.locator(".cover-photo-options fieldset")).toHaveCount(1);
+  await manager.locator('input[name="coverPhotoChoice"]').first().check();
+  await manager.getByLabel("Поиск вещей").fill("no-such-synthetic-item");
+  await expect(manager.locator('input[name="selectedPhoto"]')).not.toHaveValue("");
+  await manager.getByLabel("Поиск вещей").clear();
   await expect(manager.locator(".collection-cover-preview img")).toBeVisible();
   await manager.getByRole("button",{name:"Сохранить обложку"}).click();
   await page.getByRole("button",{name:"Увеличить фото"}).click();
@@ -62,8 +76,7 @@ test("collection tile, staged membership and every cover type remain independent
   const first=await viewer.locator(".photo-viewer-image img").getAttribute("src");
   await viewer.getByRole("button",{name:"Изменить обложку"}).click();manager=page.getByRole("dialog",{name:"Обложка коллекции"});
   await manager.getByLabel("Обложка коллекции").selectOption("item_photo");
-  const secondOptions=await manager.locator('select[name="selectedPhoto"] option').all();
-  await manager.locator('select[name="selectedPhoto"]').selectOption(await secondOptions[2]!.getAttribute("value") ?? "");
+  await manager.locator('input[name="coverPhotoChoice"]').nth(1).check();
   await manager.getByRole("button",{name:"Сохранить обложку"}).click();
   await expect.poll(()=>viewer.locator(".photo-viewer-image img").getAttribute("src")).not.toBe(first);
   await viewer.getByRole("button",{name:"Изменить обложку"}).click();manager=page.getByRole("dialog",{name:"Обложка коллекции"});

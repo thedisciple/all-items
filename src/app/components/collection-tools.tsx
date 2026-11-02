@@ -15,7 +15,7 @@ import { CategoryTags } from "./category-tag";
 
 const idle: ActionFeedback = { status: "idle", message: "" };
 type SelectableItem = { id: string; name: string; model: string | null; categories: string[]; mediaId: string | null };
-type CoverPhoto = { itemId: string; name: string; model: string | null; mediaId: string };
+export type CoverPhoto = { itemId: string; name: string; model: string | null; inventoryNumber: string; mediaId: string };
 
 function handleDialogKeys(event: KeyboardEvent<HTMLElement>, close: () => void) {
   if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); close(); return; }
@@ -68,13 +68,17 @@ export function CollectionAddItems({ collectionId, items, existingIds }: { colle
   </>;
 }
 
-export function CollectionCoverManager({ collectionId, options, add = false }: { collectionId: string; options: CoverPhoto[]; add?: boolean }) {
+export function CollectionCoverManager({ collectionId, options, add = false, controlledOpen, onOpenChange }: { collectionId: string; options: CoverPhoto[]; add?: boolean; controlledOpen?: boolean; onOpenChange?: (open:boolean)=>void }) {
   const { t } = useI18n();
   const { base } = useInventory();
   const [feedback, action, actionPending] = useActionState(setCollectionCoverAction, idle);
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = (value:boolean) => { setInternalOpen(value); onOpenChange?.(value); };
+  const [page,setPage] = useState(0);
   const [coverType, setCoverType] = useState("default");
   const [selectedPhoto, setSelectedPhoto] = useState("");
+  const [photoQuery,setPhotoQuery] = useState("");
   const [icon, setIcon] = useState("🤖");
   const [coverPreview, setCoverPreview] = useState("");
   const coverFile = useRef<HTMLInputElement>(null);
@@ -82,24 +86,40 @@ export function CollectionCoverManager({ collectionId, options, add = false }: {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
   const router = useRouter();
-  const close=()=>{if(!actionPending){setOpen(false);setCoverType("default");setSelectedPhoto("");setIcon("🤖");}};
+  const close=()=>{if(!actionPending){setOpen(false);setCoverType("default");setSelectedPhoto("");setPhotoQuery("");setPage(0);setIcon("🤖");}};
   useEffect(() => () => { if (coverPreview) URL.revokeObjectURL(coverPreview); }, [coverPreview]);
   useEffect(() => { if (!open && coverPreview) setCoverPreview(""); }, [open, coverPreview]);
   useEffect(() => { if (open) { wasOpen.current = true; dialogRef.current?.querySelector<HTMLElement>("select")?.focus(); } else if (wasOpen.current) { wasOpen.current = false; triggerRef.current?.focus(); } }, [open]);
   useEffect(() => { if (feedback.status === "success") { setOpen(false); router.refresh(); } }, [feedback, router]);
   return <>
-    <button ref={triggerRef} type="button" className="quiet-button" onClick={() => setOpen(true)}><ImageIcon size={16} aria-hidden="true"/>{t(add ? "collectionAddCover" : "collectionChangeCover")}</button>
+    {controlledOpen === undefined ? <button ref={triggerRef} type="button" className="quiet-button" onClick={() => setOpen(true)}><ImageIcon size={16} aria-hidden="true"/>{t(add ? "collectionAddCover" : "collectionChangeCover")}</button> : null}
     {open ? <div className="photo-source-overlay collection-cover-overlay" role="presentation"><section ref={dialogRef} className="photo-source-dialog collection-cover-dialog" role="dialog" aria-modal="true" aria-labelledby="collection-cover-title" onKeyDown={(event) => handleDialogKeys(event, close)}>
       <div className="dialog-heading"><h3 id="collection-cover-title">{t("collectionCover")}</h3><button type="button" className="icon-button" aria-label={t("close")} disabled={actionPending} onClick={close}><X size={18} aria-hidden="true"/></button></div>
       <ActionForm action={action} pending={actionPending} className="collection-cover-form"><input type="hidden" name="collectionId" value={collectionId}/>
         <label className="field"><span>{t("collectionCover")}</span><select name="coverType" value={coverType} onChange={(event) => setCoverType(event.target.value)}><option value="default">{t("collectionCoverDefault")}</option><option value="item_photo" disabled={!options.length}>{t("collectionCoverItem")}</option><option value="upload">{t("collectionCoverUpload")}</option><option value="emoji">{t("collectionCoverEmoji")}</option></select></label>
-        {coverType === "item_photo" ? <label className="field"><span>{t("collectionCoverPickItem")}</span><select name="selectedPhoto" value={selectedPhoto} required onChange={(event) => setSelectedPhoto(event.target.value)}><option value="">{t("selectCategory")}</option>{options.map((option) => <option key={option.mediaId} value={`${option.itemId}:${option.mediaId}`}>{option.name || t("unidentifiedItemName")}{option.model ? ` ${option.model}` : ""} — {t("galleryPhoto", { number: options.filter(photo => photo.itemId === option.itemId).findIndex(photo => photo.mediaId === option.mediaId) + 1 })}</option>)}</select></label> : null}
+        {coverType === "item_photo" ? <div className="cover-photo-picker">
+          <input type="hidden" name="selectedPhoto" value={selectedPhoto}/>
+          <label className="field"><span>{t("searchItems")}</span><input type="search" value={photoQuery} maxLength={160} onChange={event=>{setPhotoQuery(event.target.value);setPage(0);}}/></label>
+          <p>{t("collectionCoverPrimaryUnaffected")}</p>
+          {(() => {
+            const filtered=options.filter(option=>([option.name || t("unidentifiedItemName"),option.model ?? "",option.inventoryNumber].join(" ")).toLocaleLowerCase().includes(photoQuery.trim().toLocaleLowerCase()));
+            const count=Math.ceil(filtered.length/24), visible=filtered.slice(page*24,(page+1)*24);
+            const groups=Array.from(new Set(visible.map(option=>option.itemId)));
+            return <><div className="cover-photo-options" role="radiogroup" aria-label={t("collectionCoverPickItem")}>
+              {groups.map(id=>{const photos=visible.filter(option=>option.itemId===id),item=photos[0]!;return <fieldset key={id}><legend>{item.name || t("unidentifiedItemName")} · {item.inventoryNumber}</legend>{photos.map(option=>{
+                const value=option.itemId+":"+option.mediaId,position=options.filter(photo=>photo.itemId===id).findIndex(photo=>photo.mediaId===option.mediaId)+1;
+                return <label className="cover-photo-choice" key={option.mediaId}><input type="radio" name="coverPhotoChoice" value={value} checked={selectedPhoto===value} onChange={()=>setSelectedPhoto(value)}/><PrivateImage variant="thumbnail" src={base+"/media/"+option.itemId+"/"+option.mediaId+"?variant=thumbnail"} alt=""/><span>{t("galleryPhoto",{number:position})}</span></label>;
+              })}</fieldset>;})}
+              {!visible.length?<p>{t("noMatches")}</p>:null}
+            </div>{count>1?<div className="cover-photo-pages"><button type="button" className="quiet-button" disabled={page===0} onClick={()=>setPage(page-1)}>{t("galleryPrevious")}</button><span>{t("galleryCounter",{number:page+1,total:count})}</span><button type="button" className="quiet-button" disabled={page+1>=count} onClick={()=>setPage(page+1)}>{t("galleryNext")}</button></div>:null}</>;
+          })()}
+        </div> : null}
         {coverType === "upload" ? <><input ref={coverFile} className="visually-hidden" tabIndex={-1} aria-hidden="true" type="file" name="coverFile" accept="image/jpeg,image/png,image/webp" required onChange={(event: ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; setCoverPreview(file ? URL.createObjectURL(file) : ""); }}/><button type="button" className="photo-source-button collection-cover-pick" onClick={() => coverFile.current?.click()}>{t("collectionCoverUpload")}</button>{coverPreview ? <div className="collection-cover-preview"><PrivateImage variant="preview" src={coverPreview} alt={t("collectionCoverPreview")} width={480} height={240}/></div> : null}</> : null}
         {coverType === "default" ? <div className="cover-choice-preview" aria-hidden="true"><LibraryBig size={30}/></div> : null}
         {coverType === "item_photo" && selectedPhoto ? <div className="collection-cover-preview"><PrivateImage variant="preview" src={`${base}/media/${selectedPhoto.replace(":", "/")}?variant=image`} alt={t("collectionCoverPreview")}/></div> : null}
         {coverType === "emoji" ? <><div className="cover-choice-preview" aria-hidden="true">{icon}</div><CollectionEmojiField label={t("collectionCoverEmojiLabel")} value={icon} onChange={setIcon} required/></> : null}
         {feedback.status === "error" && feedback.message ? <p className="inline-status error-status" role="alert">{feedback.message ? t(feedback.message, feedback.values) : ""}</p> : null}
-        <div className="dialog-actions"><FormSubmitButton className="add-button" pendingLabel={t("savingChanges")}>{t("collectionCoverSave")}</FormSubmitButton></div>
+        <div className="dialog-actions"><FormSubmitButton className="add-button" disabled={coverType === "item_photo" && !selectedPhoto} pendingLabel={t("savingChanges")}>{t("collectionCoverSave")}</FormSubmitButton></div>
       </ActionForm>
     </section></div> : null}
     {feedback.status === "success" && feedback.message ? <p className="visually-hidden" role="status">{feedback.message ? t(feedback.message, feedback.values) : ""}</p> : null}

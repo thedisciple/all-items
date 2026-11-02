@@ -87,7 +87,7 @@ test("one item save retains a failed draft and commits type, stock and multiple 
   await page.getByRole("link", { name: /R1 combined/ }).click();
   const form = page.locator(".item-edit-form");
   await expect(page.getByRole("button", { name: "Сохранить запас" })).toHaveCount(0);
-  await expect(form.getByRole("button", { name: "Сохранить изменения" })).toBeDisabled();
+  await expect(form.locator(".form-action-row")).toBeHidden();
   await form.getByLabel("Тип учёта").selectOption("unique");
   await expect(form.getByRole("alert")).toContainText("одна единица");
   await form.getByLabel("Тип учёта").selectOption("bulk");

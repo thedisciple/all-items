@@ -104,5 +104,5 @@ export function ItemExitProvider({ children }: { children: ReactNode }) {
 
 export function ItemDone({returnTo}:{returnTo:string}){
   const {t}=useI18n();
-  return <Link className="quiet-button item-done" href={returnTo}>{t("itemDone")}</Link>;
+  return <Link className="quiet-button item-done" href={returnTo}>{t(returnTo.includes("/collections/") ? "itemBackCollection" : "itemBackInventory")}</Link>;
 }

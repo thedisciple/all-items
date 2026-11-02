@@ -11,6 +11,8 @@ import { useInventory } from "./inventory-provider";
 import { useI18n } from "@/i18n/provider";
 import { Pencil, Plus, X } from "lucide-react";
 import { CollectionEmojiField } from "./collection-emoji-field";
+import { CollectionCoverManager, type CoverPhoto } from "./collection-tools";
+import { CollectionCoverVisual, type CollectionVisualData } from "./collection-cover-visual";
 
 const idle: ActionFeedback = { status: "idle", message: "" };
 
@@ -54,7 +56,9 @@ export function CreateCollectionForm({ tile = false }: { tile?: boolean }) {
   </>;
 }
 
-export function CollectionManageForms({ id, name, icon }: { id: string; name: string; icon: string | null }) {
+export function CollectionManageForms({ id, name, icon, cover, options }: { id: string; name: string; icon: string | null; cover: CollectionVisualData; options: CoverPhoto[] }) {
+  const { base } = useInventory();
+  const [coverOpen,setCoverOpen] = useState(false);
   const { t } = useI18n();
   const [renameFeedback, renameAction, renameActionPending] = useActionState(renameCollectionAction, idle);
   const [draftName, setDraftName] = useState(name);
@@ -63,6 +67,9 @@ export function CollectionManageForms({ id, name, icon }: { id: string; name: st
   const router = useRouter();
   const nameInput = useRef<HTMLInputElement>(null);
   const editTrigger = useRef<HTMLButtonElement>(null);
+  const coverTrigger = useRef<HTMLButtonElement>(null);
+  const wasCoverOpen = useRef(false);
+  useEffect(() => { if (coverOpen) wasCoverOpen.current=true; else if (wasCoverOpen.current) { wasCoverOpen.current=false; coverTrigger.current?.focus(); } }, [coverOpen]);
   const wasEditing = useRef(false);
   useEffect(() => { if (renameFeedback.status === "success") { setEditing(false); router.refresh(); } }, [renameFeedback, router]);
   useEffect(() => { if (editing) { wasEditing.current=true;nameInput.current?.focus(); nameInput.current?.select(); } else if(wasEditing.current){wasEditing.current=false;editTrigger.current?.focus();} }, [editing]);
@@ -70,16 +77,18 @@ export function CollectionManageForms({ id, name, icon }: { id: string; name: st
   return <div className="collection-manage-forms">
     <div className="collection-rename-panel">
       <button ref={editTrigger} type="button" className="quiet-button collection-edit-trigger" onClick={() => setEditing(true)}><Pencil size={15} aria-hidden="true"/>{t("collectionEdit")}</button>
-      {editing?<div className="photo-source-overlay add-dialog-overlay" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)close();}}><section className="photo-source-dialog collection-rename-dialog" role="dialog" aria-modal="true" aria-labelledby="collection-edit-title" onKeyDown={event=>handleDialogKeys(event,close)}>
+      {editing && !coverOpen?<div className="photo-source-overlay add-dialog-overlay" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)close();}}><section className="photo-source-dialog collection-rename-dialog" role="dialog" aria-modal="true" aria-labelledby="collection-edit-title" onKeyDown={event=>handleDialogKeys(event,close)}>
         <div className="dialog-heading"><h2 id="collection-edit-title">{t("collectionEdit")}</h2><button type="button" className="icon-button" aria-label={t("close")} disabled={renameActionPending} onClick={close}><X size={18} aria-hidden="true"/></button></div>
         <ActionForm action={renameAction} pending={renameActionPending} className="collection-rename-form">
         <input type="hidden" name="id" value={id}/>
         <label className="field"><span>{t("collectionRenameTitle")}</span><input ref={nameInput} name="name" value={draftName} maxLength={120} required onChange={(event) => setDraftName(event.target.value)}/></label>
         <CollectionEmojiField label={t("collectionIcon")} value={draftIcon} onChange={setDraftIcon}/>
+        <div className="collection-edit-cover"><CollectionCoverVisual base={base} collection={cover} variant="card"/><button ref={coverTrigger} type="button" className="quiet-button" onClick={()=>setCoverOpen(true)}>{t("collectionChangeCover")}</button></div>
         {renameFeedback.status === "error" && renameFeedback.message ? <p className="inline-status error-status" role="alert">{renameFeedback.message ? t(renameFeedback.message, renameFeedback.values) : ""}</p> : null}
         <div className="dialog-actions"><FormSubmitButton disabled={draftName.trim() === name && draftIcon === (icon ?? "")} pendingLabel={t("savingChanges")}>{t("collectionRename")}</FormSubmitButton></div>
       </ActionForm></section></div>:null}
     </div>
+    {editing ? <CollectionCoverManager collectionId={id} options={options} controlledOpen={coverOpen} onOpenChange={setCoverOpen}/> : null}
     <DestructiveConfirmation action={deleteCollectionAction} label={t("collectionDelete")} description={`${t("collectionDeleteWarning")} «${name}»`} fields={{ id }}/>
     {renameFeedback.status === "success" && renameFeedback.message ? <p className="visually-hidden" role="status">{renameFeedback.message ? t(renameFeedback.message, renameFeedback.values) : ""}</p> : null}
   </div>;
