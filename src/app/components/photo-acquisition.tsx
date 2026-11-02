@@ -17,6 +17,7 @@ type CropData = CropperJS.Data;
 export type PhotoDraft = { selected: File | null; source: File | null; pending: File | null; crop: CropData | null; pendingCrop?:CropData|null };
 
 type Props = {
+  trailingAction?: React.ReactNode;
   multiple?:boolean;
   disabled?:boolean;
   active?:boolean;
@@ -47,7 +48,7 @@ function cameraErrorKey(error: unknown) {
   return "cameraUnavailable";
 }
 
-export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoSubmit = false, savedToken, resultToken, retryReady = false, externalPreview = false, initialCrop, onPreviewChange, onDraftChange, resetToken, recovery, onRecoveryChange, multiple=false, disabled=false, active=true, hideAcquire=false, hideRemove=false, onAcquireFiles }: Props) {
+export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoSubmit = false, savedToken, resultToken, retryReady = false, externalPreview = false, initialCrop, onPreviewChange, onDraftChange, resetToken, recovery, onRecoveryChange, multiple=false, disabled=false, active=true, hideAcquire=false, hideRemove=false, onAcquireFiles, trailingAction }: Props) {
   const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const sourceInputRef = useRef<HTMLInputElement>(null);
@@ -329,6 +330,7 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
         <span>{checking?t("creationReadingPhotos"):pending&&autoSubmit ? t("savingPhoto") : selectedFile ? t("chooseAnotherPhoto") : currentPhotoUrl ? t("replacePhoto") : t("addPhoto")}</span>
       </button>:null}
       {(currentPhotoUrl || selectedFile) && !pending ? <button ref={hideAcquire?triggerRef:undefined} type="button" className="photo-acquisition-primary photo-edit-primary" onClick={() => void editCurrentPhoto()}><Pencil size={16} aria-hidden="true"/><span>{t("editCrop")}</span></button> : null}
+      {!pending ? trailingAction : null}
       {selectedFile && !pending && !autoSubmit&&!hideRemove ? <button type="button" className="text-button" onClick={clearSelection}>{t("removeSelection")}</button> : null}
       {selectedFile && !pending && autoSubmit&&!hideRemove ? <button type="button" className="text-button" onClick={clearSelection}>{t("cancelSelection")}</button> : null}
       {selectedFile && retryReady && !pending ? <button type="button" className="quiet-button" onClick={() => { submittingRef.current = true; inputRef.current?.form?.requestSubmit(); }}>{t("retryUpload")}</button> : null}

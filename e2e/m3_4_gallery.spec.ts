@@ -23,6 +23,8 @@ test("three-photo gallery updates primary, order and one crop, then promotes a s
   const first = await page.locator(".gallery-thumbnail img").first().getAttribute("src");
   await upload(page, page.locator(".gallery-add"), "#4da66b");
   await expect(page.locator(".gallery-thumbnail")).toHaveCount(2);
+  await expect(page.locator(".gallery-thumbnail").nth(1)).toHaveAttribute("aria-current", "true");
+  await expect(page.locator(".gallery-primary-button").first()).toHaveAttribute("aria-pressed", "true");
   await upload(page, page.locator(".gallery-add"), "#4d68a6");
   await expect(page.locator(".gallery-thumbnail")).toHaveCount(3);
   await page.getByRole("button", { name: "Фото 2", exact: true }).click();

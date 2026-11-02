@@ -694,8 +694,8 @@ button svg,a.quiet-button svg { flex-shrink: 0; }
 .photo-gallery { display: grid; gap: 14px; min-width: 0; }
 .gallery-strip { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
 .gallery-thumbnail { position: relative; display: grid; place-items: center; width: 72px; height: 72px; padding: 3px; border: 1px solid var(--control-border); border-radius: 8px; background: #11130f; cursor: pointer; }
-.gallery-thumbnail .media-thumbnail { width: 64px; height: 64px; }
-.gallery-thumbnail img { width: 100%; height: 100%; object-fit: contain; }
+.gallery-thumbnail .media-thumbnail { width: 64px; height: 64px; grid-template: minmax(0,1fr) / minmax(0,1fr); place-items: center; }
+.gallery-thumbnail .private-image-frame > img { width: 100%; height: 100%; min-width: 0; min-height: 0; object-fit: contain; object-position: center; }
 .gallery-thumbnail[aria-current="true"] { border: 2px solid var(--green); padding: 2px; }
 .gallery-primary-mark { position: absolute; bottom: 3px; right: 3px; padding: 2px; box-sizing: content-box; background: #111e; color: var(--green); border-radius: 4px; }
 .gallery-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -863,3 +863,17 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .creation-error .dialog-actions { padding-inline: 0; }
 
 .draft-main-preview .photo-viewer:not(.photo-viewer-open) .media-detail { height: 100%; max-height: 100%; min-height: 0; grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr); }
+
+.cover-photo-options { display: grid; gap: 8px; max-height: 260px; overflow-y: auto; }
+.cover-photo-choice { display: flex; align-items: center; gap: 10px; min-height: 64px; padding: 6px; border: 1px solid var(--control-border); border-radius: 8px; cursor: pointer; }
+.cover-photo-choice:has(input:checked) { border-color: var(--green); }
+.cover-photo-choice:focus-within { outline: 2px solid var(--green); outline-offset: 2px; }
+
+/* M4B.1: compact, bounded collection and gallery controls. */
+.cover-photo-options fieldset { border: 0; padding: 0; margin: 0 0 12px; min-width: 0; }
+.cover-photo-options legend { font-weight: 600; margin-bottom: 6px; }
+.cover-photo-pages { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.collection-edit-cover { display: flex; align-items: center; gap: 12px; }
+.collection-edit-cover .media-card, .collection-edit-cover .collection-card-placeholder { width: 96px; height: 64px; flex: none; }
+.form-action-row[hidden] { display: none; }
+.photo-acquisition-actions .photo-delete-icon { min-width: 44px; min-height: 44px; }

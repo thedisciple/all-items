@@ -44,6 +44,7 @@ export function PhotoGallery({ itemId, itemName, photos }: { itemId: string; ite
     priorPhotos.current=ids;
   },[photos]);
   const changeEditing=useCallback((value:boolean)=>{setEditing(value);if(value)setPhotoSaved(false);},[]);
+  const selectAdded=useCallback((id:string)=>{setSelectedId(id);},[]);
   const changeAdding=useCallback((value:boolean)=>{setAdding(value);if(value)setPhotoSaved(false);},[]);
   const locked=pending||editing||adding||dragging;
   function select(position:number){const photo=ordered[position];if(photo&&!locked){setSelectedId(photo.id);setSelectedPosition(position);}}
@@ -63,13 +64,12 @@ export function PhotoGallery({ itemId, itemName, photos }: { itemId: string; ite
     });
   }
   return <div className="photo-gallery" aria-label={t("gallery")} aria-busy={pending}>
-    <div inert={pending||dragging||adding}><PhotoReplacement itemId={itemId} mediaId={selected?.id} crop={selected?.crop} photoUrl={selected?`${base}/media/${itemId}/${selected.id}?v=${selected.id}`:null} itemName={itemName} announceSuccess={false} onDirtyChange={changeEditing} navigation={{index,total:ordered.length,disabled:locked,select}}/></div>
+    <div inert={pending||dragging||adding}><PhotoReplacement itemId={itemId} mediaId={selected?.id} crop={selected?.crop} photoUrl={selected?`${base}/media/${itemId}/${selected.id}?v=${selected.id}`:null} itemName={itemName} announceSuccess={false} onDirtyChange={changeEditing} navigation={{index,total:ordered.length,disabled:locked,select}} trailingAction={!locked&&selected?<DestructiveConfirmation iconOnly key={selected.id} action={deleteGalleryPhoto} label={t("photoDelete")} description={t("galleryDeleteWarning")} fields={{id:itemId,mediaId:selected.id}}/>:null}/></div>
     {ordered.length>0?<>
       <GalleryRail key={railEpoch} restoreFocusId={restoreFocusId} photos={ordered.map(photo=>({id:photo.id,primary:photo.isPrimary,preview:<PrivateImage variant="thumbnail" src={`${base}/media/${itemId}/${photo.id}?variant=thumbnail`} alt="" width={64} height={64}/>}))} selectedId={selected?.id} disabled={pending||editing||adding} onSelect={id=>select(ordered.findIndex(photo=>photo.id===id))} onPrimary={id=>mutate("primary",id)} onReorder={(ids,sourceId)=>{movedId.current=sourceId;mutate("reorder",undefined,ids);}} onDraggingChange={setDragging}/>
-      <div className="gallery-actions">{!locked&&selected?<DestructiveConfirmation iconOnly key={selected.id} action={deleteGalleryPhoto} label={t("photoDelete")} description={t("galleryDeleteWarning")} fields={{id:itemId,mediaId:selected.id}}/>:null}</div>
       <div className="gallery-add" inert={pending||dragging||editing}>
         <p className="photo-slots">{t("gallerySlots",{count:Math.max(0,NEW_ITEM_PHOTO_LIMIT-ordered.length)})}</p>
-        {ordered.length<NEW_ITEM_PHOTO_LIMIT||adding?<PhotoReplacement itemId={itemId} photoUrl={null} itemName={itemName} hideEmptyViewer announceSuccess={false} onDirtyChange={changeAdding}/>:<p>{t("galleryLimit",{count:NEW_ITEM_PHOTO_LIMIT})}</p>}
+        {ordered.length<NEW_ITEM_PHOTO_LIMIT||adding?<PhotoReplacement itemId={itemId} photoUrl={null} itemName={itemName} hideEmptyViewer announceSuccess={false} onDirtyChange={changeAdding} onAdded={selectAdded}/>:<p>{t("galleryLimit",{count:NEW_ITEM_PHOTO_LIMIT})}</p>}
       </div>
     </>:null}
     {photoSaved?<p className="visually-hidden" role="status">{t("photoSaved")}</p>:null}

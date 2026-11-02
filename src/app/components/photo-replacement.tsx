@@ -13,7 +13,7 @@ import { useI18n } from "@/i18n/provider";
 
 const idle: PhotoActionFeedback = { status: "idle", message: "" };
 
-export function PhotoReplacement({ itemId, photoUrl, itemName, mediaId, crop, hideEmptyViewer = false, onDirtyChange, announceSuccess = true, navigation }: { navigation?: PhotoNavigation; announceSuccess?: boolean; itemId: string; photoUrl: string | null; itemName: string; mediaId?: string; crop?: CropperJS.Data | null; hideEmptyViewer?: boolean; onDirtyChange?: (value: boolean) => void }) {
+export function PhotoReplacement({ itemId, photoUrl, itemName, mediaId, crop, hideEmptyViewer = false, onDirtyChange, announceSuccess = true, navigation, onAdded, trailingAction }: { trailingAction?: React.ReactNode; onAdded?: (id:string)=>void; navigation?: PhotoNavigation; announceSuccess?: boolean; itemId: string; photoUrl: string | null; itemName: string; mediaId?: string; crop?: CropperJS.Data | null; hideEmptyViewer?: boolean; onDirtyChange?: (value: boolean) => void }) {
   const { t } = useI18n();
   const { base } = useInventory();
   const router=useRouter();
@@ -36,10 +36,11 @@ export function PhotoReplacement({ itemId, photoUrl, itemName, mediaId, crop, hi
   useEffect(() => {
     if (feedback.status === "success" && feedback.mediaId) {
       writeId.current=null;setHasSelection(false);
+      if(hideEmptyViewer)onAdded?.(feedback.mediaId);
       setSavedUrl(hideEmptyViewer ? null : `${base}/media/${itemId}/${feedback.mediaId}?v=${feedback.mediaId}`);
       setPreviewUrl(null);
     }
-  }, [feedback, itemId, base, hideEmptyViewer]);
+  }, [feedback, itemId, base, hideEmptyViewer, onAdded]);
 
   useEffect(() => {
     setSavedUrl(photoUrl);
@@ -52,7 +53,7 @@ export function PhotoReplacement({ itemId, photoUrl, itemName, mediaId, crop, hi
       {previewUrl || savedUrl ? <PhotoViewer navigation={navigation} src={previewUrl ?? savedUrl ?? ""} alt={`${t("photo")}: ${itemName}`}/> : <div className="compact-photo-placeholder"><span aria-hidden="true">{t("photo")}</span><p>{t("photoMissing")}</p></div>}
       {previewUrl ? <p className="photo-unsaved-note" role="status">{t("previewUnsaved")}</p> : null}
     </div> : null}
-    <PhotoAcquisition key={mediaId ?? "new"} name="photo" initialCrop={crop} onDraftChange={onDirtyChange} onRecoveryChange={selection} currentPhotoUrl={savedUrl} autoSubmit savedToken={feedback.status === "success" ? feedback.mediaId : undefined} resultToken={feedback.message ? t(feedback.message, feedback.values) : ""} retryReady={feedback.status === "error"} externalPreview onPreviewChange={updatePreview}/>
+    <PhotoAcquisition trailingAction={trailingAction} key={mediaId ?? "new"} name="photo" initialCrop={crop} onDraftChange={onDirtyChange} onRecoveryChange={selection} currentPhotoUrl={savedUrl} autoSubmit savedToken={feedback.status === "success" ? feedback.mediaId : undefined} resultToken={feedback.message ? t(feedback.message, feedback.values) : ""} retryReady={feedback.status === "error"} externalPreview onPreviewChange={updatePreview}/>
     {!actionPending&&hasSelection&&feedback.status === "error" && feedback.message ? <p className="inline-status error-status" role="alert">{feedback.message ? t(feedback.message, feedback.values) : ""}</p> : announceSuccess && feedback.status === "success" && feedback.message ? <p className="visually-hidden" role="status">{feedback.message ? t(feedback.message, feedback.values) : ""}</p> : null}
   </ActionForm>;
 }
