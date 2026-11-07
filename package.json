@@ -4,16 +4,17 @@
   "private": true,
   "license": "GPL-3.0-only",
   "scripts": {
-    "dev": "npm run db:migrate && next dev --hostname 127.0.0.1",
+    "dev": "npm run config:check && npm run db:migrate && next dev --hostname 127.0.0.1",
     "build": "next build",
-    "start": "npm run db:migrate && next start --hostname 127.0.0.1",
+    "start": "npm run config:check && npm run db:migrate && next start --hostname 127.0.0.1",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "db:migrate": "tsx src/db/migrate.ts",
     "backup": "tsx src/backup/cli.ts",
-    "auth": "tsx src/auth/cli.ts"
+    "auth": "tsx src/auth/cli.ts",
+    "config:check": "tsx src/auth/check-config.ts"
   },
   "dependencies": {
     "@noble/hashes": "1.8.0",

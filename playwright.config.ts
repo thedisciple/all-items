@@ -27,7 +27,7 @@ export default defineConfig({
   webServer: {
     command: "node --import tsx e2e/helpers/auth-server.ts",
     url: "http://127.0.0.1:3100/login",
-    env: { ALL_ITEMS_DATA_DIR: dataDirectory,ALL_ITEMS_ORIGIN:"http://127.0.0.1:3100" },
+    env: { ALL_ITEMS_DATA_DIR: dataDirectory,ALL_ITEMS_ORIGIN:"http://127.0.0.1:3100",ALL_ITEMS_NEXT_DIST:path.join(dataDirectory,"next-dev") },
     reuseExistingServer: false,
     timeout: 120_000,
     stdout: "pipe",

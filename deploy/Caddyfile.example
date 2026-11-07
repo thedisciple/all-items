@@ -1,0 +1,29 @@
+{
+	admin 127.0.0.1:2019
+	servers {
+		strict_sni_host on
+		timeouts {
+			read_header 10s
+			read_body_idle 30s
+			write_idle 60s
+			idle 2m
+		}
+	}
+}
+
+# No default domain: this file is inert until the owner supplies a real domain
+# and an identical private 32-byte proxy secret to Caddy and the app.
+{$ALL_ITEMS_DOMAIN} {
+	request_body {
+		max_size 136MB
+	}
+	header Strict-Transport-Security "max-age=604800"
+	reverse_proxy 127.0.0.1:3000 {
+		header_up Host {$ALL_ITEMS_DOMAIN}
+		header_up X-Forwarded-Host {$ALL_ITEMS_DOMAIN}
+		header_up X-Forwarded-Proto https
+		header_up X-Forwarded-Port 443
+		header_up X-All-Items-Proxy-Secret {$ALL_ITEMS_PROXY_SECRET}
+		header_up -Forwarded
+	}
+}

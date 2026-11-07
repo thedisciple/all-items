@@ -12,6 +12,13 @@ The owner requested short, coherent checkpoints because the session usage window
 - `npm run typecheck`, `npm run lint`, `npm test -- --pool forks --maxWorkers=1` (25 files, 123 tests), and `npm run build` passed after the UX edits. The isolated production restart test also passed (1/1). Final P2 CI and security/device gates remain pending.
 - Design evidence and limitations are in [p2-ux.md](../product/p2-ux.md). Synthetic screenshots: `%TEMP%\all-items-p2-empty-account-synthetic.png` and `%TEMP%\all-items-p1-modal-synthetic.png` (overwritten by the successful run).
 
+## In-progress checkpoint: strict HTTPS proxy preparation
+
+- Added explicit `https-proxy` mode requiring exact HTTPS origin, a 32-byte private proxy secret, pinned Host and forwarded scheme/port. Local mode remains loopback HTTP. Startup preflight rejects bad configuration before migration.
+- Added security headers and disabled the shared Next image optimizer. A synthetic production HTTPS proxy test passed (1/1): authenticated login and Secure cookie, host/origin/forwarded-header rejection, direct-backend denial and optimizer denial. Caddy 2.11.9 validated the example configuration offline; no public listener or real certificate was installed.
+- Added an outside-repository Windows runtime config template, production launcher with no-migration `-ValidateOnly`, [security checklist](p2-threat-model.md) and [deployment preparation](p2-deployment.md). The launcher passed a synthetic temporary config preflight on Windows PowerShell.
+- `npm run typecheck`, `npm run lint`, `npm run build`, and the full one-fork unit suite (26 files, 126 tests) passed. Final device/security and OIDC gates remain.
+
 ## Remaining integrated milestone
 
 1. Review P1 entry points and produce a concrete threat checklist; fix verified vulnerabilities. Audit current Next.js patch/security notices and lockfile using primary sources.
