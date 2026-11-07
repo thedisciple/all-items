@@ -1,5 +1,7 @@
 "use client";
 
+import {browserUUID} from "@/lib/browser-crypto";
+
 import Link from "next/link";
 import {CurrencyFields} from "./currency-fields";
 import {suggestedCurrency,validPrice} from "@/items/currencies";
@@ -39,6 +41,7 @@ function ScopedAddItemForm(){
   const [gallery,setGallery]=useState<DraftGallery>(emptyDraftGallery);
   const [operationId,setOperationId]=useState("");
   const [open,setOpen]=useState(false),[mounted,setMounted]=useState(false),[resetToken,setResetToken]=useState(0);
+  const [secureRandomError,setSecureRandomError]=useState(false);
   const [galleryBusy,setGalleryBusy]=useState(false),[attempted,setAttempted]=useState(false);
   const [storedDraft,setStoredDraft]=useState<GalleryDraftRecord|null>(null),[storageReady,setStorageReady]=useState(false);
   const [storageError,setStorageError]=useState<""|"draftStorageFailed"|"draftStorageConflict"|"draftSavedCleanupFailed">("");
@@ -51,7 +54,7 @@ function ScopedAddItemForm(){
   const meaningful=Boolean([draft.name,draft.model,draft.brand,draft.originalMarking,draft.description,draft.notes,draft.askingPrice].some(value=>value.trim())||draft.categories.length||draft.identificationStatus!=="unknown"||draft.saleIntent!=="not_for_sale"||draft.askingCurrency||draft.trackingMode!=="unique"||rows.some(row=>row.location.trim()||row.quantity!=="1")||gallery.photos.length);
   const dirty=meaningful;
   const snapshot=useMemo<GalleryDraftRecord|null>(()=>!meaningful||!operationId?null:{
-    version:2,key:draftKey,revision:crypto.randomUUID(),updatedAt:Date.now(),operationId,fields:draft as DraftFields,rows,
+    version:2,key:draftKey,revision:browserUUID(),updatedAt:Date.now(),operationId,fields:draft as DraftFields,rows,
     categoryPresentation:categoryDraft.filter(entry=>draft.categories.includes(entry.category)),
     photos:gallery.photos.map(photo=>({id:photo.id,selected:photo.selected?fileToDraft(photo.selected):null,source:photo.source?fileToDraft(photo.source):null,pending:photo.pending?fileToDraft(photo.pending):null,crop:photo.crop,pendingCrop:photo.pendingCrop??null})),
     primaryId:gallery.primaryId,selectedId:gallery.selectedId,visibleIndex:Math.max(0,gallery.photos.findIndex(photo=>photo.id===gallery.selectedId)),
@@ -101,7 +104,7 @@ function ScopedAddItemForm(){
   },[]);
   useExitEditor(attempted&&meaningful,pending||cleanupPending||galleryBusy,saveForExit);
 
-  useEffect(()=>{setOperationId(crypto.randomUUID());setMounted(true);},[]);
+  useEffect(()=>{try{setOperationId(browserUUID());}catch{setSecureRandomError(true);}setMounted(true);},[]);
   useEffect(()=>{
     let active=true;
     void readGalleryDraft(draftKey).then(value=>{if(active){revision.current=value?.revision??null;setStoredDraft(value);setStorageReady(true);}})
@@ -122,7 +125,7 @@ function ScopedAddItemForm(){
   useEffect(()=>{if(!meaningful&&!cleanupPending)finalizing.current=false;},[meaningful,cleanupPending,resetToken]);
 
   function resetDraft(){
-    latestSnapshot.current=null;setDraft(emptyFields());setRows([{location:"",quantity:"1"}]);setCategoryDraft([]);setGallery(emptyDraftGallery());setOperationId(crypto.randomUUID());setAttempted(false);setResetToken(value=>value+1);setProgress(null);
+    latestSnapshot.current=null;setDraft(emptyFields());setRows([{location:"",quantity:"1"}]);setCategoryDraft([]);setGallery(emptyDraftGallery());setOperationId(browserUUID());setAttempted(false);setResetToken(value=>value+1);setProgress(null);
   }
   function restoreStored(){
     if(!storedDraft)return;
@@ -158,7 +161,8 @@ function ScopedAddItemForm(){
   const close=()=>{if(!blocked){setOpen(false);triggerRef.current?.focus();}};
 
   return <>
-    <button ref={triggerRef} type="button" className="add-button add-dialog-trigger" onClick={()=>setOpen(true)}><Plus size={17} aria-hidden="true"/><span>{t("addItem")}</span></button>
+    <button ref={triggerRef} type="button" disabled={secureRandomError} className="add-button add-dialog-trigger" onClick={()=>setOpen(true)}><Plus size={17} aria-hidden="true"/><span>{t("addItem")}</span></button>
+    {secureRandomError?<p className="form-error" role="alert">{t("secureRandomUnavailable")}</p>:null}
     {storageError&&!open?<p className="form-error" role="alert">{t(storageError)}</p>:null}
     {mounted?createPortal(<div className="photo-source-overlay add-dialog-overlay" role="presentation" hidden={!open}>
       <section ref={dialogRef} className="photo-source-dialog add-item-dialog" role="dialog" aria-modal="true" aria-labelledby="add-item-title" onKeyDown={event=>{
@@ -193,7 +197,7 @@ function ScopedAddItemForm(){
 
 
           {!pending&&attempted&&feedback.status==="error"&&feedback.message?<div className="creation-error"><p className="form-error" role="alert">{t(feedback.message,feedback.values)}</p>
-            {feedback.completedOperation?<div className="dialog-actions">{feedback.itemId?<Link className="quiet-button" href={base+"/items/"+feedback.itemId}>{t("creationOpenSaved")}</Link>:null}<button type="button" className="quiet-button" onClick={()=>{setOperationId(crypto.randomUUID());setAttempted(false);}}>{t("creationUseForAnother")}</button></div>:null}
+            {feedback.completedOperation?<div className="dialog-actions">{feedback.itemId?<Link className="quiet-button" href={base+"/items/"+feedback.itemId}>{t("creationOpenSaved")}</Link>:null}<button type="button" className="quiet-button" onClick={()=>{setOperationId(browserUUID());setAttempted(false);}}>{t("creationUseForAnother")}</button></div>:null}
           </div>:null}
           <div className="dialog-actions"><FormSubmitButton className="add-button" disabled={blocked||!canSave} pendingLabel={t("addingItem")}><Plus size={16} aria-hidden="true"/><span>{pending?t("addingItem"):t("saveItem")}</span></FormSubmitButton><button type="button" className="text-button" disabled={blocked} onClick={close}>{t("close")}</button>
             {dirty&&!blocked?<DestructiveConfirmation refreshOnSuccess={false} action={discardCurrent} label={t("discardDraft")} description={t("discardDraftConfirm")} fields={{}}/>:null}

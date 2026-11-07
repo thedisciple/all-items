@@ -1,5 +1,7 @@
 "use client";
 
+import {browserUUID} from "@/lib/browser-crypto";
+
 import type CropperJS from "cropperjs";
 import { ActionForm } from "./action-form";
 
@@ -21,7 +23,7 @@ export function PhotoReplacement({ itemId, photoUrl, itemName, mediaId, crop, hi
   const [hasSelection,setHasSelection]=useState(false);
   const [feedback, action, actionPending] = useActionState(async(previous:PhotoActionFeedback,data:FormData):Promise<PhotoActionFeedback>=>{
     // An unacknowledged attempt retains its identity even if its draft is corrected.
-    writeId.current??=crypto.randomUUID();data.set("photoWriteId",writeId.current);
+    try{writeId.current??=browserUUID();data.set("photoWriteId",writeId.current);}catch{return{status:"error",message:"secureRandomUnavailable"};}
     try{return await replacePhotoAction(previous,data);}catch{return{status:"error",message:"photoSaveGeneric"};}
   }, idle);
   const selection=useCallback((photo:PhotoDraft|null)=>{

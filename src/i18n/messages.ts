@@ -1,4 +1,6 @@
 const ru = {
+  viewOptions: "Настроить вид", viewModelBrand: "Модель и бренд", viewReset: "Сбросить настройки", viewStorageError: "Настройки вида не удалось сохранить в браузере.",
+  secureRandomUnavailable: "Не удалось безопасно создать идентификатор. Обновите браузер или откройте приложение на этом компьютере.",
   installationBackups: "Резервные копии установки",
   installationBackupScope: "Все инвентари и сохранённые фото на этом компьютере.",
   installationBackupNone: "Проверенных копий пока нет.",
@@ -343,6 +345,8 @@ const ru = {
 } as const;
 
 const en: Record<MessageKey, string> = {
+  viewOptions: "View options", viewModelBrand: "Model and brand", viewReset: "Reset to defaults", viewStorageError: "View settings could not be saved in this browser.",
+  secureRandomUnavailable: "Unable to generate a secure identifier. Update your browser or open the app on this computer.",
   installationBackups: "Installation backups",
   installationBackupScope: "All inventories and saved photos on this computer.",
   installationBackupNone: "No verified backups yet.",
@@ -520,6 +524,8 @@ const en: Record<MessageKey, string> = {
 };
 
 const uk: Record<MessageKey, string> = {
+  viewOptions: "Налаштувати вигляд", viewModelBrand: "Модель і бренд", viewReset: "Скинути налаштування", viewStorageError: "Не вдалося зберегти налаштування вигляду в браузері.",
+  secureRandomUnavailable: "Не вдалося безпечно створити ідентифікатор. Оновіть браузер або відкрийте програму на цьому комп’ютері.",
   installationBackups: "Резервні копії встановлення",
   installationBackupScope: "Усі інвентарі та збережені фото на цьому комп’ютері.",
   installationBackupNone: "Перевірених копій поки немає.",
@@ -636,6 +642,8 @@ const uk: Record<MessageKey, string> = {
 };
 
 const srLatn: Record<MessageKey, string> = {
+  viewOptions: "Podešavanje prikaza", viewModelBrand: "Model i brend", viewReset: "Vrati podrazumevano", viewStorageError: "Podešavanja prikaza nije moguće sačuvati u pregledaču.",
+  secureRandomUnavailable: "Nije moguće bezbedno napraviti identifikator. Ažurirajte pregledač ili otvorite aplikaciju na ovom računaru.",
   installationBackups: "Rezervne kopije instalacije",
   installationBackupScope: "Svi inventari i sačuvane fotografije na ovom računaru.",
   installationBackupNone: "Još nema proverenih kopija.",
@@ -752,6 +760,8 @@ const srLatn: Record<MessageKey, string> = {
 };
 
 const zhHans: Record<MessageKey, string> = {
+  viewOptions: "显示选项", viewModelBrand: "型号和品牌", viewReset: "恢复默认设置", viewStorageError: "无法在浏览器中保存显示设置。",
+  secureRandomUnavailable: "无法安全生成标识符。请更新浏览器或在此电脑上打开应用。",
   installationBackups: "安装备份",
   installationBackupScope: "此电脑上的所有库存和已保存照片。",
   installationBackupNone: "尚无已验证的备份。",

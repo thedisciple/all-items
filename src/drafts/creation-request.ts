@@ -1,10 +1,11 @@
+import {browserSHA256} from "@/lib/browser-crypto";
 import {creationCommandSchema,safePhotoName,type CreationCommand} from "@/items/creation-command";
 import type {DraftFields,GalleryDraftRecord} from "./recovery-store";
 
 const descriptors=new WeakMap<File,Promise<CreationCommand["photos"][number]["selected"]>>();
 export function describePhoto(file:File){
   let result=descriptors.get(file);
-  if(!result){result=(async()=>({sha256:[...new Uint8Array(await crypto.subtle.digest("SHA-256",await file.arrayBuffer()))].map(byte=>byte.toString(16).padStart(2,"0")).join(""),size:file.size,name:safePhotoName(file.name),type:file.type as "image/png"|"image/jpeg"|"image/webp"}))();descriptors.set(file,result);}
+  if(!result){result=(async()=>({sha256:await browserSHA256(await file.arrayBuffer()),size:file.size,name:safePhotoName(file.name),type:file.type as "image/png"|"image/jpeg"|"image/webp"}))();descriptors.set(file,result);}
   return result;
 }
 

@@ -1,5 +1,7 @@
 "use client";
 
+import {browserUUID} from "@/lib/browser-crypto";
+
 import dynamic from "next/dynamic";
 import {useEffect,useMemo,useRef,useState} from "react";
 import {NEW_ITEM_PHOTO_LIMIT,MAX_CREATION_PHOTO_BYTES} from "@/media/limits";
@@ -55,7 +57,7 @@ export function MultiPhotoDraft({value,onChange,disabled,active,restoreToken,onB
       const checked:File[]=[];for(const file of files)checked.push(await preflightPhoto(file));
       const blobs=new Set<File>();for(const photo of value.photos)for(const input of [photo.selected,photo.source,photo.pending])if(input)blobs.add(input);for(const input of checked)blobs.add(input);
       if([...blobs].reduce((total,file)=>total+file.size,0)>MAX_CREATION_PHOTO_BYTES){setError({key:"creationByteLimit",values:{size:MAX_CREATION_PHOTO_BYTES/1024/1024}});return;}
-      const additions:DraftGalleryPhoto[]=checked.map(file=>({id:crypto.randomUUID(),selected:checked.length===1?null:file,source:checked.length===1?null:file,pending:checked.length===1?file:null,crop:null,pendingCrop:null}));
+      const additions:DraftGalleryPhoto[]=checked.map(file=>({id:browserUUID(),selected:checked.length===1?null:file,source:checked.length===1?null:file,pending:checked.length===1?file:null,crop:null,pendingCrop:null}));
       onChange({photos:[...value.photos,...additions],primaryId:value.primaryId??additions[0]!.id,selectedId:additions[0]!.id});
     }catch(error){setError({key:error instanceof PhotoInputError?error.code:"photoSelectionFailed"});}
     finally{busy.current=false;setReading(false);}

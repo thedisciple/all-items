@@ -15,6 +15,7 @@
     "backup": "tsx src/backup/cli.ts"
   },
   "dependencies": {
+    "@noble/hashes": "1.8.0",
     "@dnd-kit/dom": "0.5.1",
     "@dnd-kit/react": "0.5.1",
     "@libsql/client": "^0.15.15",
