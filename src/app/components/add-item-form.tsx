@@ -173,11 +173,13 @@ function ScopedAddItemForm(){
         const first=focusable[0],last=focusable.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
       }}>
         <div className="dialog-heading"><h2 id="add-item-title">{t("addItem")}</h2><button type="button" className="icon-button" aria-label={t("close")} disabled={blocked} onClick={close}><X size={18} aria-hidden="true"/></button></div>
-        {storageError?<p className="form-error" role="alert">{t(storageError)}</p>:null}
-        {pending||cleanupPending?<p role="status" aria-live="polite">{progress&&progress!=="commit"?t("creationPreparingPhotos",progress):t("creationCommitting")}</p>:null}
-        {!storageReady?<p role="status">{t("draftLoading")}</p>:storedDraft?<div className="draft-recovery" role="group" aria-label={t("draftRecoveryTitle")}><h3>{t("draftRecoveryTitle")}</h3><p>{t("draftRecoveryPrompt")}</p><div className="dialog-actions"><button type="button" className="add-button" onClick={restoreStored}>{t("draftRestore")}</button><button type="button" className="quiet-button" onClick={()=>void discardStored()}>{t("draftDiscardSaved")}</button></div></div>:<form ref={formRef} aria-busy={pending||cleanupPending} inert={pending||cleanupPending} className="photo-add-form" onSubmit={event=>{
+        <form ref={formRef} aria-busy={pending||cleanupPending} className="photo-add-form" onSubmit={event=>{
           event.preventDefault();if(submitLocked.current||blocked||!canSave)return;submitLocked.current=true;setAttempted(true);const data=new FormData(event.currentTarget);startTransition(()=>action(data));
         }}>
+          <div className="add-dialog-body">
+          {storageError?<p className="form-error" role="alert">{t(storageError)}</p>:null}
+          {pending||cleanupPending?<p role="status" aria-live="polite">{progress&&progress!=="commit"?t("creationPreparingPhotos",progress):t("creationCommitting")}</p>:null}
+          {!storageReady?<p role="status">{t("draftLoading")}</p>:storedDraft?<div className="draft-recovery" role="group" aria-label={t("draftRecoveryTitle")}><h3>{t("draftRecoveryTitle")}</h3><p>{t("draftRecoveryPrompt")}</p><div className="dialog-actions"><button type="button" className="add-button" onClick={restoreStored}>{t("draftRestore")}</button><button type="button" className="quiet-button" onClick={()=>void discardStored()}>{t("draftDiscardSaved")}</button></div></div>:<div className="add-dialog-fields" inert={pending||cleanupPending}>
           <MultiPhotoDraft key={resetToken} value={gallery} onChange={setGallery} disabled={pending||cleanupPending} active={open} restoreToken={resetToken} onBusyChange={setGalleryBusy} itemName={draft.name||t("unidentifiedItemName")}/>
           <div className="photo-add-fields">
             <label className="field"><span>{t("itemName")}</span><input name="name" value={draft.name} placeholder={t("itemNamePlaceholder")} maxLength={160} onChange={update("name")}/></label>
@@ -199,10 +201,12 @@ function ScopedAddItemForm(){
           {!pending&&attempted&&feedback.status==="error"&&feedback.message?<div className="creation-error"><p className="form-error" role="alert">{t(feedback.message,feedback.values)}</p>
             {feedback.completedOperation?<div className="dialog-actions">{feedback.itemId?<Link className="quiet-button" href={base+"/items/"+feedback.itemId}>{t("creationOpenSaved")}</Link>:null}<button type="button" className="quiet-button" onClick={()=>{setOperationId(browserUUID());setAttempted(false);}}>{t("creationUseForAnother")}</button></div>:null}
           </div>:null}
-          <div className="dialog-actions"><FormSubmitButton className="add-button" disabled={blocked||!canSave} pendingLabel={t("addingItem")}><Plus size={16} aria-hidden="true"/><span>{pending?t("addingItem"):t("saveItem")}</span></FormSubmitButton><button type="button" className="text-button" disabled={blocked} onClick={close}>{t("close")}</button>
-            {dirty&&!blocked?<DestructiveConfirmation refreshOnSuccess={false} action={discardCurrent} label={t("discardDraft")} description={t("discardDraftConfirm")} fields={{}}/>:null}
+          </div>}
           </div>
-        </form>}
+          <div className="dialog-actions add-dialog-footer">{storageReady&&!storedDraft?<FormSubmitButton className="add-button" disabled={blocked||!canSave} pendingLabel={t("addingItem")}><Plus size={16} aria-hidden="true"/><span>{pending?t("addingItem"):t("saveItem")}</span></FormSubmitButton>:null}<button type="button" className="quiet-button" disabled={blocked} onClick={close}>{t("close")}</button>
+            {dirty&&!blocked&&!storedDraft?<DestructiveConfirmation refreshOnSuccess={false} action={discardCurrent} label={t("discardDraft")} description={t("discardDraftConfirm")} fields={{}}/>:null}
+          </div>
+        </form>
       </section>
     </div>,document.body):null}
   </>;

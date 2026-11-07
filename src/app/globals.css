@@ -890,4 +890,14 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .view-options-panel label { display: flex; min-height: 36px; gap: 10px; align-items: center; font-size: var(--control-font); }
 .view-options-panel input { width: 18px; height: 18px; accent-color: var(--green); }
 .view-options-panel button { width: 100%; }
+/* Add Item owns one scroll area; its form and actions never scroll. */
+.photo-source-dialog.add-item-dialog { padding: 0; max-height: min(92dvh,900px); overflow: hidden; }
+.add-item-dialog > .dialog-heading { margin: 0; padding: var(--dialog-inset); border-bottom: 1px solid var(--control-border); }
+.add-item-dialog > form.photo-add-form { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 0; gap: 0; scrollbar-gutter: auto; }
+.add-dialog-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; scrollbar-width: thin; padding: var(--dialog-inset) var(--dialog-inset) calc(var(--dialog-inset) + 8px); }
+.add-dialog-fields { display: grid; gap: 15px; min-width: 0; }
+.add-dialog-body > .draft-recovery > .dialog-actions,.add-dialog-fields > .creation-error > .dialog-actions { position: static; background: transparent; padding: 0; }
+.add-item-dialog .draft-recovery { overflow: visible; padding: 0; }
+.add-item-dialog > form > .add-dialog-footer { position: static; flex: 0 0 auto; border-top: 1px solid var(--control-border); background: #1d2119; padding: var(--dialog-inset) var(--dialog-inset) calc(var(--dialog-inset) + env(safe-area-inset-bottom,0px)); }
+.add-dialog-footer > button { width: auto; }
 @media (min-width: 761px) { .inventory-view .item-grid-row { display: flex; flex-wrap: wrap; } .inventory-view .item-identity { flex: 1 1 150px; } .inventory-view .item-categories { flex: 1 1 180px; } .inventory-view .item-stock { flex: 0 1 110px; } }
