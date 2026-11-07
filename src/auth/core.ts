@@ -14,7 +14,7 @@ export type User={id:string;username:string;isAdmin:boolean};
 export class AccessError extends Error{constructor(public status:401|403|404){super("Access unavailable");}}
 export class LoginError extends Error{constructor(public code:"authInvalid"|"authThrottled"){super("Sign in unavailable");}}
 export const usernameSchema=z.string().trim().toLowerCase().regex(/^[a-z0-9][a-z0-9._-]{2,63}$/);
-const passwordSchema=z.string().min(12).max(256).refine(value=>Buffer.byteLength(value,"utf8")<=1024);
+export const passwordSchema=z.string().min(12).max(256).refine(value=>Buffer.byteLength(value,"utf8")<=1024);
 async function derive(password:string,salt:Buffer):Promise<Buffer>{return new Promise((resolve,reject)=>scrypt(password,salt,64,{N:131072,r:8,p:1,maxmem:192*1024*1024},(error,key)=>error?reject(error):resolve(key)));}
 export async function hashPassword(value:unknown){const password=passwordSchema.parse(value),salt=randomBytes(16);return `scrypt:131072:8:1:${salt.toString("hex")}:${(await derive(password,salt)).toString("hex")}`;}
 async function verifyPassword(password:string,encoded:unknown){
