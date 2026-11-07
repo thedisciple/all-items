@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, Search, X } from "lucide-react";
 import { useI18n } from "@/i18n/provider";
+import {InventoryViewOptions} from "./inventory-view";
 import { useInventory } from "./inventory-provider";
 
 type Props = {
@@ -94,6 +95,6 @@ export function ItemFilters({ categories, statuses, searchPlaceholder, actions }
     </label><label className="filter-select"><span aria-hidden="true">{sortLabel}</span><select aria-label={t("sortLabel")} value={params.get("sort") ?? presentation.preferences.sort} onChange={(event) => navigate("sort", event.target.value)}>
       <option value="date">{t("sortNewest")}</option><option value="name">{t("sortName")}</option><option value="quantity">{t("sortQuantity")}</option>
     </select><ChevronDown className="filter-chevron" size={16} aria-hidden="true"/>
-    </label>{activeFilters ? <button type="button" className="quiet-button clear-filters-button" onClick={clear}><X size={15} aria-hidden="true"/>{t("clearFilters")}</button> : null}
+    </label>{actions?<InventoryViewOptions/>:null}{activeFilters ? <button type="button" className="quiet-button clear-filters-button" onClick={clear}><X size={15} aria-hidden="true"/>{t("clearFilters")}</button> : null}
   </div>;
 }

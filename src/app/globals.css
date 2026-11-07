@@ -877,3 +877,17 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .collection-edit-cover .media-card, .collection-edit-cover .collection-card-placeholder { width: 96px; height: 64px; flex: none; }
 .form-action-row[hidden] { display: none; }
 .photo-acquisition-actions .photo-delete-icon { min-width: 44px; min-height: 44px; }
+
+/* Inventory-only presentation preferences. */
+.inventory-view[data-view-ready="false"] .item-list { visibility: hidden; }
+.inventory-view[data-view-model="false"] .item-model-brand, .inventory-view[data-view-categories="false"] .item-categories, .inventory-view[data-view-quantity="false"] .item-quantity, .inventory-view[data-view-location="false"] .item-location, .inventory-view[data-view-status="false"] .item-index, .inventory-view[data-view-added="false"] .item-added, .inventory-view[data-view-quantity="false"][data-view-location="false"] .item-stock { display: none; }
+.item-added { flex-basis: 100%; }
+.item-timestamp,.item-dates { color: var(--muted,#aeb3a7); font-size: 12px; }
+.item-dates { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0 0 14px; }
+.view-options { position: relative; flex: 0 0 auto; }
+.view-options-trigger { width: 44px; padding: 0; }
+.view-options-panel { position: absolute; z-index: 30; right: 0; top: calc(100% + 6px); width: min(280px,calc(100vw - 32px)); padding: 12px; background: #1d2119; border: 1px solid var(--control-border); border-radius: var(--control-radius); box-shadow: 0 8px 24px #0008; display: grid; gap: 8px; }
+.view-options-panel label { display: flex; min-height: 36px; gap: 10px; align-items: center; font-size: var(--control-font); }
+.view-options-panel input { width: 18px; height: 18px; accent-color: var(--green); }
+.view-options-panel button { width: 100%; }
+@media (min-width: 761px) { .inventory-view .item-grid-row { display: flex; flex-wrap: wrap; } .inventory-view .item-identity { flex: 1 1 150px; } .inventory-view .item-categories { flex: 1 1 180px; } .inventory-view .item-stock { flex: 0 1 110px; } }
