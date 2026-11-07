@@ -78,10 +78,10 @@ test("sidebar keyboard preference, reduced motion and rounded dialog scrolling r
   const dialog = page.getByRole("dialog", { name: messages.ru.addItem });
   await dialog.getByLabel(messages.ru.itemName, { exact: true }).fill("M3.4 preserved modal");
   await dialog.getByText(messages.ru.additionalDetails, { exact: true }).click();
-  const form = dialog.locator("form");
-  expect(await form.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
+  const body = dialog.locator(".add-dialog-body");
+  expect(await body.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
   expect(await dialog.evaluate(element => getComputedStyle(element).overflow)).toBe("hidden");
-  await form.evaluate(element => { element.scrollTop = element.scrollHeight; });
+  await body.evaluate(element => { element.scrollTop = element.scrollHeight; });
   await dialog.getByRole("button", { name: messages.ru.saveItem, exact: true }).focus();
   await expect(dialog.getByRole("button", { name: messages.ru.saveItem, exact: true })).toBeInViewport();
   await dialog.getByRole("button", { name: messages.ru.close, exact: true }).first().click();

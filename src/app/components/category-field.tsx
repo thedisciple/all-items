@@ -30,10 +30,12 @@ export function CategoryField({ values, onValueChange, presentations, onPresenta
     function reposition(){
       const rect=box.current?.getBoundingClientRect();if(!rect)return;
       const margin=8,width=Math.min(Math.max(rect.width,260),window.innerWidth-margin*2);
-      const below=Math.max(0,window.innerHeight-rect.bottom-margin-6),above=Math.max(0,rect.top-margin-6);
-      const flip=below<200&&above>below,maxHeight=Math.max(80,Math.min(290,flip?above:below));
+      const body=root.current?.closest<HTMLElement>(".add-dialog-body")?.getBoundingClientRect();
+      const upper=Math.max(margin,body?.top??margin),lower=Math.min(window.innerHeight-margin,body?.bottom??window.innerHeight-margin);
+      const below=Math.max(0,lower-rect.bottom-6),above=Math.max(0,rect.top-upper-6);
+      const flip=below<200&&above>below,maxHeight=Math.min(Math.max(0,lower-upper),Math.max(80,Math.min(290,flip?above:below)));
       const left=Math.max(margin,Math.min(rect.left,window.innerWidth-width-margin));
-      const top=flip?Math.max(margin,rect.top-maxHeight-6):Math.min(window.innerHeight-maxHeight-margin,rect.bottom+6);
+      const top=Math.max(upper,Math.min(lower-maxHeight,flip?rect.top-maxHeight-6:rect.bottom+6));
       setPosition({left,top,width,maxHeight});
     }
     reposition();window.addEventListener("resize",reposition);window.addEventListener("scroll",reposition,true);

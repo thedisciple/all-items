@@ -41,8 +41,8 @@ export function ItemFilters({ categories, statuses, searchPlaceholder, actions }
 
   useEffect(() => {
     if (!editedSinceNavigation.current) setQuery(params.get("q") ?? "");
-    editedSinceNavigation.current = false;
-  }, [params]);
+    else if(query.trim()===(params.get("q")??""))editedSinceNavigation.current=false;
+  }, [params,query]);
 
   function navigate(key: string, value: string) {
     const next = new URLSearchParams(params);
@@ -60,7 +60,7 @@ export function ItemFilters({ categories, statuses, searchPlaceholder, actions }
 
   useEffect(() => {
     const committed = params.get("q") ?? "";
-    if (query === committed) return;
+    if (!editedSinceNavigation.current||query.trim() === committed) return;
     const timer = window.setTimeout(() => navigate("q", query.trim()), 300);
     return () => window.clearTimeout(timer);
   }, [query, paramsString]);
