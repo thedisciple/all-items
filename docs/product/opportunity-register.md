@@ -89,3 +89,7 @@ M4A implements bounded multi-file/sequential-camera creation, complete local pho
 ## M4B.3 status
 
 Item creation/update dates and optional browser-local, per-inventory list details are implemented. M4B.2 verified installation backups and isolated restore drills are available; scheduling remains opt-in. Device diagnostics are synthetic, and physical device, accessibility and pilot security acceptance remain open. [Device and pilot runbook](../architecture/m4b-3-device-pilot.md). Historical milestone notes above describe their original planning context.
+
+## Pilot P1 status
+
+Local invite-only accounts, revocable sessions and per-user inventory ownership are implemented with synthetic isolation checks; installation backup administration is restricted. The Add Item dialog has a distinct fixed header/footer and one scrolling body. P1 is not hosting rollout, shared family/team roles or an independent security audit. P2 proxy/TLS, security and physical-device acceptance remain open. See [identity ADR](../architecture/adr-p1-local-identity.md) and [runbook](../architecture/p1-local-accounts.md). Earlier planning notes retain their historical context.

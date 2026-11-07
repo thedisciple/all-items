@@ -44,7 +44,7 @@ For every visible element ask whether it supports a real action, gives necessary
 
 All Items applies the interaction principles researched in Kovodstvo, monobank, monobazar, Telegram, and Notion without copying their proprietary assets or implying a partnership. Notion informs lightweight emoji-based organization. Telegram informs direct media manipulation and responsive navigation. monobank and monobazar remain sources for future organization, goals, and marketplace hypotheses. These references do not override local-first privacy, honest states, or the current product scope.
 
-AI, MCP integrations, achievements, marketplace flows, E2EE synchronization, optional providers, multi-user access, and private beta remain future proposals. They are not permissions to expose data, add network dependencies, or claim unimplemented capabilities. See the [opportunity register](opportunity-register.md) and [architecture](../architecture.md) for boundaries and staged plans.
+AI, MCP integrations, achievements, marketplace flows, E2EE synchronization, optional providers, shared roles and an externally accessible private beta remain future proposals. P1 implements only local invite-only accounts and separate ownership. They are not permissions to expose data, add network dependencies, or claim unimplemented capabilities. See the [opportunity register](opportunity-register.md) and [architecture](../architecture.md) for boundaries and staged plans.
 
 ## M3.3A inventory boundaries
 

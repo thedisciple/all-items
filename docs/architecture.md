@@ -1,5 +1,9 @@
 # Architecture
 
+## Pilot P1 local identity
+
+P1 adds local invite-only accounts, server-side sessions and one owning user per inventory through additive migration 0014. The original owner is disabled until explicit local credential bootstrap; existing data identities/content are retained. Shared domain checks cover reads and mutations, and installation backups require installation admin. See [identity ADR and entry-point map](architecture/adr-p1-local-identity.md), [account/upgrade/recovery runbook](architecture/p1-local-accounts.md) and [P2 gate](architecture/m4b-3-device-pilot.md). Older unauthenticated status statements below describe historical milestones. The app still binds loopback by default.
+
 ## M4A creation, retry and interaction reliability
 
 The current creation workflow stages bounded metadata-stripped photos privately without inserting an item, then promotes generated destinations and commits item, stock, categories, order, primary and a durable write receipt together. Migration 0013 is additive; installation-local receipts cover creation and saved-gallery additions/replacements, bind inventory/kind/operation/hash and retain deletion tombstones. Resolve ambiguous commit status before cleanup. Startup journals and expiry cleanup coordinate files with SQLite without claiming cross-device atomicity. See [creation architecture](architecture/m4a-creation-plan.md) for budgets and failure behavior.

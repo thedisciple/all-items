@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — Pilot P1
+
+- Separated Add Item into a stable header, one scrolling body and a safe-area footer.
+- Added local CLI account provisioning, scrypt credentials, revocable database sessions, login/logout and five-language account UI.
+- Added migration 0014 and server-verified inventory ownership across private resources; installation backup administration is restricted.
+- Added synthetic adversarial/browser/production-restart checks and an SBB/P2 decision runbook. Public/LAN deployment remains gated.
+
 ## Unreleased — M4B.3
 
 - Added secure browser UUID and SHA-256 fallbacks for contexts lacking newer Web Crypto APIs; the app remains loopback-only by default.

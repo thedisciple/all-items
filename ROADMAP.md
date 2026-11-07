@@ -181,15 +181,18 @@ M4A is complete as a scoped UX/create-flow milestone; it is not a public release
 - [ ] v0.1 release preparation after recovery/security/usability gates
 - [ ] Optional authenticated LAN access only after server-side authentication and origin protections are complete
 
-## Authenticated private pilot — NOT STARTED (historical M3.5 label)
+## Authenticated private pilot — P1 LOCAL FOUNDATION (historical M3.5 label)
 
 The old number is not execution order. Recovery/usability groundwork and a separately approved security milestone precede any network pilot. Public HTTPS and server-side authorization must both pass the [pilot security gate](docs/architecture/m4b-3-device-pilot.md) before exposure. AI identification is a distinct optional local capability and does not require exposing this app.
 
 - [ ] Plan a 5–10 person invite-only pilot on a production-mode host with authenticated HTTPS access
-- [ ] Implement secure sessions, workspace-scoped authorization in every service and media route, and verify isolation between users
-- [ ] Add CSRF/origin protections, rate limits, upload limits, security headers, backup/recovery, and privacy-conscious feedback reporting
-- [ ] Migrate the owner's existing workspace safely and validate recovery before inviting testers
-- [ ] Keep development endpoints private; never expose the unauthenticated loopback app through a public tunnel
+- [x] P1 local invite-only credentials, revocable server sessions, owned-inventory service/media boundaries and synthetic cross-user verification; see [P1 architecture](docs/architecture/adr-p1-local-identity.md)
+- [ ] P2 independent security/deployment review and real-device HTTPS acceptance before any exposure
+- [x] P1 exact-origin mutations, persistent local login budgets, retained upload limits, private cache/security headers and protected installation backup controls
+- [ ] P2 review production proxy/TLS, abuse/credential handling, scheduled recovery and privacy-conscious feedback reporting
+- [x] P1 additive owner association with verified backup/isolated restoration and preservation checks; owner activates credentials locally
+- [ ] Invite real testers only after P2 acceptance
+- [x] P1 keeps development/private endpoints local; no public tunnel, listener or hostname enabled
 - [ ] Consider Telegram OIDC as an optional identity provider with local authentication fallback; identity must not grant access to Telegram chats/files
 
 ## Future AI — NOT STARTED
