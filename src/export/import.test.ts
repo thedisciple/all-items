@@ -48,6 +48,7 @@ async function seed() {
     [itemB, "智慧手表 🧰", "INV-000008", "bulk", "Власна категорія", "willing_to_sell"],
   ]) await c.execute({ sql: `INSERT INTO items (id,workspace_id,name,model,inventory_number,brand,category,original_marking,notes,description,identification_status,tracking_mode,sale_intent,asking_price_minor,asking_currency,created_at,updated_at)
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, args: [id, workspaceId, name, null, number, null, category, null, "Synthetic note", "Synthetic description", "user_confirmed", mode, sale, 1250, "EUR", date, date] });
+  await c.execute({sql: "UPDATE items SET updated_at=? WHERE id=?", args:["2025-06-13T12:00:00.000Z",itemA]});
   for (const [item,category] of [[itemA,"electronics"],[itemA,"tools"],[itemB,"Custom category"]]) await c.execute({ sql: "INSERT INTO item_categories (item_id,category) VALUES (?,?)", args: [item,category] });
   for (const [id, item, location, quantity] of [[randomUUID(), itemA, locationA, 1], [randomUUID(), itemB, locationA, 2], [randomUUID(), itemB, locationB, 3]]) await c.execute({ sql: "INSERT INTO stock_entries (id,item_id,location_id,quantity,created_at,updated_at) VALUES (?,?,?,?,?,?)", args: [id, item, location, quantity, date, date] });
   const crop = JSON.stringify({ x: 0, y: 0, width: 64, height: 64, rotate: 0, scaleX: 1, scaleY: 1 });

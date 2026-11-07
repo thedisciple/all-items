@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { z } from "zod";
 import { AppSidebar } from "@/app/components/app-sidebar";
 import { CollectionMembership } from "@/app/components/collection-membership";
+import {ItemTimestamp} from "@/app/components/item-timestamp";
+import {hasMeaningfulUpdate} from "@/i18n/item-dates";
 import { ItemDone } from "@/app/components/item-exit";
 import { ItemEditForm } from "@/app/components/item-edit-form";
 import { PhotoGallery } from "@/app/components/photo-gallery";
@@ -48,6 +50,7 @@ export default async function ItemPage({ params, searchParams }: Props) {
       <div className="content-wrap detail-wrap">
         <ItemDone returnTo={returnTo}/>
         <div className="item-hero"><h1>{item.name || t("unidentifiedItemName")}</h1><span className="item-number-badge">{item.inventory_number}</span></div>
+        <div className="item-dates"><ItemTimestamp value={item.created_at}/>{hasMeaningfulUpdate(item.created_at,item.updated_at)?<ItemTimestamp value={item.updated_at} kind="dateUpdated"/>:null}</div>
         <section className="photo-detail-panel" aria-label={t("photo")}>
           <PhotoGallery itemId={id} photos={photos} itemName={item.name || t("unidentifiedItemName")}/>
         </section>
