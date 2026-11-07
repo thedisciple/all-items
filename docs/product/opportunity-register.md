@@ -85,3 +85,7 @@ M3.4 implements ordered galleries, exact currency storage, localized unnamed han
 ## M4A delivery boundary
 
 M4A implements bounded multi-file/sequential-camera creation, complete local photo draft recovery, shared accessible sorting and retry-safe completion. Re-evaluate the ten-photo intake policy and very long imported galleries through task evidence. General resumable upload queues, annotations, themes, physical-device/usability acceptance and verified automatic backups are not implied by this implementation. Next is M4B recovery/usability; reviewable AI identification follows a separate provider/privacy scope. Authenticated family/team inventories additionally need roles, invitation/revocation and server-side authorization before any hosting. Cross-inventory projects, marketplace, Telegram/MCP and optional organization remain independent proposals.
+
+## M4B.3 status
+
+Item creation/update dates and optional browser-local, per-inventory list details are implemented. M4B.2 verified installation backups and isolated restore drills are available; scheduling remains opt-in. Device diagnostics are synthetic, and physical device, accessibility and pilot security acceptance remain open. [Device and pilot runbook](../architecture/m4b-3-device-pilot.md). Historical milestone notes above describe their original planning context.

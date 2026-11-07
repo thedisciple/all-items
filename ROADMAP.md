@@ -142,7 +142,7 @@ Follow [the architecture decision](docs/architecture/adr-multiple-inventories.md
 ## M3 — Remaining personal organization
 
 - [ ] Optional encrypted archive export as a future security enhancement
-- [ ] M4B: verified automatic local backups, retention policy and actual restore drills; extend recovery to additional workflows where useful
+- [x] M4B.2: verified local installation backups, opt-in retention and isolated restore drills; additional workflow recovery remains separate
 - [ ] Populated-workspace merge/replacement only after a separate conflict and verified recovery design
 - [ ] Styled XLSX spreadsheet export separate from the full-fidelity ZIP archive
 - [ ] Flexible item attributes (readable portable image paths are implemented)
@@ -153,7 +153,7 @@ Follow [the architecture decision](docs/architecture/adr-multiple-inventories.md
 
 ## M4 — Quality and release — IN PROGRESS
 
-M4A is complete as a scoped UX/create-flow milestone; it is not a public release. M4B recovery and usability checks remain next. See [planning audit](docs/product/m4a-planning-audit.md).
+M4A is complete as a scoped UX/create-flow milestone; it is not a public release. M4B recovery groundwork is implemented; physical-device and security checks remain. See [planning audit](docs/product/m4a-planning-audit.md).
 
 ### M4A — Photo-first creation parity and UX gate — COMPLETE
 
@@ -166,6 +166,7 @@ M4A is complete as a scoped UX/create-flow milestone; it is not a public release
 
 - [x] M4B.1 UX refinement: contained gallery previews, contextual item actions and visual collection cover choice
 - [x] M4B.2 verified installation backups, optional scheduled CLI/retention and isolated restore drills
+- [x] M4B.3 secure-context fallback, item timestamps and browser-local per-inventory list options; see [device and pilot runbook](docs/architecture/m4b-3-device-pilot.md) and [v0.1 compatibility](docs/architecture/v0-1-compatibility.md). Physical-device acceptance remains open.
 
 - [x] Local backup service, opt-in Windows scheduling instructions, retention preview and isolated restoration drills
 - [ ] Physical camera/touch/zoom and task-based usability acceptance; release compatibility policy
@@ -182,7 +183,7 @@ M4A is complete as a scoped UX/create-flow milestone; it is not a public release
 
 ## Authenticated private pilot — NOT STARTED (historical M3.5 label)
 
-The old number is not execution order. Recovery/usability groundwork and a separately approved security milestone precede any network pilot. AI identification is a distinct optional local capability and does not require exposing this app.
+The old number is not execution order. Recovery/usability groundwork and a separately approved security milestone precede any network pilot. Public HTTPS and server-side authorization must both pass the [pilot security gate](docs/architecture/m4b-3-device-pilot.md) before exposure. AI identification is a distinct optional local capability and does not require exposing this app.
 
 - [ ] Plan a 5–10 person invite-only pilot on a production-mode host with authenticated HTTPS access
 - [ ] Implement secure sessions, workspace-scoped authorization in every service and media route, and verify isolation between users

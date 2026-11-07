@@ -1,0 +1,34 @@
+# M4B.3 device readiness and future private pilot
+
+Status: planning and synthetic diagnostics. No public endpoint, host changes, accounts or real-device acceptance are delivered here. M4B.1 and M4B.2 are complete; physical usability, accessibility/security review and release compatibility remain M4 quality gates. The existing Authenticated private pilot in ROADMAP is planned for 5–10 invitees after a separately approved security implementation and its acceptance checklist. It is not a second roadmap or a public beta.
+
+## Security boundary
+
+The application is currently unauthenticated and binds `127.0.0.1`. Inventory UUIDs identify scope; they do not authorize an account. HTTPS, firewall rules, a tunnel, a reverse proxy, or Caddy basic authentication cannot replace server-side user/workspace authorization. Do not expose the real app via LAN HTTP, a public tunnel, a wildcard Server Action origin, or an open `next dev` server. A browser on a different device cannot reach the host's loopback address. Ordinary HTTP on a private IP is not a secure context: `randomUUID` and SubtleCrypto may be unavailable and camera access is unavailable. The browser fallbacks in M4B.3 address compatibility, not network security. File selection remains available; camera requires a trusted secure context.
+
+Next's Server Actions use POST and compare Origin with Host or X-Forwarded-Host; mismatches fail. This is one protection, not user authorization, and proxy headers must only be trusted from a controlled proxy. See [Next.js data security](https://nextjs.org/docs/15/app/guides/data-security), [self-hosting](https://nextjs.org/docs/app/guides/self-hosting) and [MDN camera secure contexts](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia).
+
+## Future hosting choices
+
+No public IPv4/IPv6, CGNAT, ISP policy, DNS, router forwarding or power availability has been measured. Diagnose these only with the owner's consent and without exposing the current app. Compare the router WAN address with an independently observed public IPv4, look for shared 100.64.0.0/10 or other private ranges, check IPv6 assignment/firewall and ask the ISP about inbound restrictions; a matching address alone does not prove inbound reachability. Treat addresses as sensitive operational information. Test only a separately authorized disposable service after the security gate.
+
+1. **Reachable home host:** owned domain/DNS, Windows PC always on, [Caddy automatic HTTPS](https://caddyserver.com/docs/automatic-https), controlled router forwarding and firewall, with authenticated application bound to loopback behind the proxy. This minimizes dependencies when a reachable public address and certificate validation are available. Electricity, home outage, router changes, updates, backups, monitoring and recovery are the owner's responsibility.
+2. **CGNAT relay:** a small self-controlled VPS with public IP and domain terminates HTTPS and reaches the home PC over a tightly restricted [WireGuard](https://www.wireguard.com/quickstart/) connection. SQLite and media stay at home; the VPS is infrastructure and does see traffic it terminates. Account for VPS/domain cost, key rotation, both hosts' availability, upstream trust and additional operational complexity.
+3. **Managed tunnel:** [Cloudflare Tunnel](https://developers.cloudflare.com/tunnel/get-started/) or [Tailscale Funnel](https://tailscale.com/docs/features/tailscale-funnel) is optional convenience with a provider dependency, policy/availability and potentially bandwidth or domain limits. Neither supplies the application's per-user ownership checks. Do not enable either in this milestone.
+
+Recommend option 1 if reachability, ISP rules and reliable home operation are verified; otherwise compare option 2's cost/control against option 3's provider dependency. No option is approved for a public endpoint until the security gate passes.
+
+## Required security implementation before invite-only use
+
+- Create only 5–10 explicitly invited accounts, no open signup by default; design revocable, expiring sessions, reset/recovery and secure password/credential handling.
+- Add server-side user/workspace ownership and membership authorization to every inventory, item, search, stock, collection, photo/source, backup, export, import, deletion and maintenance action. Validate on every request; never derive authority from cookie or UUID alone.
+- Safely migrate the local owner using a verified backup, isolated rehearsal and rollback. Provision independent synthetic tester accounts and data first; never mix owner data into a test account.
+- Require trusted HTTPS; set Secure, HttpOnly and appropriate SameSite cookies; defend CSRF, host and origin, constrain trusted proxies and secrets. Protect media and archives with the same authorization. Rate-limit login and sensitive actions, enforce upload/body/pixel limits and privacy-preserving errors/logging.
+- Design backups with scheduled verification and restoration drills, minimal health monitoring and feedback. Use production build, a monitored Windows service with restart/reboot policy, controlled updates, versioned deployments and tested rollback. Set proxy trust and deployment/secret ownership deliberately.
+- Add adversarial cross-user tests that substitute another user's workspace, item, collection, media/source and archive IDs and attempt both reads and writes. Verify logout/revocation, expiry, origin abuse, uploads and restart recovery. Only then review the complete security checklist and enable a public endpoint.
+
+## Device diagnostics and manual acceptance
+
+Run `node scripts/device-diagnostic.mjs` for an isolated diagnostic page on loopback. An explicit private-interface option is documented by `--help`; it serves a fixed synthetic page only and never opens the inventory, database, media or application. HTTP on a non-loopback address intentionally demonstrates missing secure-context APIs. A real camera check on a second physical device needs separately configured trusted HTTPS for the disposable diagnostic, or a future secured pilot; no unauthenticated real inventory should be exposed.
+
+Record device, OS, browser/version, network type, viewport and actual result without private inventory content. On Windows, Android and iOS physically check camera permission and denial, file fallback, capture, crop, multi-photo creation, touch hold/reorder/cancel, 360px layout, 125%/150% browser zoom where supported, refresh, browser restart, draft restore/discard and quota denial, pending/errors and reasonable task latency. Verify that photos remain private and that the selected primary persists. Test with synthetic data in a separate installation, not the owner's data. Record any device or network unavailable as **not tested**. Browser mocks and viewport emulation are not physical camera, touch, zoom, Wi-Fi or multi-device acceptance.

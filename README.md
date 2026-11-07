@@ -10,7 +10,7 @@ Creation prepares private metadata-stripped assets sequentially, then commits it
 
 The responsive header/toolbar, dialog insets, ISO-only currency labels and safe detail exit are covered by a reusable synthetic Edge acceptance gate. Exact price units, five complete local dictionaries and experimental ZIP revision 6 with tested revision 2–5 import recovery remain unchanged. See [M4A validation](docs/architecture/m4a-validation.md), [creation and retry architecture](docs/architecture/m4a-creation-plan.md), [gallery interactions](docs/architecture/m4a-gallery.md) and [ROADMAP.md](ROADMAP.md).
 
-M4A is local quality groundwork. M4B automatic verified backups, retention, restore drills and physical-device/usability checks remain next; AI, authenticated hosting, shared accounts and marketplace are future work.
+M4A and M4B.1–M4B.2 provide local creation, usability and verified installation-backup groundwork. M4B.3 adds device-readiness and inventory presentation options; physical-device and security acceptance remain open. AI, authenticated hosting, shared accounts and marketplace are future work. See the [device and private-pilot runbook](docs/architecture/m4b-3-device-pilot.md) and [compatibility policy](docs/architecture/v0-1-compatibility.md).
 
 ## Run on Windows 11
 
@@ -64,3 +64,5 @@ Reuse `e2e/helpers/layout-gate.ts` for geometry and `browser-reliability.ts` for
 ## Installation backup and recovery
 
 Use `npm run backup -- create`, `list`, `verify UUID` and `drill UUID` for verified local installation copies and isolated restoration tests. The Data page offers manual creation and verification. These copies include all inventories and committed private media; portable ZIP export covers one inventory and browser drafts are separate. See [local backup commands, Windows scheduling, retention and offline recovery](docs/architecture/local-backups.md).
+
+Inventory list View options are stored locally in this browser, separately for each inventory. They are not included in portable ZIP backups.

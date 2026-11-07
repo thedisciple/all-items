@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — M4B.3
+
+- Added secure browser UUID and SHA-256 fallbacks for contexts lacking newer Web Crypto APIs; the app remains loopback-only by default.
+- Display local item timestamps and configurable browser-local inventory list details.
+- Documented a security-gated private pilot, compatibility policy and synthetic device diagnostics.
+
 ## M4B.2 - Verified local backup and recovery
 
 - Added format-1 installation snapshots with identifier-checked immutable media, bounded streaming copies, SHA-256 manifests and verified completion markers. Short-lived SQLite workers avoid retained native Windows file handles.
