@@ -1,3 +1,4 @@
+import {accessFailure} from "@/auth/http";
 import { resolveInventory } from "@/items/inventories";
 import { ORIGINAL_INVENTORY_ID } from "@/items/inventory-context";
 import { ZodError } from "zod";
@@ -21,6 +22,7 @@ export async function GET(request: Request, { params }: Context) {
       "Cache-Control": "private, no-store, max-age=0", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer",
     } });
   } catch (error) {
+    const denied=accessFailure(error);if(denied)return denied;
     return new Response(null, { status: error instanceof ZodError ? 400 : 404 });
   }
 }

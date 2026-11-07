@@ -206,6 +206,7 @@ export async function recoverInventoryImports(client:Client,directory:string) {
 }
 
 export async function restoreInventoryArchive(input:Uint8Array,context:{client:Client;directory:string;workspaceId:string},fault?:"stage"|"prepare"|"promote") {
+  await (await import("@/auth/authority")).authorizeInventory(context.workspaceId,context.client);
   return withInventoryOperation(context.directory,()=>restoreEmptyInventoryArchive(input,context,fault));
 }
 
@@ -355,6 +356,8 @@ function plannedPromotions(inventory:PortableInventory):Promotion[] {
 export type ImportFault="stage"|"prepare"|"promote"|"transaction"|"interrupt"|"after-commit";
 
 export async function importArchiveAsNew(context:InventoryContext,input:Uint8Array,name:unknown,storage:{client:Client;directory:string},fault?:ImportFault) {
+  const {authorizeInventory,inMaintenance}=await import("@/auth/authority");
+  const actor=await authorizeInventory(context.workspaceId,storage.client);
   const targetName=inventoryName.parse(name);
   const archive=await validatedArchive(input);
   const plan=remapInventory(archive.inventory,targetName);
@@ -409,6 +412,7 @@ export async function importArchiveAsNew(context:InventoryContext,input:Uint8Arr
         }
         await assertUniqueInventoryName(tx,targetName);
         await persistInventoryInTransaction(tx,plan.inventory);
+        if(!inMaintenance())await tx.execute({sql:"INSERT INTO inventory_owners(workspace_id,user_id) VALUES(?,?)",args:[targetInventoryId,actor.id]});
         await tx.execute({sql:"INSERT INTO inventory_import_operations(id,workspace_id,created_at) VALUES(?,?,?)",args:[operationId,targetInventoryId,new Date().toISOString()]});
         if(fault==="transaction")throw new ImportError("Simulated transaction failure.","failed");
         if((await tx.execute("PRAGMA foreign_key_check")).rows.length)throw new ImportError("Imported relationships are invalid.","failed");

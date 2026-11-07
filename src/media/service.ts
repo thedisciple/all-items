@@ -79,6 +79,7 @@ function assertStoredPaths(row: StoredAsset) {
 }
 
 export async function removeAssetFiles(context: InventoryContext, row: StoredAsset) {
+  await inventoryDatabase(context);
   const db = (await import("@/db/client")).getDatabase;
   const live = await (await db()).$client.execute({ sql: "SELECT i.workspace_id FROM media_assets m JOIN items i ON i.id=m.item_id WHERE m.id=?", args: [row.id] });
   if (live.rows.some(owner => owner.workspace_id !== context.workspaceId)) throw new Error("Invalid media cleanup inventory");

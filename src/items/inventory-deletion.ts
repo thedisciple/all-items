@@ -80,6 +80,7 @@ export async function deleteInventory(context:InventoryContext,confirmation:unkn
   const {workspaceId}=inventoryContextSchema.parse(context);
   const confirmed=z.string().max(120).parse(confirmation);
   const directory=storage?.directory??dataDirectory(),client=storage?.client??(await getDatabase()).$client;
+  await (await import("@/auth/authority")).authorizeInventory(workspaceId,client);
   return withInventoryOperation(directory,async()=>{
     const initial=await ownedRows(client,workspaceId);
     if(!initial.workspaces!.length)throw new InventoryDeletionError("not_found");

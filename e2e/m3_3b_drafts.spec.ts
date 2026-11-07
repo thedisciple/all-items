@@ -94,13 +94,13 @@ test("restores a selected photo that was still awaiting cropping", async ({ page
   await expect.poll(() => draftCount(page)).toBe(0);
 });
 
-test("a committed draft with a photo survives a browser restart", async () => {
+test("a committed draft with a photo survives a browser restart", async ({context:ownerContext}) => {
   test.setTimeout(120_000);
   const profile = await mkdtemp(path.join(os.tmpdir(), "all-items-draft-profile-"));
   let context: BrowserContext | undefined;
   const launch = () => chromium.launchPersistentContext(profile, { channel: "msedge", headless: true, locale: "ru-RU", baseURL: "http://127.0.0.1:3100" });
   try {
-    context = await launch(); let page = await context.newPage();
+    context = await launch();await context.addCookies(await ownerContext.cookies()); let page = await context.newPage();
     await page.goto(base); await page.locator(".add-dialog-trigger").click();
     const dialog = page.getByRole("dialog", { name: "Добавить вещь" });
     await dialog.getByLabel("Название").fill("Restart recovery synthetic");

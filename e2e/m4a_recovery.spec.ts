@@ -10,12 +10,12 @@ import sharp from "sharp";
 const base="/inventories/00000000-0000-4000-8000-000000000001";
 const image=async(index:number)=>({name:`synthetic-recovery-${index}.png`,mimeType:"image/png",buffer:await sharp({create:{width:640,height:400,channels:3,background:["#65856e","#967653","#5a7596"][index%3]!}}).png().toBuffer()});
 
-test("M4A browser restart restores all source Blobs, order, primary and pending crop geometry",async()=>{
+test("M4A browser restart restores all source Blobs, order, primary and pending crop geometry",async({context:ownerContext})=>{
   test.setTimeout(240_000);const profile=await mkdtemp(path.join(os.tmpdir(),"all-items-m4a-draft-profile-"));let context:BrowserContext|undefined;const errors:string[]=[];
   const launch=()=>chromium.launchPersistentContext(profile,{channel:"msedge",headless:true,locale:"ru-RU",baseURL:"http://127.0.0.1:3100",viewport:{width:390,height:820}});
   const observe=(page:import("@playwright/test").Page)=>{page.on("pageerror",error=>errors.push(error.message));page.on("console",message=>{if(message.type()==="error")errors.push(message.text());});};
   try{
-    context=await launch();let page=await context.newPage();observe(page);await page.goto(base);await page.locator(".add-dialog-trigger").click();let add=page.getByRole("dialog",{name:messages.ru.addItem,exact:true});
+    context=await launch();await context.addCookies(await ownerContext.cookies());let page=await context.newPage();observe(page);await page.goto(base);await page.locator(".add-dialog-trigger").click();let add=page.getByRole("dialog",{name:messages.ru.addItem,exact:true});
     await add.getByLabel(messages.ru.itemName,{exact:true}).fill("M4A synthetic full restart");await add.getByLabel(messages.ru.itemModel,{exact:true}).fill("Recovered model");await add.locator('input[name="photo"]').setInputFiles(await Promise.all([0,1,2].map(image)));await expect(add.locator(".gallery-thumbnail")).toHaveCount(3);
     await add.getByRole("button",{name:messages.ru.editCrop,exact:true}).click();let crop=page.getByRole("dialog",{name:messages.ru.cropTitle,exact:true});await crop.getByRole("combobox",{name:messages.ru.cropAspect,exact:true}).selectOption("1:1");await expect(crop.getByRole("button",{name:messages.ru.cropConfirm,exact:true})).toBeEnabled();await crop.getByRole("button",{name:messages.ru.cropConfirm,exact:true}).click();
     await add.locator(".gallery-primary-button").last().click();await add.locator(".gallery-thumbnail").last().focus();await page.keyboard.press("Space");await page.keyboard.press("ArrowLeft");await expect(page.getByText(messages.ru.galleryDragPosition.replace("{number}","2").replace("{total}","3"),{exact:true})).toHaveCount(1);await page.keyboard.press("Space");

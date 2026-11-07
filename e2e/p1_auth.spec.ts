@@ -1,0 +1,36 @@
+import {test,expect,type Page} from "@playwright/test";
+import sharp from "sharp";
+import {syntheticAccounts} from "./helpers/auth-credentials";
+import {messages,locales} from "../src/i18n/messages";
+import {expectPageFits} from "./helpers/layout-gate";
+test.use({storageState:{cookies:[],origins:[]}});
+async function login(page:Page,who:"alice"|"bob"){await page.goto("/login");await page.locator('input[name="username"]').fill(syntheticAccounts[who].username);await page.locator('input[name="password"]').fill(syntheticAccounts[who].password);await page.locator('button[type="submit"]').click();await expect(page).not.toHaveURL(/\/login/);}
+async function inventory(page:Page,name:string){if(await page.locator(".inventory-menu-trigger").count())await page.locator(".inventory-menu-trigger").click();await page.locator(".inventory-create-button").click();const dialog=page.getByRole("dialog",{name:messages.en.inventoryCreate,exact:true});await dialog.locator('input[name="name"]').fill(name);await dialog.getByRole("button",{name:messages.en.inventoryCreate,exact:true}).click();await expect(page).toHaveURL(/\/inventories\/[a-f0-9-]{36}$/);return new URL(page.url()).pathname;}
+async function add(page:Page,name:string,photo=false){await page.locator(".add-dialog-trigger").click();const dialog=page.getByRole("dialog",{name:messages.en.addItem,exact:true});await dialog.locator('input[name="name"]').fill(name);if(photo){await dialog.locator('input[name="photo"]').setInputFiles({name:"synthetic-p1.png",mimeType:"image/png",buffer:await sharp({create:{width:180,height:140,channels:3,background:"#667d63"}}).png().toBuffer()});const crop=page.getByRole("dialog",{name:messages.en.cropTitle,exact:true});await expect(crop.getByRole("button",{name:messages.en.cropConfirm,exact:true})).toBeEnabled();await crop.getByRole("button",{name:messages.en.cropConfirm,exact:true}).click();}await dialog.getByRole("button",{name:messages.en.saveItem,exact:true}).click();const link=page.getByRole("link",{name,exact:true});await expect(link).toBeVisible();return(await link.getAttribute("href"))!;}
+
+test("real sessions isolate two accounts, direct resources and forged action forms",async({browser,page})=>{
+ test.setTimeout(240_000);const errors:string[]=[];page.on("pageerror",error=>errors.push(error.message));
+ await page.goto("/");await expect(page).toHaveURL(/\/login/);expect((await page.request.get("/api/export/archive")).status()).toBe(401);expect((await page.request.get("/_next/image?url=%2Fmedia%2Ftest&w=640&q=75")).status()).toBe(404);
+ const aliceContext=await browser.newContext({locale:"en-US"}),bobContext=await browser.newContext({locale:"en-US"});
+ try{
+ const a=await aliceContext.newPage(),b=await bobContext.newPage();for(const surface of[a,b])surface.on("pageerror",error=>errors.push(error.message));
+ await login(a,"alice");const aliceBase=await inventory(a,"P1 Alice isolated");const aliceItem=await add(a,"P1 Alice photo",true);const row=a.locator(".item-grid-row").filter({hasText:"P1 Alice photo"});await expect(row.locator("img")).toBeVisible();const media=(await row.locator("img").getAttribute("src"))!.split("?")[0]!;
+ await login(b,"bob");const bobBase=await inventory(b,"P1 Bob isolated");const bobItem=await add(b,"P1 Bob own item");await expect(b.getByText("P1 Alice photo",{exact:true})).toHaveCount(0);
+ for(const url of[aliceItem,aliceBase,aliceBase+"/settings",aliceBase+"/data",aliceBase+"/collections",aliceBase+"/api/export/archive",aliceBase+"/api/export/csv",...['image','thumbnail','source'].map(variant=>media+"?variant="+variant)]){const response=await b.request.get(url);expect(response.status(),url).toBe(404);expect(response.headers()["cache-control"]).toContain("no-store");}
+ for(const suffix of["preview","restore"])expect((await b.request.post(aliceBase+"/api/import/"+suffix,{headers:{origin:"http://127.0.0.1:3100"},data:"invalid"})).status()).toBe(404);
+ expect((await b.request.get(bobBase,{headers:{"x-forwarded-host":"attacker.invalid"}})).status()).toBe(403);expect((await b.request.get(bobBase,{headers:{"x-forwarded-proto":"https"}})).status()).toBe(403);
+ expect((await b.request.post(bobBase+"/api/import/preview",{headers:{origin:"https://attacker.invalid"},data:"invalid"})).status()).toBe(403);
+ await b.goto(bobItem);const form=b.locator(".item-edit-form");await form.locator('input[name="name"]').fill("P1 attempted foreign update");await form.locator('input[name="inventoryId"]').evaluate((element,value)=>(element as HTMLInputElement).value=value,aliceBase.split("/").at(-1)!);await form.locator('input[name="id"]').evaluate((element,value)=>(element as HTMLInputElement).value=value,aliceItem.split("/").at(-1)!);await form.locator('input[name="returnTo"]').evaluate((element,value)=>(element as HTMLInputElement).value=value,aliceBase);await form.getByRole("button",{name:messages.en.saveChanges,exact:true}).click();await expect(form.getByRole("alert")).toBeVisible();await expect(form.locator('input[name="name"]')).toHaveValue("P1 attempted foreign update");
+ await a.goto(aliceItem);await expect(a.locator('.item-edit-form input[name="name"]')).toHaveValue("P1 Alice photo");
+ const reopened=await browser.newContext({storageState:await aliceContext.storageState(),locale:"en-US"});try{const restored=await reopened.newPage();await restored.goto("http://127.0.0.1:3100"+aliceBase);await expect(restored.getByRole("link",{name:"P1 Alice photo",exact:true})).toBeVisible();}finally{await reopened.close();}
+ const oldToken=(await aliceContext.cookies()).find(cookie=>cookie.name==="all-items-session")!;expect(oldToken.httpOnly).toBe(true);expect(oldToken.sameSite).toBe("Strict");expect(oldToken.secure).toBe(false);
+ await a.getByLabel(messages.en.authAccount,{exact:true}).click();await a.getByRole("button",{name:messages.en.authSignOut,exact:true}).click();await expect(a).toHaveURL(/\/login/);expect((await a.request.get(aliceBase+"/api/export/archive",{headers:{cookie:`all-items-session=${oldToken.value}`}})).status()).toBe(401);
+ expect(errors).toEqual([]);
+ }finally{await aliceContext.close();await bobContext.close();}
+});
+test("login is localized at 360px and failed attempts are throttled",async({page,context})=>{
+ test.setTimeout(120_000);await page.setViewportSize({width:360,height:700});
+ for(const locale of locales){await context.addCookies([{name:"all-items-language",value:locale,url:"http://127.0.0.1:3100"}]);await page.goto("/login");await expect(page.getByLabel(messages[locale].authUsername,{exact:true})).toBeVisible();await expect(page.getByRole("button",{name:messages[locale].authSignIn,exact:true})).toBeVisible();await expectPageFits(page);}
+ await context.addCookies([{name:"all-items-language",value:"en",url:"http://127.0.0.1:3100"}]);await page.goto("/login");
+ for(let attempt=0;attempt<6;attempt++){await page.locator('input[name="username"]').fill("synthetic-rate-limited");await page.locator('input[name="password"]').fill("Synthetic incorrect password");await page.locator('button[type="submit"]').click();await expect(page.locator(".login-form").getByRole("alert")).toHaveText(messages.en[attempt===5?"authThrottled":"authInvalid"]);await expect(page.locator('button[type="submit"]')).toBeEnabled();}
+});

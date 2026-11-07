@@ -313,6 +313,7 @@ async function readSafeAsset(root: string, relative: string): Promise<Uint8Array
 export async function createInventoryArchive(inventory: InventoryContext, context?: { client: Client; directory: string }) {
   const { workspaceId } = inventoryContextSchema.parse(inventory);
   const client = context?.client ?? (await getDatabase()).$client;
+  await (await import("@/auth/authority")).authorizeInventory(workspaceId,client);
   const tx = await client.transaction("read");
   let snapshot: Record<string, Array<Record<string, unknown>>>;
   try {

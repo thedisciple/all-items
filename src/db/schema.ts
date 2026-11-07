@@ -8,6 +8,17 @@ export const workspaces = sqliteTable("workspaces", {
   nextInventoryNumber: integer("next_inventory_number").notNull().default(1),
 });
 
+export const authUsers=sqliteTable("auth_users",{
+  id:text("id").primaryKey(),username:text("username").unique(),passwordHash:text("password_hash"),isAdmin:integer("is_admin").notNull().default(0),disabled:integer("disabled").notNull().default(1),createdAt:text("created_at").notNull(),
+});
+export const inventoryOwners=sqliteTable("inventory_owners",{
+  workspaceId:text("workspace_id").primaryKey().references(()=>workspaces.id,{onDelete:"cascade"}),userId:text("user_id").notNull().references(()=>authUsers.id,{onDelete:"restrict"}),
+});
+export const authSessions=sqliteTable("auth_sessions",{
+  tokenHash:text("token_hash").primaryKey(),userId:text("user_id").notNull().references(()=>authUsers.id,{onDelete:"cascade"}),expiresAt:integer("expires_at").notNull(),lastSeenAt:integer("last_seen_at").notNull(),
+});
+export const authLoginBuckets=sqliteTable("auth_login_buckets",{bucket:text("bucket").primaryKey(),startedAt:integer("started_at").notNull(),attempts:integer("attempts").notNull()});
+
 export const inventoryImportOperations = sqliteTable("inventory_import_operations", {
   id: text("id").primaryKey(),
   workspaceId: text("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),

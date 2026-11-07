@@ -1,4 +1,5 @@
 "use server";
+import {assertActionOrigin} from "@/auth/request";
 
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
@@ -11,10 +12,12 @@ import { createInventory, InventoryNameConflict, renameInventory, resolveInvento
 import { inventoryPath } from "@/items/inventory-context";
 import type { MessageKey } from "@/i18n/messages";
 import { setInventorySort } from "@/items/inventory-presentation";
+import {trustedOrigin} from "@/auth/policy";
 
 export type InventoryFeedback = { status: "idle" | "success" | "error"; code?: MessageKey; inventoryId?: string };
 
 export async function saveInventorySortAction(_previous: InventoryFeedback, data: FormData): Promise<InventoryFeedback> {
+  await assertActionOrigin();
   try {
     const context = await resolveInventory(data.get("inventoryId"));
     await setInventorySort(context, data.get("sort"));
@@ -24,11 +27,13 @@ export async function saveInventorySortAction(_previous: InventoryFeedback, data
 }
 
 export async function rememberInventoryAction(id: string) {
+  await assertActionOrigin();
   const context = await resolveInventory(id);
-  (await cookies()).set("all-items-inventory", context.workspaceId, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 60 * 60 * 24 * 365 });
+  (await cookies()).set("all-items-inventory", context.workspaceId, { httpOnly: true, sameSite: "lax", secure: trustedOrigin().protocol==="https:", path: "/", maxAge: 60 * 60 * 24 * 365 });
 }
 
 export async function createInventoryAction(_previous: InventoryFeedback, data: FormData): Promise<InventoryFeedback> {
+  await assertActionOrigin();
   try {
     const inventory = await createInventory(data.get("name"));
     await rememberInventoryAction(inventory.workspaceId);
@@ -38,6 +43,7 @@ export async function createInventoryAction(_previous: InventoryFeedback, data: 
 }
 
 export async function renameInventoryAction(_previous: InventoryFeedback, data: FormData): Promise<InventoryFeedback> {
+  await assertActionOrigin();
   try {
     const context = await resolveInventory(data.get("inventoryId"));
     await renameInventory(context, data.get("name"));
@@ -47,6 +53,7 @@ export async function renameInventoryAction(_previous: InventoryFeedback, data: 
 }
 
 export async function deleteInventoryAction(_previous:InventoryFeedback,data:FormData):Promise<InventoryFeedback> {
+  await assertActionOrigin();
   try {
     z.literal("on").parse(data.get("confirm"));
     const context=await resolveInventory(data.get("inventoryId"));

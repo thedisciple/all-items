@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "db:migrate": "tsx src/db/migrate.ts",
-    "backup": "tsx src/backup/cli.ts"
+    "backup": "tsx src/backup/cli.ts",
+    "auth": "tsx src/auth/cli.ts"
   },
   "dependencies": {
     "@noble/hashes": "1.8.0",

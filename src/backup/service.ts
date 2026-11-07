@@ -40,7 +40,7 @@ export async function inspectDatabase(client:Client){
   if((await client.execute("PRAGMA integrity_check")).rows.map(r=>r.integrity_check).join()!=="ok"||(await client.execute("PRAGMA foreign_key_check")).rows.length)throw new Error("Database integrity verification failed");
   const migrations=(await client.execute("SELECT name FROM _all_items_migrations ORDER BY name")).rows.map(r=>String(r.name));
   const expected=(await readdir(path.join(process.cwd(),"src/db/migrations"))).filter(n=>/^\d{4}_[a-z0-9_]+\.sql$/.test(n)).map(n=>n.slice(0,-4)).sort();
-  if(JSON.stringify(migrations)!==JSON.stringify(expected))throw new Error("Incompatible database migrations; use the matching application version");
+  if(migrations.length<13||JSON.stringify(migrations)!==JSON.stringify(expected.slice(0,migrations.length)))throw new Error("Incompatible database migrations; use the matching application version");
   const files:string[]=[];
   for(const row of (await client.execute("SELECT id,item_id,storage_path,thumbnail_path,source_storage_path FROM media_assets")).rows){
     const base=z.uuid().parse(row.item_id)+"/"+z.uuid().parse(row.id);
@@ -56,7 +56,7 @@ export async function inspectDatabase(client:Client){
   if(files.length+1>MAX_FILES)throw new Error("Backup file budget exceeded");
   const hash=createHash("sha256");
   const tables=(await client.execute("SELECT name,sql FROM sqlite_master WHERE type='table' ORDER BY name")).rows;
-  const allowed=new Set(["workspaces","items","locations","stock_entries","item_categories","media_assets","collections","collection_cover_assets","item_collection_memberships","inventory_import_operations","inventory_preferences","custom_category_presentation","item_write_receipts","_all_items_migrations","sqlite_sequence"]);
+  const allowed=new Set(["workspaces","items","locations","stock_entries","item_categories","media_assets","collections","collection_cover_assets","item_collection_memberships","inventory_import_operations","inventory_preferences","custom_category_presentation","item_write_receipts","_all_items_migrations","sqlite_sequence","auth_users","auth_sessions","auth_login_buckets","inventory_owners"]);
   if(tables.some(table=>!allowed.has(String(table.name))))throw new Error("Unexpected database table");
   for(const table of tables){
     const name=String(table.name);hash.update(JSON.stringify(table));

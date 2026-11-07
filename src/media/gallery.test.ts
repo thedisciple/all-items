@@ -1,3 +1,5 @@
+import {runMaintenance} from "@/auth/authority";
+import {ownFixtureInventory} from "@/test/owned-fixture";
 import { beforeAll, describe, expect, it } from "vitest";
 import { createClient } from "@libsql/client";
 import { copyFile, mkdtemp, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
@@ -49,10 +51,11 @@ beforeAll(async () => {
   beforeItems = (await client.execute("SELECT * FROM items ORDER BY id")).rows as unknown as Record<string,unknown>[];
   beforeMedia = (await client.execute("SELECT * FROM media_assets ORDER BY id")).rows as unknown as Record<string, unknown>[];
   legacyPhoto = String(beforeMedia[0]!.id);
-  beforeBytes = hash((await readItemPhoto(inventory, legacyId, legacyPhoto, "image"))!);
+  beforeBytes = hash((await runMaintenance(()=>readItemPhoto(inventory, legacyId, legacyPhoto, "image")))!);
   backup = await createMigrationBackup(client, directory);
   await applyMigrations(client, migrations); await applyMigrations(client, migrations);
   await client.execute({ sql: "INSERT INTO workspaces(id,name,created_at) VALUES(?,?,?)", args: [foreign.workspaceId, "Synthetic other", "2026-01-01"] });
+  await ownFixtureInventory(client,foreign.workspaceId);
 }, 120_000);
 
 describe("ordered private item photos", () => {

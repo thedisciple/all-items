@@ -1,3 +1,4 @@
+import {accessFailure,assertMutationOrigin} from "@/auth/http";
 import { InventoryNameConflict, resolveInventory } from "@/items/inventories";
 import { getDatabase,dataDirectory } from "@/db/client";
 import { ArchiveError } from "@/export/archive";
@@ -11,6 +12,7 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request,{params}:{params:Promise<{inventoryId:string}>}) {
   try {
+    assertMutationOrigin(request);
     const context=await resolveInventory((await params).inventoryId);
     const bytes = await readArchiveRequest(request);
     const name=decodeURIComponent(z.string().max(1500).parse(request.headers.get("x-all-items-inventory-name")));
@@ -18,6 +20,7 @@ export async function POST(request: Request,{params}:{params:Promise<{inventoryI
     await rememberInventoryAction(result.inventoryId);
     return Response.json(result, { headers: { "Cache-Control": "no-store, private" } });
   } catch (error) {
+    const denied=accessFailure(error);if(denied)return denied;
     const key = error instanceof InventoryNameConflict ? "inventoryNameExists" : error instanceof InventoryBusyError ? "inventoryBusy" : error instanceof ImportError && error.code === "occupied" ? "importOccupied"
       : error instanceof ArchiveError && error.message.startsWith("Unsupported archive format") ? "importUnsupported"
       : error instanceof ArchiveError || error instanceof ImportError && error.code === "invalid" ? "importInvalid" : "importFailed";

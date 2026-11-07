@@ -1,3 +1,4 @@
+import {ownFixtureInventory} from "@/test/owned-fixture";
 import {beforeAll,expect,it,vi} from "vitest";
 import {createClient} from "@libsql/client";
 import {createHash,randomUUID} from "node:crypto";
@@ -27,6 +28,7 @@ beforeAll(async()=>{
   directory=await mkdtemp(path.join(os.tmpdir(),"all-items-creation-"));process.env.ALL_ITEMS_DATA_DIR=directory;
   client=createClient({url:pathToFileURL(path.join(directory,"all-items.db")).href});await applyMigrations(client,path.join(process.cwd(),"src/db/migrations"));
   await client.execute({sql:"INSERT INTO workspaces(id,name,created_at) VALUES(?,?,?)",args:[foreign.workspaceId,"Synthetic foreign creation",new Date().toISOString()]});
+  await ownFixtureInventory(client,foreign.workspaceId);
 });
 async function fixture(count=3){
   const files:File[]=[];

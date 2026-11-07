@@ -5,10 +5,11 @@ import { once } from "node:events";
 import { mkdtemp,readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import {syntheticAccounts} from "./helpers/auth-credentials";
 
-test("production restart preserves selection, media ownership, scoped deletion and the final empty landing",async({page})=>{
+test("production restart preserves authenticated ownership, media, scoped deletion and the final empty landing",async({page,browser})=>{
   const directory=await mkdtemp(path.join(os.tmpdir(),"all-items-restart-"));
-  const env:NodeJS.ProcessEnv={...process.env,ALL_ITEMS_DATA_DIR:directory,NODE_ENV:"production"};
+  const env:NodeJS.ProcessEnv={...process.env,ALL_ITEMS_DATA_DIR:directory,ALL_ITEMS_ORIGIN:"http://127.0.0.1:3104",NODE_ENV:"production"};
   const run=promisify(execFile);
   const migrate=()=>run(process.execPath,["--import","tsx","src/db/migrate.ts"],{env,windowsHide:true});
   await migrate();
@@ -21,7 +22,7 @@ test("production restart preserves selection, media ownership, scoped deletion a
     await migrate();output="";
     app=spawn(process.execPath,["node_modules/next/dist/bin/next","start","--hostname","127.0.0.1","--port","3104"],{env,windowsHide:true,stdio:["ignore","pipe","pipe"]});
     app.stdout?.on("data",data=>{output+=String(data);});app.stderr?.on("data",data=>{output+=String(data);});
-    await expect.poll(async()=>{if(app?.exitCode!==null)throw new Error(output);try{return(await page.request.get("/")).status();}catch{return 0;}},{timeout:30_000}).toBe(200);
+    await expect.poll(async()=>{if(app?.exitCode!==null)throw new Error(output);try{return(await page.request.get("/login")).status();}catch{return 0;}},{timeout:30_000}).toBe(200);
   };
   const base=(id:string)=>`/inventories/${id}`;
   async function remove(page:Page,id:string,name?:string,renamed?:string) {
@@ -46,6 +47,8 @@ test("production restart preserves selection, media ownership, scoped deletion a
   }
   try {
     await start();
+    await page.goto("/login");await page.locator('input[name="username"]').fill(syntheticAccounts.owner.username);await page.locator('input[name="password"]').fill(syntheticAccounts.owner.password);await page.locator('button[type="submit"]').click();await expect(page).toHaveURL(/\/inventories\//);
+    const tester=await browser.newContext({locale:"en-US"});try{const other=await tester.newPage();await other.goto("http://127.0.0.1:3104/login");await other.locator('input[name="username"]').fill(syntheticAccounts.alice.username);await other.locator('input[name="password"]').fill(syntheticAccounts.alice.password);await other.locator('button[type="submit"]').click();await expect(other).toHaveURL("http://127.0.0.1:3104/");expect((await other.request.get(`http://127.0.0.1:3104${base(home.id)}/media/${home.item}/${home.media}`)).status()).toBe(404);}finally{await tester.close();}
     await page.goto(base(workshop.id));
     await expect.poll(async()=>(await page.context().cookies()).find(c=>c.name==="all-items-inventory")?.value).toBe(workshop.id);
     await stop();await start();await page.goto("/");

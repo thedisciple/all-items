@@ -8,10 +8,10 @@ import type { Presentation } from "@/items/inventory-presentation";
 
 type Counts = { items: number; collections: number };
 type PresentationState = { preferences: { version: 1; sort: "date" | "name" | "quantity" }; categories: Presentation[] };
-type Value = { sidebar: { collapsed: boolean; animate: boolean; toggle: () => void }; inventory: Inventory; inventories: Inventory[]; counts: Counts; base: string; presentation: PresentationState };
+type Value = { account:{username:string}; sidebar: { collapsed: boolean; animate: boolean; toggle: () => void }; inventory: Inventory; inventories: Inventory[]; counts: Counts; base: string; presentation: PresentationState };
 const Context = createContext<Value | null>(null);
 
-export function InventoryProvider({ inventory, inventories, counts, presentation, children, initialSidebarCollapsed = false }: { initialSidebarCollapsed?: boolean; inventory: Inventory; inventories: Inventory[]; counts: Counts; presentation: PresentationState; children: React.ReactNode }) {
+export function InventoryProvider({ account,inventory, inventories, counts, presentation, children, initialSidebarCollapsed = false }: { account:{username:string}; initialSidebarCollapsed?: boolean; inventory: Inventory; inventories: Inventory[]; counts: Counts; presentation: PresentationState; children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(initialSidebarCollapsed);
   const [animate, setAnimate] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -23,7 +23,7 @@ export function InventoryProvider({ inventory, inventories, counts, presentation
     timer.current = setTimeout(() => setAnimate(false), 180);
   }
   useEffect(() => { void rememberInventoryAction(inventory.workspaceId).catch(() => {}); }, [inventory.workspaceId]);
-  return <Context.Provider value={{ sidebar: { collapsed, animate, toggle: toggleSidebar }, inventory, inventories, counts, presentation, base: inventoryPath(inventory) }}>{children}</Context.Provider>;
+  return <Context.Provider value={{account, sidebar: { collapsed, animate, toggle: toggleSidebar }, inventory, inventories, counts, presentation, base: inventoryPath(inventory) }}>{children}</Context.Provider>;
 }
 
 export function useInventory() {

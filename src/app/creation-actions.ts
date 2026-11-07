@@ -1,4 +1,5 @@
 "use server";
+import {assertActionOrigin} from "@/auth/request";
 
 import {z} from "zod";
 import {revalidatePath} from "next/cache";
@@ -23,6 +24,7 @@ function failure(error:unknown,final=false):CreationFeedback{
 function command(form:FormData){return creationCommandSchema.parse(JSON.parse(z.string().max(64*1024).parse(form.get("command"))));}
 
 export async function stageCreationPhotoAction(form:FormData):Promise<CreationFeedback>{
+  await assertActionOrigin();
   const context=await resolveInventory(form.get("inventoryId")).catch(()=>null);if(!context)return{status:"error",message:"inventoryNotFound"};
   try{
     const value=command(form),photoId=z.uuid().parse(form.get("photoId")),file=fileSchema.parse(form.get("photo"));
@@ -33,6 +35,7 @@ export async function stageCreationPhotoAction(form:FormData):Promise<CreationFe
 }
 
 export async function finalizeCreationAction(form:FormData):Promise<CreationFeedback>{
+  await assertActionOrigin();
   const context=await resolveInventory(form.get("inventoryId")).catch(()=>null);if(!context)return{status:"error",message:"inventoryNotFound"};
   try{
     const result=await finalizeItemCreation(context,command(form));revalidatePath(inventoryPath(context),"layout");

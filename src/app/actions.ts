@@ -1,4 +1,5 @@
 "use server";
+import {assertActionOrigin} from "@/auth/request";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -14,6 +15,8 @@ import { locales, type MessageKey } from "@/i18n/messages";
 import { PhotoLimitError, NEW_ITEM_PHOTO_LIMIT } from "@/media/limits";
 import {MediaProcessingBusy} from "@/media/service";
 import {WriteReceiptConflict,WriteReceiptDeleted} from "@/items/write-receipts";
+import {headers} from "next/headers";
+import {validRequest,trustedOrigin} from "@/auth/policy";
 
 
 
@@ -21,8 +24,9 @@ export type ActionFeedback = { status: "idle" | "success" | "error"; message: Me
 export type PhotoActionFeedback = ActionFeedback & { mediaId?: string };
 
 export async function setLanguageAction(formData: FormData) {
+  if(!validRequest(await headers(),true))throw new Error("Request unavailable");
   const locale = z.enum(locales).parse(formData.get("locale"));
-  (await cookies()).set("all-items-language", locale, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 60 * 60 * 24 * 365 });
+  (await cookies()).set("all-items-language", locale, { httpOnly: true, sameSite: "lax", secure: trustedOrigin().protocol==="https:", path: "/", maxAge: 60 * 60 * 24 * 365 });
 }
 
 function errorMessage(error: unknown, fallback: MessageKey) {
@@ -52,6 +56,7 @@ function formValues(formData: FormData) {
 }
 
 export async function addItemAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
+  await assertActionOrigin();
   const context = await resolveInventory(formData.get("inventoryId")).catch(() => null);
   if (!context) return { status: "error", message: "inventoryNotFound" };
   const uploaded = formData.get("photo");
@@ -75,6 +80,7 @@ export async function addItemAction(_previous: ActionFeedback, formData: FormDat
 }
 
 export async function replacePhotoAction(_previous: PhotoActionFeedback, formData: FormData): Promise<PhotoActionFeedback> {
+  await assertActionOrigin();
   const context = await resolveInventory(formData.get("inventoryId")).catch(() => null);
   if (!context) return { status: "error", message: "inventoryNotFound" };
   const id = z.string().uuid().safeParse(String(formData.get("id") ?? ""));
@@ -102,6 +108,7 @@ export async function replacePhotoAction(_previous: PhotoActionFeedback, formDat
 }
 
 export async function removePhoto(formData: FormData): Promise<void | ActionFeedback> {
+  await assertActionOrigin();
   const context = await resolveInventory(formData.get("inventoryId")).catch(() => null);
   if (!context) return { status: "error", message: "inventoryNotFound" };
   const id = z.string().uuid().safeParse(String(formData.get("id") ?? ""));
@@ -115,6 +122,7 @@ export async function removePhoto(formData: FormData): Promise<void | ActionFeed
 }
 
 export async function updateItemAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
+  await assertActionOrigin();
   const context = await resolveInventory(formData.get("inventoryId")).catch(() => null);
   if (!context) return { status: "error", message: "inventoryNotFound" };
   const id = z.string().uuid().safeParse(String(formData.get("id") ?? ""));
@@ -130,6 +138,7 @@ export async function updateItemAction(_previous: ActionFeedback, formData: Form
 }
 
 export async function createCollectionAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
+  await assertActionOrigin();
   const context = await resolveInventory(formData.get("inventoryId")).catch(() => null);
   if (!context) return { status: "error", message: "inventoryNotFound" };
   try {
@@ -140,6 +149,7 @@ export async function createCollectionAction(_previous: ActionFeedback, formData
 }
 
 export async function addItemsToCollectionAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
+  await assertActionOrigin();
   const context = await resolveInventory(formData.get("inventoryId")).catch(() => null);
   if (!context) return { status: "error", message: "inventoryNotFound" };
   const collectionId = z.string().uuid().safeParse(formData.get("collectionId"));
@@ -153,6 +163,7 @@ export async function addItemsToCollectionAction(_previous: ActionFeedback, form
 }
 
 export async function setCollectionCoverAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
+  await assertActionOrigin();
   const context = await resolveInventory(formData.get("inventoryId")).catch(() => null);
   if (!context) return { status: "error", message: "inventoryNotFound" };
   const collectionId = z.string().uuid().safeParse(formData.get("collectionId"));
@@ -183,6 +194,7 @@ export async function setCollectionCoverAction(_previous: ActionFeedback, formDa
 }
 
 export async function renameCollectionAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
+  await assertActionOrigin();
   const context = await resolveInventory(formData.get("inventoryId")).catch(() => null);
   if (!context) return { status: "error", message: "inventoryNotFound" };
   const id = z.string().uuid().safeParse(formData.get("id"));
@@ -195,6 +207,7 @@ export async function renameCollectionAction(_previous: ActionFeedback, formData
 }
 
 export async function deleteCollectionAction(formData: FormData): Promise<void | ActionFeedback> {
+  await assertActionOrigin();
   const context = await resolveInventory(formData.get("inventoryId")).catch(() => null);
   if (!context) return { status: "error", message: "inventoryNotFound" };
   const id = z.string().uuid().safeParse(formData.get("id"));
@@ -208,6 +221,7 @@ export async function deleteCollectionAction(formData: FormData): Promise<void |
 }
 
 export async function addCollectionMembershipAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
+  await assertActionOrigin();
   const context = await resolveInventory(formData.get("inventoryId")).catch(() => null);
   if (!context) return { status: "error", message: "inventoryNotFound" };
   const itemId = z.string().uuid().safeParse(formData.get("itemId"));
@@ -221,6 +235,7 @@ export async function addCollectionMembershipAction(_previous: ActionFeedback, f
 }
 
 export async function removeCollectionMembershipAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
+  await assertActionOrigin();
   const context = await resolveInventory(formData.get("inventoryId")).catch(() => null);
   if (!context) return { status: "error", message: "inventoryNotFound" };
   const itemId = z.string().uuid().safeParse(formData.get("itemId"));
@@ -233,6 +248,7 @@ export async function removeCollectionMembershipAction(_previous: ActionFeedback
 }
 
 export async function removeItem(formData: FormData): Promise<void | ActionFeedback> {
+  await assertActionOrigin();
   const context = await resolveInventory(formData.get("inventoryId")).catch(() => null);
   if (!context) return { status: "error", message: "inventoryNotFound" };
   const id = z.string().uuid().safeParse(String(formData.get("id") ?? ""));
@@ -246,6 +262,7 @@ export async function removeItem(formData: FormData): Promise<void | ActionFeedb
 }
 
 export async function galleryPhotoAction(_previous: ActionFeedback, formData: FormData): Promise<ActionFeedback> {
+  await assertActionOrigin();
   const context = await resolveInventory(formData.get("inventoryId")).catch(() => null);
   if (!context) return {status:"error",message:"inventoryNotFound"};
   try {
@@ -263,6 +280,7 @@ export async function galleryPhotoAction(_previous: ActionFeedback, formData: Fo
 }
 
 export async function deleteGalleryPhoto(formData: FormData): Promise<ActionFeedback> {
+  await assertActionOrigin();
   formData.set("operation","delete");
   return galleryPhotoAction({status:"idle",message:""},formData);
 }

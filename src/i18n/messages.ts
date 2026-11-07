@@ -1,4 +1,14 @@
 const ru = {
+  authSignIn: "Войти",
+  authSigningIn: "Вход…",
+  authUsername: "Имя пользователя",
+  authPassword: "Пароль",
+  authSignOut: "Выйти",
+  authAccount: "Учётная запись",
+  authInviteOnly: "Учётную запись выдаёт владелец установки.",
+  authInvalid: "Не удалось войти. Проверьте имя пользователя и пароль.",
+  authThrottled: "Слишком много попыток. Повторите через 15 минут.",
+  authUnavailable: "Вход временно недоступен. Повторите попытку.",
   viewOptions: "Настроить вид", viewModelBrand: "Модель и бренд", viewReset: "Сбросить настройки", viewStorageError: "Настройки вида не удалось сохранить в браузере.",
   secureRandomUnavailable: "Не удалось безопасно создать идентификатор. Обновите браузер или откройте приложение на этом компьютере.",
   installationBackups: "Резервные копии установки",
@@ -345,6 +355,16 @@ const ru = {
 } as const;
 
 const en: Record<MessageKey, string> = {
+  authSignIn: "Sign in",
+  authSigningIn: "Signing in…",
+  authUsername: "Username",
+  authPassword: "Password",
+  authSignOut: "Sign out",
+  authAccount: "Account",
+  authInviteOnly: "Accounts are issued by the installation owner.",
+  authInvalid: "Unable to sign in. Check your username and password.",
+  authThrottled: "Too many attempts. Try again in 15 minutes.",
+  authUnavailable: "Sign in is temporarily unavailable. Try again.",
   viewOptions: "View options", viewModelBrand: "Model and brand", viewReset: "Reset to defaults", viewStorageError: "View settings could not be saved in this browser.",
   secureRandomUnavailable: "Unable to generate a secure identifier. Update your browser or open the app on this computer.",
   installationBackups: "Installation backups",
@@ -524,6 +544,16 @@ const en: Record<MessageKey, string> = {
 };
 
 const uk: Record<MessageKey, string> = {
+  authSignIn: "Увійти",
+  authSigningIn: "Вхід…",
+  authUsername: "Ім’я користувача",
+  authPassword: "Пароль",
+  authSignOut: "Вийти",
+  authAccount: "Обліковий запис",
+  authInviteOnly: "Обліковий запис надає власник установки.",
+  authInvalid: "Не вдалося увійти. Перевірте ім’я та пароль.",
+  authThrottled: "Забагато спроб. Повторіть через 15 хвилин.",
+  authUnavailable: "Вхід тимчасово недоступний. Повторіть спробу.",
   viewOptions: "Налаштувати вигляд", viewModelBrand: "Модель і бренд", viewReset: "Скинути налаштування", viewStorageError: "Не вдалося зберегти налаштування вигляду в браузері.",
   secureRandomUnavailable: "Не вдалося безпечно створити ідентифікатор. Оновіть браузер або відкрийте програму на цьому комп’ютері.",
   installationBackups: "Резервні копії встановлення",
@@ -642,6 +672,16 @@ const uk: Record<MessageKey, string> = {
 };
 
 const srLatn: Record<MessageKey, string> = {
+  authSignIn: "Prijavi se",
+  authSigningIn: "Prijavljivanje…",
+  authUsername: "Korisničko ime",
+  authPassword: "Lozinka",
+  authSignOut: "Odjavi se",
+  authAccount: "Nalog",
+  authInviteOnly: "Naloge izdaje vlasnik instalacije.",
+  authInvalid: "Prijava nije uspela. Proverite korisničko ime i lozinku.",
+  authThrottled: "Previše pokušaja. Pokušajte za 15 minuta.",
+  authUnavailable: "Prijava trenutno nije dostupna. Pokušajte ponovo.",
   viewOptions: "Podešavanje prikaza", viewModelBrand: "Model i brend", viewReset: "Vrati podrazumevano", viewStorageError: "Podešavanja prikaza nije moguće sačuvati u pregledaču.",
   secureRandomUnavailable: "Nije moguće bezbedno napraviti identifikator. Ažurirajte pregledač ili otvorite aplikaciju na ovom računaru.",
   installationBackups: "Rezervne kopije instalacije",
@@ -760,6 +800,16 @@ const srLatn: Record<MessageKey, string> = {
 };
 
 const zhHans: Record<MessageKey, string> = {
+  authSignIn: "登录",
+  authSigningIn: "正在登录…",
+  authUsername: "用户名",
+  authPassword: "密码",
+  authSignOut: "退出登录",
+  authAccount: "账户",
+  authInviteOnly: "账户由安装所有者提供。",
+  authInvalid: "无法登录。请检查用户名和密码。",
+  authThrottled: "尝试次数过多。请在15分钟后重试。",
+  authUnavailable: "暂时无法登录。请重试。",
   viewOptions: "显示选项", viewModelBrand: "型号和品牌", viewReset: "恢复默认设置", viewStorageError: "无法在浏览器中保存显示设置。",
   secureRandomUnavailable: "无法安全生成标识符。请更新浏览器或在此电脑上打开应用。",
   installationBackups: "安装备份",

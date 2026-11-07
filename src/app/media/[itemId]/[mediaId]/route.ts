@@ -1,3 +1,4 @@
+import {accessFailure} from "@/auth/http";
 import { resolveInventory } from "@/items/inventories";
 import { ORIGINAL_INVENTORY_ID } from "@/items/inventory-context";
 import { ZodError } from "zod";
@@ -25,6 +26,7 @@ export async function GET(request: Request, { params }: Context) {
       },
     });
   } catch (error) {
+    const denied=accessFailure(error);if(denied)return denied;
     const status = error instanceof ZodError ? 400 : 404;
     return new Response(null, { status });
   }

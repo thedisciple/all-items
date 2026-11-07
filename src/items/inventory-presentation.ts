@@ -27,6 +27,7 @@ export async function setInventorySort(context: InventoryContext, value: unknown
 }
 
 export async function saveCategoryPresentations(tx: Pick<Client, "execute">, workspaceId: string, values: unknown, selected: string[]) {
+  await (await import("@/auth/authority")).authorizeInventory(workspaceId,tx);
   for (const value of categoryPresentations.parse(values)) {
     if (!selected.includes(value.category)) throw new Error("Category presentation must refer to a selected category");
     await tx.execute({ sql: "INSERT INTO custom_category_presentation(workspace_id,category,emoji) VALUES(?,?,?) ON CONFLICT(workspace_id,category) DO UPDATE SET emoji=excluded.emoji", args: [workspaceId, value.category, value.emoji] });

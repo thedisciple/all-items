@@ -15,6 +15,7 @@ export class WriteReceiptDeleted extends Error {
 }
 
 export async function readWriteReceipt(executor:Executor,context:InventoryContext,identity:WriteIdentity):Promise<WriteResult|null>{
+  await (await import("@/auth/authority")).authorizeInventory(context.workspaceId,executor);
   const {operationId,kind,requestHash}=identitySchema.parse(identity);
   const workspaceId=z.uuid().parse(context.workspaceId);
   const result=await executor.execute({sql:"SELECT kind,request_hash,item_id,media_id,inventory_number FROM item_write_receipts WHERE workspace_id=? AND operation_id=?",args:[workspaceId,operationId]});
@@ -26,6 +27,7 @@ export async function readWriteReceipt(executor:Executor,context:InventoryContex
 }
 
 export async function insertWriteReceipt(executor:Executor,context:InventoryContext,identity:WriteIdentity,result:WriteResult){
+  await (await import("@/auth/authority")).authorizeInventory(context.workspaceId,executor);
   const parsed=identitySchema.parse(identity);
   z.uuid().parse(context.workspaceId);z.uuid().parse(result.itemId);if(result.mediaId)z.uuid().parse(result.mediaId);
   await executor.execute({sql:"INSERT INTO item_write_receipts(workspace_id,operation_id,kind,request_hash,item_id,media_id,inventory_number,created_at) VALUES(?,?,?,?,?,?,?,?)",args:[context.workspaceId,parsed.operationId,parsed.kind,parsed.requestHash,result.itemId,result.mediaId,result.inventoryNumber,new Date().toISOString()]});

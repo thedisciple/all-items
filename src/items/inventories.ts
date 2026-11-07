@@ -3,6 +3,7 @@ import { getDatabase } from "@/db/client";
 import { inventoryContextSchema, type InventoryContext } from "./inventory-context";
 import { normalizedInventoryName } from "./inventory-names";
 import type { Client } from "@libsql/client";
+import {authorizeInventory,requireActor,inMaintenance} from "@/auth/authority";
 
 export type Inventory = InventoryContext & { name: string; createdAt: string; nextInventoryNumber: number };
 export const inventoryName = z.string().trim().min(1).max(120);
@@ -10,7 +11,8 @@ export class InventoryNameConflict extends Error { constructor(){super("Inventor
 
 // Call inside a SQLite write transaction so concurrent writers cannot both pass.
 export async function assertUniqueInventoryName(client:Pick<Client,"execute">,name:string,exceptId?:string) {
-  const rows=(await client.execute("SELECT id,name FROM workspaces")).rows;
+  const actor=await requireActor();
+  const rows=(await client.execute(inMaintenance()?"SELECT id,name FROM workspaces":{sql:"SELECT w.id,w.name FROM workspaces w JOIN inventory_owners o ON o.workspace_id=w.id WHERE o.user_id=?",args:[actor.id]})).rows;
   if(rows.some(row=>String(row.id)!==exceptId&&normalizedInventoryName(String(row.name))===normalizedInventoryName(name)))throw new InventoryNameConflict();
 }
 
@@ -37,6 +39,7 @@ async function inventoryNameWrite<T>(work:(tx:Pick<Client,"execute">)=>Promise<T
 export async function resolveInventory(value: unknown): Promise<Inventory> {
   const workspaceId = z.uuid().parse(value);
   const db = await getDatabase();
+  await authorizeInventory(workspaceId,db.$client);
   const result = await db.$client.execute({ sql: "SELECT * FROM workspaces WHERE id=?", args: [workspaceId] });
   if (!result.rows.length) throw new Error("Inventory not found");
   const row = result.rows[0]!;
@@ -51,17 +54,20 @@ export async function inventoryDatabase(context: InventoryContext) {
 
 export async function listInventories(): Promise<Inventory[]> {
   const db = await getDatabase();
-  const result = await db.$client.execute("SELECT * FROM workspaces ORDER BY created_at,id");
+  const actor=await requireActor();
+  const result = await db.$client.execute(inMaintenance()?"SELECT * FROM workspaces ORDER BY created_at,id":{sql:"SELECT w.* FROM workspaces w JOIN inventory_owners o ON o.workspace_id=w.id WHERE o.user_id=? ORDER BY w.created_at,w.id",args:[actor.id]});
   return result.rows.map(row => ({ workspaceId: String(row.id), name: String(row.name), createdAt: String(row.created_at), nextInventoryNumber: Number(row.next_inventory_number) }));
 }
 
 export async function createInventory(value: unknown): Promise<Inventory> {
   const name = inventoryName.parse(value);
+  const actor=await requireActor();
   const workspaceId = crypto.randomUUID();
   const createdAt = new Date().toISOString();
   await inventoryNameWrite(async tx=>{
     await assertUniqueInventoryName(tx,name);
     await tx.execute({ sql: "INSERT INTO workspaces(id,name,created_at,next_inventory_number) VALUES(?,?,?,1)", args: [workspaceId,name,createdAt] });
+    if(!inMaintenance())await tx.execute({sql:"INSERT INTO inventory_owners(workspace_id,user_id) VALUES(?,?)",args:[workspaceId,actor.id]});
   });
   return { workspaceId, name, createdAt, nextInventoryNumber: 1 };
 }
@@ -70,6 +76,7 @@ export async function renameInventory(context: InventoryContext, value: unknown)
   const name = inventoryName.parse(value);
   const { workspaceId } = inventoryContextSchema.parse(context);
   await inventoryNameWrite(async tx=>{
+    await authorizeInventory(workspaceId,tx);
     const existing=await tx.execute({sql:"SELECT name FROM workspaces WHERE id=?",args:[workspaceId]});
     if(!existing.rows.length)throw new Error("Inventory not found");
     if(String(existing.rows[0]!.name)!==name) {

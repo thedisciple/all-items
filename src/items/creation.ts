@@ -99,7 +99,7 @@ async function recoverPromotion(client:Pick<Client,"execute">,directory:string,f
   manifest.promoting=false;manifest.updatedAt=Date.now();await writeManifest(directory,folder,manifest);return false;
 }
 
-async function scanStages(client:Pick<Client,"execute">,directory:string){
+async function scanStages(client:Pick<Client,"execute">,directory:string,onlyWorkspace?:string){
   const root=stageRoot(directory);await assertPrivatePath(directory,root);await mkdir(root,{recursive:true});
   let bytes=0,operations=0;
   const workspaces=await readdir(root,{withFileTypes:true});if(workspaces.length>CREATION_STAGE_LIMITS.operations+1)throw new CreationStageError("Staging directory budget exceeded","capacity");
@@ -109,12 +109,13 @@ async function scanStages(client:Pick<Client,"execute">,directory:string){
     if(folders.length>CREATION_STAGE_LIMITS.operations+1)throw new CreationStageError("Staging operation budget exceeded","capacity");
     for(const entry of folders){
       if(!entry.isDirectory()||entry.isSymbolicLink()||!uuid.safeParse(entry.name).success)throw new CreationStageError("Unknown staging operation retained");
-      const folder=operationFolder(directory,workspace.name,entry.name);let manifest=await readManifest(directory,folder);
+      const canClean=onlyWorkspace===undefined||onlyWorkspace===workspace.name;
+      const folder=operationFolder(directory,workspace.name,entry.name);let manifest=canClean?await readManifest(directory,folder):null;
       if(manifest?.promoting&&await recoverPromotion(client,directory,folder,manifest))continue;
       if(manifest?.promoting)manifest=await readManifest(directory,folder);
       const owner=await client.execute({sql:"SELECT 1 FROM workspaces WHERE id=?",args:[workspace.name]});
       const updatedAt=manifest?.updatedAt??(await lstat(folder)).mtimeMs;
-      if(!owner.rows.length||Date.now()-updatedAt>CREATION_STAGE_LIMITS.lifetime){await removeOperation(directory,folder);continue;}
+      if(canClean&&(!owner.rows.length||Date.now()-updatedAt>CREATION_STAGE_LIMITS.lifetime)){await removeOperation(directory,folder);continue;}
       operations++;
       const files=await readdir(folder,{withFileTypes:true});if(files.length>64)throw new CreationStageError("Staging file budget exceeded","capacity");
       for(const file of files){if(!file.isFile()||file.isSymbolicLink()||!safeStageFile.test(file.name))throw new CreationStageError("Unknown staging file retained");bytes+=(await lstat(path.join(folder,file.name))).size;}
@@ -124,7 +125,7 @@ async function scanStages(client:Pick<Client,"execute">,directory:string){
   return{bytes,operations};
 }
 
-export async function recoverItemCreations(client:Pick<Client,"execute">,directory:string){return withInventoryOperation(directory,()=>scanStages(client,directory));}
+export async function recoverItemCreations(client:Pick<Client,"execute">,directory:string){const {runMaintenance}=await import("@/auth/authority");return runMaintenance(()=>withInventoryOperation(directory,()=>scanStages(client,directory)));}
 
 async function prepare(directory:string,command:CreationCommand,usage:{bytes:number;operations:number}){
   const folder=operationFolder(directory,command.inventoryId,command.operationId);let manifest=await readManifest(directory,folder);
@@ -153,7 +154,7 @@ export async function stageItemCreation(context:InventoryContext,value:unknown,p
   const directory=dataDirectory();
   return withInventoryOperation(directory,async()=>{
     const {db}=await inventoryDatabase(context),receipt=await readWriteReceipt(db.$client,context,identity(command));if(receipt)return{completed:receipt};
-    const usage=await scanStages(db.$client,directory);
+    const usage=await scanStages(db.$client,directory,context.workspaceId);
     const {folder,manifest}=await prepare(directory,command,usage);
     await verifyUpload(file,input.selected);await verifyUpload(source,input.source);
     const previous=manifest.photos.find(photo=>photo.input.id===photoId);
@@ -185,7 +186,7 @@ export async function finalizeItemCreation(context:InventoryContext,value:unknow
   const command=parseCommand(context,value),write=identity(command),directory=dataDirectory();
   return withInventoryOperation(directory,async()=>{
     const {db}=await inventoryDatabase(context),prior=await readWriteReceipt(db.$client,context,write);if(prior)return prior;
-    const usage=await scanStages(db.$client,directory),{folder,manifest}=await prepare(directory,command,usage);
+    const usage=await scanStages(db.$client,directory,context.workspaceId),{folder,manifest}=await prepare(directory,command,usage);
     const photos=command.photos.map(input=>{const photo=manifest.photos.find(entry=>entry.input.id===input.id);if(!photo||canonicalJSON(input)!==canonicalJSON(photo.input))throw new CreationStageError("Photo preparation is incomplete");return photo;});
     for(const photo of photos)for(const variant of variants){await photoBytes(directory,folder,photo,variant);const target=destination(directory,manifest.itemId,photo.mediaId,variant);await assertPrivatePath(directory,target);try{await lstat(target);throw new CreationStageError("Promotion destination already exists");}catch(error){if(!(error instanceof Error&&"code"in error&&error.code==="ENOENT"))throw error;}}
     manifest.promoting=true;await writeManifest(directory,folder,manifest);

@@ -31,6 +31,7 @@ function assertPaths(asset: CoverAsset) {
 }
 
 export async function removeCollectionCoverAssetFiles(context: InventoryContext, asset: CoverAsset) {
+  await inventoryDatabase(context);
   const { getDatabase } = await import("@/db/client");
   const live = await (await getDatabase()).$client.execute({ sql: "SELECT c.workspace_id FROM collection_cover_assets ca JOIN collections c ON c.id=ca.collection_id WHERE ca.id=?", args: [asset.id] });
   if (live.rows.some(owner => owner.workspace_id !== context.workspaceId)) throw new Error("Invalid cover cleanup inventory");

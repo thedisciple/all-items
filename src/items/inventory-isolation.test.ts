@@ -1,3 +1,4 @@
+import {ownFixtureInventory} from "@/test/owned-fixture";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { mkdtemp, readFile } from "node:fs/promises";
 import os from "node:os";
@@ -111,6 +112,7 @@ it("preserves legacy duplicate names and prevents new normalized duplicates in c
   const client=(await getDatabase()).$client;
   const first=crypto.randomUUID(),second=crypto.randomUUID(),now=new Date().toISOString();
   for(const [id,name] of [[first,"Existing duplicate"],[second,"EXISTING DUPLICATE"]]) await client.execute({sql:"INSERT INTO workspaces(id,name,created_at,next_inventory_number) VALUES(?,?,?,1)",args:[id!,name!,now]});
+  for(const id of [first,second])await ownFixtureInventory(client,id);
   await expect(createInventory(" existing DUPLICATE ")).rejects.toThrow("Inventory name already exists");
   const original=await client.execute({sql:"SELECT id,name FROM workspaces WHERE id IN (?,?) ORDER BY id",args:[first,second]});
   expect(original.rows).toHaveLength(2);

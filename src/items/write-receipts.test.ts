@@ -1,3 +1,4 @@
+import {ownFixtureInventory} from "@/test/owned-fixture";
 import {beforeAll,expect,it} from "vitest";
 import {createClient} from "@libsql/client";
 import {randomUUID} from "node:crypto";
@@ -33,6 +34,7 @@ it("rejects changed completed content and scopes operation identities by invento
   const receipt=identity();const item=await createItem(context,{name:"Synthetic bound content"},undefined,undefined,{id:randomUUID(),identity:receipt});
   await expect(createItem(context,{name:"Changed content"},undefined,undefined,{id:randomUUID(),identity:{...receipt,requestHash:"b".repeat(64)}})).rejects.toBeInstanceOf(WriteReceiptConflict);
   const foreign={workspaceId:randomUUID()};await client.execute({sql:"INSERT INTO workspaces(id,name,created_at) VALUES(?,?,?)",args:[foreign.workspaceId,"Synthetic receipt isolation",new Date().toISOString()]});
+  await ownFixtureInventory(client,foreign.workspaceId);
   expect(await readWriteReceipt(client,foreign,receipt)).toBeNull();
   const other=await createItem(foreign,{name:"Synthetic independent receipt"},undefined,undefined,{id:randomUUID(),identity:receipt});expect(other.id).not.toBe(item.id);
   await expect(insertWriteReceipt(client,foreign,{...receipt,operationId:randomUUID()},{itemId:item.id,mediaId:null,inventoryNumber:item.inventoryNumber})).rejects.toThrow("Invalid write receipt ownership");

@@ -1,3 +1,4 @@
+import {accessFailure} from "@/auth/http";
 import { resolveInventory } from "@/items/inventories";
 import { ZodError } from "zod";
 import { readPrimaryPhoto } from "@/media/service";
@@ -24,6 +25,7 @@ export async function GET(request: Request, { params }: Context) {
       },
     });
   } catch (error) {
+    const denied=accessFailure(error);if(denied)return denied;
     const status = error instanceof ZodError ? 400 : 404;
     return new Response(null, { status });
   }

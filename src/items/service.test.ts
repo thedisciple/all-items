@@ -1,3 +1,4 @@
+import {ownFixtureInventory} from "@/test/owned-fixture";
 import { beforeAll, describe, expect, it } from "vitest";
 import { createClient } from "@libsql/client";
 import { access, copyFile, mkdtemp, mkdir, readdir } from "node:fs/promises";
@@ -159,7 +160,7 @@ describe("M1 inventory", () => {
   it("applies migrations repeatedly without duplicating schema", async () => {
     await applyMigrations(client, migrations);
     const names = await client.execute("SELECT name FROM _all_items_migrations ORDER BY name");
-    expect(names.rows.map((row) => row.name)).toEqual(["0001_foundation", "0002_inventory_management", "0003_private_media", "0004_collections", "0005_editable_media_source", "0006_collection_covers", "0007_item_categories", "0008_inventory_boundaries", "0009_inventory_import_operations", "0010_inventory_presentation", "0011_ordered_item_photos", "0012_price_minor_units", "0013_item_write_receipts"]);
+    expect(names.rows.map((row) => row.name)).toEqual(["0001_foundation", "0002_inventory_management", "0003_private_media", "0004_collections", "0005_editable_media_source", "0006_collection_covers", "0007_item_categories", "0008_inventory_boundaries", "0009_inventory_import_operations", "0010_inventory_presentation", "0011_ordered_item_photos", "0012_price_minor_units", "0013_item_write_receipts", "0014_local_identity"]);
   });
 });
 
@@ -274,6 +275,7 @@ describe("collections", () => {
     const foreignItem = "00000000-0000-4000-8000-000000000098";
     const foreignCollection = "00000000-0000-4000-8000-000000000097";
     await client.execute({ sql: "INSERT INTO workspaces (id, name, created_at) VALUES (?, ?, ?)", args: [foreignWorkspace, "Other test workspace", "2025-01-01T00:00:00.000Z"] });
+    await ownFixtureInventory(client,foreignWorkspace);
     await client.execute({ sql: `INSERT INTO items (id, workspace_id, name, model, inventory_number, identification_status, tracking_mode, sale_intent, created_at, updated_at) VALUES (?, ?, ?, NULL, ?, 'unknown', 'bulk', 'not_for_sale', ?, ?)`, args: [foreignItem, foreignWorkspace, "Other workspace item", "INV-000001", "2025-01-02T00:00:00.000Z", "2025-01-02T00:00:00.000Z"] });
     await client.execute({ sql: "INSERT INTO collections (id, workspace_id, name, normalized_name, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", args: [foreignCollection, foreignWorkspace, "Other collection", "other collection", "2025-01-01T00:00:00.000Z", "2025-01-01T00:00:00.000Z"] });
     const localItem = await createItem(inventory, { name: "Local workspace item", trackingMode: "bulk" });
