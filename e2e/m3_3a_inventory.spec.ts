@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import {chooseAccountLanguage} from "./helpers/language";
 
 async function createInventory(page:Page,name:string) {
   const previous=new URL(page.url()).pathname;
@@ -94,8 +95,7 @@ test("header navigation, scoped counts and category links remain usable at 360px
   await page.getByLabel("Любой статус").selectOption("source_verified");
   await expect(page).toHaveURL(/status=source_verified/);
   for(const [locale,label] of [["en","English"],["uk","Українська"],["sr-Latn","Srpski"],["zh-Hans","简体中文"],["ru","Русский"]]) {
-    await page.locator(".language-switcher").click();
-    await page.getByRole("menuitemradio",{name:label!,exact:true}).click();
+    await chooseAccountLanguage(page,label!);
     await expect(page.locator("html")).toHaveAttribute("lang",locale!);
     for(const select of await page.locator(".filter-bar select").all()) {
       const fits=await select.evaluate(element=>{const style=getComputedStyle(element);const canvas=document.createElement("canvas");const ctx=canvas.getContext("2d")!;ctx.font=style.font;return ctx.measureText((element as HTMLSelectElement).selectedOptions[0]!.text).width+44<=element.getBoundingClientRect().width;});

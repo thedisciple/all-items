@@ -77,12 +77,23 @@ async function verifyContents(root:string,manifest:BackupManifest){
   return total;
 }
 export function backupPath(directory:string,id:string){return path.join(directory,"backups","installation-"+z.uuid().parse(id));}
-export async function verifyBackup(directory:string,id:string){
+async function readCompletedManifest(directory:string,id:string){
   const root=backupPath(directory,id);await assertPrivatePath(directory,path.join(root,"manifest.json"));
-  const stat=await lstat(path.join(root,"manifest.json"));if(stat.size>32*1024**2)throw new Error("Oversized backup manifest");
+  const stat=await lstat(path.join(root,"manifest.json"));if(!stat.isFile()||stat.size>32*1024**2)throw new Error("Unsafe or oversized backup manifest");
   await assertPrivatePath(directory,path.join(root,"COMPLETE"));
+  const marker=await lstat(path.join(root,"COMPLETE"));if(!marker.isFile()||marker.size!==64)throw new Error("Invalid completion marker");
   const text=await readFile(path.join(root,"manifest.json"),"utf8"),manifest=manifestSchema.parse(JSON.parse(text));
   if(manifest.id!==id||(await readFile(path.join(root,"COMPLETE"),"utf8"))!==digest(text))throw new Error("Incomplete backup");
+  let bytes=0;const paths=new Set<string>();
+  for(const file of manifest.files){
+    if(paths.has(file.path)||file.path!=="all-items.db"&&!/^media\/(items|collections)\/[a-f0-9-]{36}\/[a-f0-9-]{36}(-thumb|-source)?\.webp$/.test(file.path))throw new Error("Unsafe backup entries");
+    paths.add(file.path);bytes+=file.size;if(bytes>MAX_BYTES)throw new Error("Backup size budget exceeded");
+  }
+  if(!paths.has("all-items.db"))throw new Error("Missing backup database");
+  return{manifest,bytes,path:root};
+}
+export async function verifyBackup(directory:string,id:string){
+  const {manifest,path:root}=await readCompletedManifest(directory,id);
   const expected=[...manifest.files.map(f=>f.path),"manifest.json","COMPLETE"].sort();
   if(JSON.stringify(await inventoryFiles(root))!==JSON.stringify(expected))throw new Error("Unexpected backup files");
   return {manifest,bytes:await verifyContents(root,manifest),path:root};
@@ -107,8 +118,10 @@ export async function createBackup(directory:string,options:{pinned?:boolean;fau
 }
 export async function listBackups(directory:string){
   await assertPrivatePath(directory,path.join(directory,"backups"));let names:string[];try{names=await readdir(path.join(directory,"backups"));}catch(e){if((e as NodeJS.ErrnoException).code==="ENOENT")return [];throw e;}
-  const results=[];for(const name of names.filter(n=>/^installation-[a-f0-9-]{36}$/.test(n))){const id=name.slice(13);try{const backup=await verifyBackup(directory,id);results.push({id,verified:true,createdAt:backup.manifest.createdAt,bytes:backup.bytes,pinned:backup.manifest.pinned});}catch{results.push({id,verified:false,createdAt:null,bytes:null,pinned:true});}}return results;
+  // Completion metadata is not a fresh integrity check of SQLite or media bytes.
+  const results:BackupSummary[]=[];for(const name of names.filter(n=>/^installation-[a-f0-9-]{36}$/.test(n))){const id=name.slice(13);try{const backup=await readCompletedManifest(directory,id);results.push({id,status:"recorded",createdAt:backup.manifest.createdAt,bytes:backup.bytes,pinned:backup.manifest.pinned});}catch{results.push({id,status:"unavailable",createdAt:null,bytes:null,pinned:true});}}return results;
 }
+export type BackupSummary={id:string;status:"recorded"|"unavailable";createdAt:string|null;bytes:number|null;pinned:boolean};
 export async function restoreDrill(directory:string,id:string,fault?:"copy"){
   const start=Date.now(),backup=await verifyBackup(directory,id),target=await mkdtemp(path.join(os.tmpdir(),"all-items-restore-"));
   try{for(const file of backup.manifest.files){await copy(backup.path,target,file.path);if(fault)throw new Error("Injected restore interruption");}await verifyContents(target,backup.manifest);await worker("read",target);
@@ -118,7 +131,10 @@ export async function restoreDrill(directory:string,id:string,fault?:"copy"){
 // Explicit opt-in only; legacy/migration backups, partial folders and pinned/manual copies are never candidates.
 export async function retainBackups(directory:string,policy:{daily:number;weekly:number},apply=false){
   const keep=z.object({daily:z.number().int().min(1).max(365),weekly:z.number().int().min(1).max(520)}).parse(policy);
-  return withInventoryOperation(directory,async()=>{const backups=(await listBackups(directory)).filter(b=>b.verified&&!b.pinned).sort((a,b)=>b.createdAt!.localeCompare(a.createdAt!));const days=new Set<string>(),weeks=new Set<number>(),remove:string[]=[];
+  return withInventoryOperation(directory,async()=>{
+    const backups:BackupSummary[]=[];
+    for(const summary of await listBackups(directory))if(summary.status==="recorded"&&!summary.pinned){try{await verifyBackup(directory,summary.id);backups.push(summary);}catch{/* Damaged copies are never retention candidates. */}}
+    backups.sort((a,b)=>b.createdAt!.localeCompare(a.createdAt!));const days=new Set<string>(),weeks=new Set<number>(),remove:string[]=[];
     for(const backup of backups){const day=backup.createdAt!.slice(0,10),week=Math.floor(Date.parse(day)/(7*86400_000));let retain=false;if(!days.has(day)&&days.size<keep.daily){days.add(day);retain=true;}if(!weeks.has(week)&&weeks.size<keep.weekly){weeks.add(week);retain=true;}if(!retain)remove.push(backup.id);}
     if(apply)for(const id of remove){const verified=await verifyBackup(directory,id);if(verified.manifest.pinned)throw new Error("Pinned backup");const target=backupPath(directory,id);await assertPrivatePath(directory,target);await rm(target,{recursive:true});}return {apply,remove};});
 }

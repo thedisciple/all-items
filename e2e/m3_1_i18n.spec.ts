@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import sharp from "sharp";
+import {chooseAccountLanguage} from "./helpers/language";
 
 const cases = [
   { locale: "ru", native: "Русский", title: "Инвентарь", collection: "Коллекции", data: "Данные", download: "Скачать архив", csv: "Экспорт CSV", import: "Импортировать архив", inventoryType: "Тип учёта", categorySelect: "Выбрать категории", addPhoto: "Добавить фото", editTitle: "Редактировать фото", done: "Готово", cancel: "Отмена", close: "Закрыть" },
@@ -10,8 +11,7 @@ const cases = [
 ];
 
 async function chooseLocale(page: Page, native: string) {
-  await page.locator(".language-switcher").click();
-  await page.getByRole("menuitemradio", { name: native }).click();
+  await chooseAccountLanguage(page,native);
 }
 
 test("five local languages render on inventory, details, collections, and photo editing without changing item data", async ({ page }) => {

@@ -31,7 +31,10 @@ describe("locale selection and formatting", () => {
     expect(locales).toEqual(["ru", "en", "uk", "sr-Latn", "zh-Hans"]);
     for (const locale of locales) {
       expect(Object.keys(messages[locale]).sort()).toEqual(keys);
-      for (const value of Object.values(messages[locale])) expect(value.trim()).not.toBe("");
+      for (const value of Object.values(messages[locale])) {
+        expect(value.trim()).not.toBe("");
+        expect(value).not.toMatch(/\?{2,}|\uFFFD|\p{L}\?\p{L}/u);
+      }
       if (locale !== "ru" && locale !== "en") {
         const unchanged = keys.filter((key) => messages[locale][key as keyof typeof messages["ru"]] === messages.en[key as keyof typeof messages["en"]]);
         // The gallery counter contains only parameters and a separator, no words.

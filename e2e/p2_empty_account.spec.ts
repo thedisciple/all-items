@@ -22,6 +22,7 @@ for(const locale of locales)test(`new account uses the app shell: ${locale}`,asy
   await expect(shell.locator('.side-navigation [aria-disabled="true"]')).toHaveCount(3);
   await expect(shell.locator(".side-navigation a")).toHaveCount(0);
   await expect(shell.locator(".inventory-create-button")).toHaveCount(1);
+  await expect(shell.locator(".language-switcher,.empty-header-label")).toHaveCount(0);
   for(const [width,height] of [[1365,900],[390,700],[360,640]]){
     await page.setViewportSize({width,height});
     await expectPageFits(page);
@@ -39,9 +40,11 @@ for(const locale of locales)test(`new account uses the app shell: ${locale}`,asy
   if(locale==="ru")await page.screenshot({path:path.join(os.tmpdir(),"all-items-p2-empty-account-synthetic.png")});
   await shell.getByLabel(messages[locale].authAccount,{exact:true}).click();
   await expect(shell.getByRole("button",{name:messages[locale].authSignOut,exact:true})).toBeVisible();
-  await shell.getByRole("button",{name:messages[locale].language,exact:true}).click();
-  await expect(shell.getByRole("menu",{name:messages[locale].language,exact:true})).toBeVisible();
+  await shell.getByRole("link",{name:messages[locale].authAccountSettings,exact:true}).click();
+  await page.getByRole("button",{name:messages[locale].language,exact:true}).click();
+  await expect(page.getByRole("menu",{name:messages[locale].language,exact:true})).toBeVisible();
   await page.keyboard.press("Escape");
+  await page.getByRole("link",{name:messages[locale].authBack,exact:true}).click();
   await shell.locator(".inventory-create-button").focus();
   await expect(shell.locator(".inventory-create-button")).toBeFocused();
   await shell.locator(".inventory-create-button").click();

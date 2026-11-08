@@ -154,17 +154,20 @@ test("waits for image readiness, applies zoom and aspect controls, crops, and op
   await page.keyboard.press("Escape");
   await expect(viewer).toHaveCount(0);
 
+  const languageReturn=page.url();
+  await page.goto("/account");
   await page.getByRole("button", { name: "Язык" }).click();
   const languageMenu = page.getByRole("menu", { name: "Язык" });
   await expect(languageMenu.getByRole("menuitemradio", { name: "Русский" }).locator("img")).toHaveAttribute("src", "/flags/ru.svg");
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("button", { name: "Edit" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Replace photo" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Language" })).toContainText("English");
   await page.getByRole("button", { name: "Language" }).click();
   await expect(page.getByRole("menuitemradio", { name: "English" }).locator("img")).toHaveAttribute("src", "/flags/gb.svg");
+  await page.goto(languageReturn);
+  await expect(page.getByRole("button", { name: "Edit" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Replace photo" })).toBeVisible();
   expect(pageErrors).toEqual([]);
   expect(failedResponses).toEqual([]);
   expect(consoleErrors).toEqual([]);
@@ -268,11 +271,13 @@ test("category and text filters update automatically and preserve browser histor
 
 test("collection name, icon, cover and deletion are contextual and immediately visible", async ({ page }) => {
   await page.goto("/inventories/00000000-0000-4000-8000-000000000001/collections");
+  await page.goto("/account");
   await page.getByRole("button", { name: "Язык" }).click();
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect(page.getByRole("button", { name: "Language" })).toContainText("English");
+  await page.goto("/inventories/00000000-0000-4000-8000-000000000001/collections");
   await page.locator(".collection-create-trigger").click();
   const createDialog = page.getByRole("dialog", { name: "Create collection" });
   await createDialog.getByLabel("Collection name").fill("Legacy collection");

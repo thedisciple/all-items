@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { preferredInventory } from "@/app/inventory-routing";
 import { inventoryPath } from "@/items/inventory-context";
 import { CreateInventoryControl } from "@/app/components/inventory-controls";
-import { LanguageSwitcher } from "@/app/components/language-switcher";
 import { getLocale } from "@/i18n/server";
 import { translate } from "@/i18n/messages";
 import {pageUser} from "@/auth/request";
@@ -24,7 +23,7 @@ export default async function Home({searchParams}:{searchParams:Promise<Record<s
        <span className="nav-link empty-nav-link" role="link" aria-disabled="true"><Database size={15} aria-hidden="true"/><span className="nav-label">{t("data")}</span></span>
      </nav>
    </aside>
-   <section className="main-content"><header className="topbar"><div className="header-location"><span className="empty-header-label">{t("inventory")}</span></div><div className="account-controls"><AccountMenu username={account.username}/><LanguageSwitcher/></div></header>
+   <section className="main-content"><header className="topbar"><div className="account-controls"><AccountMenu username={account.username}/></div></header>
      <div className="content-wrap"><div className="empty-account-state"><h1>{t("inventoryEmptyInstallation")}</h1><CreateInventoryControl/></div></div>
    </section>
  </main>;

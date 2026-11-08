@@ -23,7 +23,7 @@ npm run backup -- verify BACKUP_UUID
 npm run backup -- drill BACKUP_UUID
 ```
 
-Manual and UI copies are pinned. `create --scheduled` creates an unpinned retention candidate. Listing fully rechecks each candidate; unreadable or corrupted candidates are reported as unverified. Paths cannot be selected from HTTP inputs. No backup download/static route exists. UI success appears only after complete verification.
+Manual and UI copies are pinned. `create --scheduled` creates an unpinned retention candidate. Listing reads bounded manifest/completion metadata only: `recorded` means completion was recorded, not that current SQLite/media integrity has been checked; `unavailable` means the metadata cannot be read/validated. A damaged or missing payload may still have readable metadata. Run explicit `verify UUID` before relying on a copy. Creation, verification, restore drills and retention candidate checks retain full cryptographic/database checks. Paths cannot be selected from HTTP inputs. No backup download/static route exists. UI success appears only after complete verification, and creation revalidates the Data page.
 
 The default optional retention keeps the newest snapshot for each of 14 recent days and eight weeks. `npm run backup -- retention` previews removals; `retention --daily=14 --weekly=8 --apply` explicitly applies them; daily and weekly counts can be configured within validated bounds. Only generated, verified, unpinned format-1 installation backups are eligible. Migration backups, portable archives, pinned copies, corrupted copies and partial directories remain untouched. Retention is not run by backup creation or page loading.
 

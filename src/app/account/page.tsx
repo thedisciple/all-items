@@ -18,7 +18,8 @@ export default async function Account({searchParams}:{searchParams:Promise<{tele
   const pending=(await cookies()).get("all-items-telegram-pending")?.value;
   const result=(await searchParams).telegram;
   const hasPassword=Boolean((await db.execute({sql:"SELECT password_hash FROM auth_users WHERE id=?",args:[user.id]})).rows[0]?.password_hash);
-  return <main className="login-page"><header className="topbar"><AppBrand href="/" label="All Items"/><LanguageSwitcher/></header><section className="login-panel account-settings"><Link href="/" className="quiet-button">{t("authBack")}</Link><h1>{t("authAccountSettings")}</h1><p>{user.username}</p>
+  return <main className="login-page"><header className="topbar"><AppBrand href="/" label="All Items"/></header><section className="login-panel account-settings"><Link href="/" className="quiet-button">{t("authBack")}</Link><h1>{t("authAccountSettings")}</h1><p>{user.username}</p>
+    <section aria-label={t("language")}><h2>{t("language")}</h2><LanguageSwitcher/></section>
     {result==="failed"?<p role="alert">{t("authTelegramFailed")}</p>:result==="linked"?<p role="status">{t("authTelegramLinked")}</p>:result==="unlinked"?<p role="status">{t("authTelegramUnlinked")}</p>:null}
     {config?<section aria-label={t("authTelegramSignIn")}>
       {linked?<><p>{t("authTelegramConnected")}</p>{hasPassword?<form action={unlinkTelegramAction}><label>{t("authPasswordConfirm")}<input name="password" type="password" required autoComplete="current-password"/></label><button type="submit" className="quiet-button">{t("authTelegramDisconnect")}</button></form>:null}</>:

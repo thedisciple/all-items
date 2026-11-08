@@ -1,4 +1,6 @@
 import { expect, test } from "./helpers/browser-reliability";
+import {chooseAccountLanguage} from "./helpers/language";
+import {draftSnapshot} from "./helpers/draft-state";
 import { messages, locales } from "../src/i18n/messages";
 import { suggestedCurrency } from "../src/items/currencies";
 import { readInventoryArchive, verifyInventoryArchive } from "../src/export/archive";
@@ -102,8 +104,11 @@ test("manual currency survives language, save, edit and archive restore; blank p
   await dialog.locator('select[name="askingCurrency"]').selectOption("UAH");
   await dialog.locator('input[name="askingPrice"]').fill("12.34");
   await dialog.getByRole("button", { name: messages.en.close, exact: true }).first().click();
-  await page.locator(".language-switcher").click(); await page.getByRole("menuitemradio", { name: "Русский" }).click();
+  await expect.poll(async()=>(await draftSnapshot(page))?.fields.name).toBe("M3.4 currency literal");
+  await chooseAccountLanguage(page,"Русский");
   await page.locator(".add-dialog-trigger").click(); dialog = page.getByRole("dialog", { name: messages.ru.addItem });
+  const restore=dialog.getByRole("button",{name:messages.ru.draftRestore,exact:true});
+  if(await restore.isVisible())await restore.click();
   await expect(dialog.locator('select[name="askingCurrency"]')).toHaveValue("UAH");
   await expect(dialog.locator('input[name="askingPrice"]')).toHaveValue("12.34");
   await dialog.getByRole("button", { name: messages.ru.saveItem, exact: true }).click(); await expect(page).toHaveURL(/added=/);

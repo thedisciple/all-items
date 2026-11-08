@@ -1,5 +1,5 @@
 import { dataDirectory } from "@/db/client";
-import { listBackups } from "@/backup/service";
+import { listBackups,type BackupSummary } from "@/backup/service";
 import { InstallationBackups } from "@/app/components/installation-backups";
 import { routeInventory } from "@/app/inventory-routing";
 import { AppSidebar } from "@/app/components/app-sidebar";
@@ -16,7 +16,8 @@ export default async function DataPage({params}: {params:Promise<{inventoryId:st
   await routeInventory((await params).inventoryId);
   const locale = await getLocale();
   const admin=(await requireActor()).isAdmin;
-  const backups=admin?await listBackups(dataDirectory()):[];
+  let backups:BackupSummary[]=[],listingFailed=false;
+  if(admin){try{backups=await listBackups(dataDirectory());}catch{listingFailed=true;}}
   const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
   return <main className="app-shell">
     <AppSidebar active="data" locale={locale}/>
@@ -24,7 +25,7 @@ export default async function DataPage({params}: {params:Promise<{inventoryId:st
       <AppHeader/>
       <div className="content-wrap data-content"><div className="heading-row"><h1>{t("data")}</h1></div>
         <section className="data-panel" aria-labelledby="data-backup-heading"><h2 id="data-backup-heading">{t("dataBackup")}</h2><ExportControls locale={locale}/><ImportControls locale={locale}/></section>
-        {admin?<InstallationBackups backups={backups}/>:null}
+        {admin?<InstallationBackups backups={backups} listingFailed={listingFailed}/>:null}
       </div>
     </section>
   </main>;

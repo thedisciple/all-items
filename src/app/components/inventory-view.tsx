@@ -3,7 +3,7 @@ import {createContext,useContext,useEffect,useLayoutEffect,useRef,useState,type 
 import {SlidersHorizontal} from "lucide-react";
 import {useI18n} from "@/i18n/provider";
 
-const defaults={modelBrand:true,categories:true,quantity:true,location:true,status:true,added:false};
+const defaults={modelBrand:false,categories:true,quantity:true,location:false,status:false,added:true};
 type Options=typeof defaults;
 type View={options:Options;set:(key:keyof Options,value:boolean)=>void;reset:()=>void;storageError:boolean};
 const Context=createContext<View|null>(null);

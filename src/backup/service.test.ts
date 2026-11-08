@@ -33,6 +33,9 @@ it("rejects corrupt, missing, unexpected, incomplete and incompatible evidence",
     if(mode==="media"||mode==="db")await writeFile(path.join(root,mode==="db"?"all-items.db":media),"corrupt");
     if(mode==="missing")await rm(path.join(root,media));if(mode==="extra")await writeFile(path.join(root,"secret.txt"),"unexpected");
     if(mode==="manifest")await writeFile(path.join(root,"manifest.json"),"{}");if(mode==="version")await writeFile(path.join(root,"manifest.json"),JSON.stringify({...backup.manifest,version:99}));if(mode==="marker")await rm(path.join(root,"COMPLETE"));
+    const summary=(await listBackups(directory)).find(value=>value.id===backup.manifest.id)!;
+    expect(summary.status).toBe(["manifest","version","marker"].includes(mode)?"unavailable":"recorded");
+    expect(summary).not.toHaveProperty("verified");
     await expect(verifyBackup(directory,backup.manifest.id)).rejects.toThrow();}
 },90_000);
 it("does not touch live media during interrupted drill or concurrent media removal",async()=>{

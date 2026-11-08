@@ -902,7 +902,7 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .add-dialog-footer > button { width: auto; }
 .login-page { max-width: 960px; margin: 0 auto; }
 .empty-account-shell .empty-nav-link { color: var(--muted); cursor: default; }
-.empty-account-shell .empty-header-label { color: var(--muted); font-size: var(--control-font); }
+.empty-account-shell .topbar { justify-content: flex-end; }
 .empty-account-state { display: flex; flex-direction: column; align-items: flex-start; gap: 22px; }
 .empty-account-state h1 { font-size: clamp(24px, 3vw, 32px); letter-spacing: -1px; }
 .empty-account-state .inventory-create-button { min-height: var(--control-height); }

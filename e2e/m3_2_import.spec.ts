@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import {chooseAccountLanguage} from "./helpers/language";
 import { readFile } from "node:fs/promises";
 import sharp from "sharp";
 import {createHash} from "node:crypto";
@@ -135,6 +136,7 @@ test("downloads a complete archive and imports it twice as new inventories while
   await page.goto(`${second}/data`);
   await page.locator('.import-panel input[type="file"]').setInputFiles({name:"invalid.zip",mimeType:"application/zip",buffer:Buffer.from("invalid")});
   await expect(page.locator(".import-panel [role=alert]")).toContainText("\u0410\u0440\u0445\u0438\u0432");
-  await page.locator(".language-switcher").click();await page.getByRole("menuitemradio",{name:"English"}).click();
+  await chooseAccountLanguage(page,"English");
+  await page.locator('.import-panel input[type="file"]').setInputFiles({name:"invalid.zip",mimeType:"application/zip",buffer:Buffer.from("invalid")});
   await expect(page.locator(".import-panel [role=alert]")).toContainText("The archive");
 });
