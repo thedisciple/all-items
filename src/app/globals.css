@@ -910,6 +910,14 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .login-panel { max-width: 420px; margin: 8dvh auto; padding: 20px; }
 .login-form { display: grid; gap: 18px; }
 .login-form .muted { color: var(--muted); font-size: 13px; }
+.telegram-login { display: grid; gap: 16px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--control-border); }
+.telegram-login form,.account-settings section,.account-settings section form { display: grid; gap: 14px; }
+.telegram-login details > form { margin-top: 14px; }
+.telegram-login summary { cursor: pointer; }
+.account-settings { display: grid; gap: 18px; }
+.account-settings .dialog-actions { position: static; display: flex; gap: 12px; background: transparent; padding: 0; }
+.account-settings input { width: 100%; }
+.account-panel a.quiet-button { text-align: center; }
 .account-controls { display: flex; gap: 6px; align-items: center; flex: 0 0 auto; }
 .account-menu { position: relative; }
 .account-menu summary { list-style: none; cursor: pointer; }

@@ -56,7 +56,7 @@ export async function inspectDatabase(client:Client){
   if(files.length+1>MAX_FILES)throw new Error("Backup file budget exceeded");
   const hash=createHash("sha256");
   const tables=(await client.execute("SELECT name,sql FROM sqlite_master WHERE type='table' ORDER BY name")).rows;
-  const allowed=new Set(["workspaces","items","locations","stock_entries","item_categories","media_assets","collections","collection_cover_assets","item_collection_memberships","inventory_import_operations","inventory_preferences","custom_category_presentation","item_write_receipts","_all_items_migrations","sqlite_sequence","auth_users","auth_sessions","auth_login_buckets","inventory_owners"]);
+  const allowed=new Set(["workspaces","items","locations","stock_entries","item_categories","media_assets","collections","collection_cover_assets","item_collection_memberships","inventory_import_operations","inventory_preferences","custom_category_presentation","item_write_receipts","_all_items_migrations","sqlite_sequence","auth_users","auth_sessions","auth_login_buckets","inventory_owners","auth_external_identities","auth_telegram_invites","auth_oidc_flows"]);
   if(tables.some(table=>!allowed.has(String(table.name))))throw new Error("Unexpected database table");
   for(const table of tables){
     const name=String(table.name);hash.update(JSON.stringify(table));

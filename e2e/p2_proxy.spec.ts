@@ -30,7 +30,7 @@ test("isolated HTTPS proxy preserves login and rejects direct or forged requests
   await new Promise<void>(resolve=>proxy.listen(0,"127.0.0.1",resolve));
   const publicPort=(proxy.address() as {port:number}).port;publicHost=`127.0.0.1:${publicPort}`;
   const origin=`https://${publicHost}`;
-  const app=spawn(process.execPath,["node_modules/next/dist/bin/next","start","--hostname","127.0.0.1","--port",String(backendPort)],{cwd:process.cwd(),env:{...process.env,ALL_ITEMS_DATA_DIR:directory,ALL_ITEMS_ORIGIN:origin,ALL_ITEMS_PROXY_MODE:"https-proxy",ALL_ITEMS_PROXY_SECRET:secret,NODE_ENV:"production"},windowsHide:true,stdio:["ignore","pipe","pipe"]});
+  const app=spawn(process.execPath,["node_modules/next/dist/bin/next","start","--hostname","127.0.0.1","--port",String(backendPort)],{cwd:process.cwd(),env:{...process.env,ALL_ITEMS_DATA_DIR:directory,ALL_ITEMS_ORIGIN:origin,ALL_ITEMS_PROXY_MODE:"https-proxy",ALL_ITEMS_PROXY_SECRET:secret,ALL_ITEMS_TELEGRAM_CLIENT_ID:"123456789",ALL_ITEMS_TELEGRAM_CLIENT_SECRET:"synthetic-client-secret-123456789",NODE_ENV:"production"},windowsHide:true,stdio:["ignore","pipe","pipe"]});
   let startupOutput="";for(const stream of[app.stdout,app.stderr])stream.on("data",chunk=>{startupOutput=(startupOutput+String(chunk)).slice(-1500);});
   const context=await browser.newContext({ignoreHTTPSErrors:true,locale:"en-US"});
   try{
@@ -43,14 +43,29 @@ test("isolated HTTPS proxy preserves login and rejects direct or forged requests
     expect(ready,`Synthetic production server must start behind TLS: ${startupOutput}`).toBe(true);
     const page=await context.newPage();
     const login=await page.goto(origin+"/login");expect(login?.status()).toBe(200);
+    await expect(page.getByRole("button",{name:"Sign in with Telegram"})).toBeVisible();
+    for(const [locale,label] of [["ru","Войти через Telegram"],["uk","Увійти через Telegram"],["sr-Latn","Prijavi se preko Telegrama"],["zh-Hans","使用 Telegram 登录"],["en","Sign in with Telegram"]]){
+      await context.addCookies([{name:"all-items-language",value:locale,url:origin}]);await page.reload();
+      await expect(page.getByRole("button",{name:label}).first()).toBeVisible();
+    }
+    await page.setViewportSize({width:360,height:640});
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+    await page.setViewportSize({width:1280,height:800});
+    const badInvite=await page.request.post(origin+"/auth/telegram/start",{form:{intent:"invite",invite:"invalid"},headers:{accept:"application/json",origin}});
+    expect(badInvite.status()).toBe(400);expect((await badInvite.json()).error).toBe("authTelegramInviteInvalid");
     expect(login?.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
     expect(login?.headers()["cache-control"]).toContain("no-store");
     expect(await page.evaluate(()=>({protocol:location.protocol,secure:isSecureContext}))).toEqual({protocol:"https:",secure:true});
     await page.locator('input[name="username"]').fill(syntheticAccounts.owner.username);
     await page.locator('input[name="password"]').fill(syntheticAccounts.owner.password);
-    await page.locator('button[type="submit"]').click();
+    await page.locator('.login-form button[type="submit"]').click();
     await expect(page).toHaveURL(/\/inventories\/[a-f0-9-]{36}$/);
     await expect(page.locator(".app-shell .brand-mark")).toHaveText("A");
+    await page.locator(".account-menu summary").click();
+    await page.getByRole("link",{name:"Account settings"}).click();
+    await expect(page.getByRole("heading",{name:"Account settings"})).toBeVisible();
+    await expect(page.getByRole("button",{name:"Connect Telegram"})).toBeVisible();
+    await page.getByRole("link",{name:"Back to inventory"}).click();
     const cookie=(await context.cookies()).find(value=>value.name==="all-items-session");
     expect(cookie).toMatchObject({secure:true,httpOnly:true,sameSite:"Strict"});
     expect((await page.request.get(origin+"/login",{headers:{host:"attacker.test"}})).status()).toBe(421);

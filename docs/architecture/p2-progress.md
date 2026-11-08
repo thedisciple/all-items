@@ -1,6 +1,6 @@
 # P2 continuation checkpoint
 
-Status: **in progress; no public/private-beta deployment is approved or live**. Starting Git commit: `f2df18c1a3c94065a4532f64fdf40bca67d1c7ef`. The user-supplied specification is the P2 private beta, Telegram OIDC and UX consolidation prompt attached in the conversation. Continue from the current checkout rather than assuming this document is the latest commit.
+Status: **candidate implementation complete; CI verification pending; no public/private-beta deployment is approved or live**. Starting Git commit: `f2df18c1a3c94065a4532f64fdf40bca67d1c7ef`. The user-supplied specification is the P2 private beta, Telegram OIDC and UX consolidation prompt attached in the conversation. Continue from the current checkout rather than assuming this document is the latest commit.
 
 The owner requested short, coherent checkpoints because the session usage window was nearly exhausted. Use one primary agent. Preserve the pre-existing unrelated working-tree changes in `package-lock.json` and `.vscode/`. Builds and tests must use isolated installations; do not modify the owner's configured database through testing. Do not configure public DNS, router, firewall, tunnel, Telegram credentials or a non-loopback listener without the separate approval and safety gate.
 
@@ -19,12 +19,17 @@ The owner requested short, coherent checkpoints because the session usage window
 - Added an outside-repository Windows runtime config template, production launcher with no-migration `-ValidateOnly`, [security checklist](p2-threat-model.md) and [deployment preparation](p2-deployment.md). The launcher passed a synthetic temporary config preflight on Windows PowerShell.
 - `npm run typecheck`, `npm run lint`, `npm run build`, and the full one-fork unit suite (26 files, 126 tests) passed. Final device/security and OIDC gates remain.
 
-## Remaining integrated milestone
+## In-progress checkpoint: optional Telegram OIDC
 
-1. Review P1 entry points and produce a concrete threat checklist; fix verified vulnerabilities. Audit current Next.js patch/security notices and lockfile using primary sources.
-2. Design and implement exact, explicitly configured HTTPS proxy trust while preserving loopback mode. Add hostile-header/origin and legitimate proxied HTTPS tests. Build safe Windows/Caddy operation and network-choice runbook without exposing the owner installation.
-3. Implement optional Telegram OIDC authorization-code/PKCE login with a maintained client, validated issuer/audience/signature/nonce, one-time flow state, invite-only account creation, explicit reauthenticated linking and safe unlink. Gate behind server-side credentials and a trusted HTTPS origin. Test with synthetic issuer/provider; no live Telegram success claim without owner configuration.
-4. Add additive identity migration only after a verified owner backup and isolated rehearsal; compare old row/media fingerprints and integrity checks. Run complete unit, build, Edge and production restart gates, then GitHub CI.
-5. Update operator, security, deployment, roadmap, changelog and user-facing instructions. Conditional home/SBB topology only after read-only facts; independent security and real-device gates remain before any public pilot.
+- Added migration 0015 for indexed identity associations, invitation tokens and expiring one-use authorization flows. Only synthetic installations have applied it; the owner's configured database has not been migrated.
+- Config-gated Authorization Code + PKCE/nonce with `openid-client` 6.8.9, exact Telegram issuer/endpoints, RS256/JWKS signature verification and validated subject. Unlinked identities cannot sign in. A single-use invite creates one non-admin account and identity together. Existing password users may reauthenticate, verify the Telegram subject, explicitly confirm/cancel in the same session, then password-confirm unlink. The strict session-cookie continuation page avoids relying on cross-site redirect delivery.
+- Focused synthetic tests (7/7) cover config gating, invite replay/expiry/collision, link/unlink, signed token attack variants and additive migration preservation. The new tables initially failed the installation-backup allowlist; after updating it, backup/restore passed 10/10. The final full unit suite passed 133/133 across 29 files; typecheck, lint and production build passed. The synthetic Edge HTTPS proxy test passed (1/1); P1 authentication and five-locale empty-account tests passed together (7/7), Add Item modal localization passed (5/5), and the isolated production restart passed (1/1). CI remains pending; live BotFather login is untested and requires owner domain/credentials.
+- See [Telegram runbook](p2-telegram.md) and [operator checklist](p2-operator-checklist.md). No public service or Telegram credentials have been configured.
 
-At the next continuation, first inspect `git status`, the P2 prompt and this file; finish any uncommitted checkpoint and resume the next unchecked item. Never treat this progress note as a final P2 acceptance record.
+## Remaining gates
+
+1. Inspect staged files and preserve the owner's existing unrelated lockfile/.vscode changes. Commit/push the OIDC checkpoint and verify GitHub CI.
+2. Before migrating the **owner's** installation, stop writers, verify a private backup and isolated restore, then compare pre/post rows, media hashes, SQLite integrity and foreign keys. Only synthetic installations have been migrated so far.
+3. Independent security/deployment review, actual SBB/network facts, trusted domain/TLS, BotFather registration and live Telegram callback remain open. Physical Windows/Android/iOS camera, crop, draft, touch, zoom and media acceptance also remain open. No LAN/public endpoint or real testers may be invited until those gates and explicit owner approval.
+
+At any continuation, inspect `git status`, this file and the P2 prompt before assuming the checkpoint is complete. Never treat local synthetic tests as a final public exposure approval.

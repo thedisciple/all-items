@@ -1,0 +1,17 @@
+<!-- Copy outside the repository; replace every C:\private and checkout path. Manual until approval. -->
+<service>
+  <id>AllItemsApp</id>
+  <name>All Items application</name>
+  <description>Loopback-bound production inventory server</description>
+  <executable>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe</executable>
+  <arguments>-NoProfile -NonInteractive -File "C:\projects\ALLitems\scripts\start-production.ps1" -ConfigPath "C:\private\runtime.env"</arguments>
+  <workingdirectory>C:\projects\ALLitems</workingdirectory>
+  <startmode>Manual</startmode>
+  <serviceaccount><prompt>dialog</prompt></serviceaccount>
+  <onfailure action="restart" delay="15 sec"/>
+  <resetfailure>1 hour</resetfailure>
+  <stoptimeout>30 sec</stoptimeout>
+  <hidewindow>true</hidewindow>
+  <logpath>C:\private\logs\app</logpath>
+  <log mode="roll-by-size"><sizeThreshold>1024</sizeThreshold><keepFiles>4</keepFiles></log>
+</service>

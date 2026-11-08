@@ -187,13 +187,13 @@ The old number is not execution order. Recovery/usability groundwork and a separ
 
 - [ ] Plan a 5–10 person invite-only pilot on a production-mode host with authenticated HTTPS access
 - [x] P1 local invite-only credentials, revocable server sessions, owned-inventory service/media boundaries and synthetic cross-user verification; see [P1 architecture](docs/architecture/adr-p1-local-identity.md)
-- [ ] P2 independent security/deployment review and real-device HTTPS acceptance before any exposure
+- [ ] P2 independent security/deployment review and real-device HTTPS acceptance before any exposure; [strict proxy preparation](docs/architecture/p2-deployment.md) and synthetic tests are implemented
 - [x] P1 exact-origin mutations, persistent local login budgets, retained upload limits, private cache/security headers and protected installation backup controls
-- [ ] P2 review production proxy/TLS, abuse/credential handling, scheduled recovery and privacy-conscious feedback reporting
+- [ ] P2 review actual production proxy/TLS, abuse/credential handling, scheduled recovery and privacy-conscious feedback reporting; [operator checklist](docs/architecture/p2-operator-checklist.md) is prepared
 - [x] P1 additive owner association with verified backup/isolated restoration and preservation checks; owner activates credentials locally
 - [ ] Invite real testers only after P2 acceptance
 - [x] P1 keeps development/private endpoints local; no public tunnel, listener or hostname enabled
-- [ ] Consider Telegram OIDC as an optional identity provider with local authentication fallback; identity must not grant access to Telegram chats/files
+- [x] Implement config-gated optional Telegram OIDC with local password fallback, one-use invitations and explicit account linking; synthetic signed-provider tests only, live BotFather callback remains a P2 gate
 
 ## Future AI — NOT STARTED
 

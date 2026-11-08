@@ -1,5 +1,13 @@
 const ru = {
   authSignIn: "Войти",
+  authAccountSettings: "Настройки учётной записи", authBack: "Назад к инвентарю",
+  authTelegramSignIn: "Войти через Telegram", authTelegramInvite: "Есть приглашение для Telegram?", authTelegramInviteToken: "Код приглашения",
+  authTelegramConnected: "Telegram подключён.", authTelegramConnect: "Подключить Telegram", authTelegramDisconnect: "Отключить Telegram",
+  authPasswordConfirm: "Подтвердите пароль", authTelegramPending: "Учётная запись Telegram проверена. Подключить её к этой учётной записи?",
+  authTelegramConfirm: "Подключить", authTelegramCancel: "Отмена", authTelegramFailed: "Не удалось завершить действие с Telegram. Повторите попытку или войдите с паролем.",
+  authTelegramLinked: "Telegram подключён.", authTelegramUnlinked: "Telegram отключён.",
+  authTelegramVerified: "Telegram подтверждён", authTelegramContinue: "Продолжить",
+  authTelegramInviteInvalid: "Приглашение недействительно или истекло. Попросите новый код.", authTelegramReauth: "Проверьте пароль и повторите подключение.",
   authSigningIn: "Вход…",
   authUsername: "Имя пользователя",
   authPassword: "Пароль",
@@ -356,6 +364,14 @@ const ru = {
 
 const en: Record<MessageKey, string> = {
   authSignIn: "Sign in",
+  authAccountSettings: "Account settings", authBack: "Back to inventory",
+  authTelegramSignIn: "Sign in with Telegram", authTelegramInvite: "Have a Telegram invitation?", authTelegramInviteToken: "Invitation code",
+  authTelegramConnected: "Telegram is connected.", authTelegramConnect: "Connect Telegram", authTelegramDisconnect: "Disconnect Telegram",
+  authPasswordConfirm: "Confirm password", authTelegramPending: "Telegram account verified. Connect it to this account?",
+  authTelegramConfirm: "Connect", authTelegramCancel: "Cancel", authTelegramFailed: "Could not complete the Telegram action. Try again or sign in with a password.",
+  authTelegramLinked: "Telegram connected.", authTelegramUnlinked: "Telegram disconnected.",
+  authTelegramVerified: "Telegram verified", authTelegramContinue: "Continue",
+  authTelegramInviteInvalid: "Invitation is invalid or expired. Ask for a new code.", authTelegramReauth: "Check your password and try connecting again.",
   authSigningIn: "Signing in…",
   authUsername: "Username",
   authPassword: "Password",
@@ -545,6 +561,14 @@ const en: Record<MessageKey, string> = {
 
 const uk: Record<MessageKey, string> = {
   authSignIn: "Увійти",
+  authAccountSettings: "Налаштування облікового запису", authBack: "Назад до інвентарю",
+  authTelegramSignIn: "Увійти через Telegram", authTelegramInvite: "Є запрошення для Telegram?", authTelegramInviteToken: "Код запрошення",
+  authTelegramConnected: "Telegram підключено.", authTelegramConnect: "Підключити Telegram", authTelegramDisconnect: "Відключити Telegram",
+  authPasswordConfirm: "Підтвердьте пароль", authTelegramPending: "Обліковий запис Telegram перевірено. Підключити його до цього запису?",
+  authTelegramConfirm: "Підключити", authTelegramCancel: "Скасувати", authTelegramFailed: "Не вдалося завершити дію з Telegram. Спробуйте знову або увійдіть із паролем.",
+  authTelegramLinked: "Telegram підключено.", authTelegramUnlinked: "Telegram відключено.",
+  authTelegramVerified: "Telegram підтверджено", authTelegramContinue: "Продовжити",
+  authTelegramInviteInvalid: "Запрошення недійсне або прострочене. Попросіть новий код.", authTelegramReauth: "Перевірте пароль і спробуйте підключити ще раз.",
   authSigningIn: "Вхід…",
   authUsername: "Ім’я користувача",
   authPassword: "Пароль",
@@ -673,6 +697,14 @@ const uk: Record<MessageKey, string> = {
 
 const srLatn: Record<MessageKey, string> = {
   authSignIn: "Prijavi se",
+  authAccountSettings: "Podešavanja naloga", authBack: "Nazad na inventar",
+  authTelegramSignIn: "Prijavi se preko Telegrama", authTelegramInvite: "Imate poziv za Telegram?", authTelegramInviteToken: "Kod poziva",
+  authTelegramConnected: "Telegram je povezan.", authTelegramConnect: "Poveži Telegram", authTelegramDisconnect: "Prekini vezu sa Telegramom",
+  authPasswordConfirm: "Potvrdite lozinku", authTelegramPending: "Telegram nalog je potvrđen. Povezati ga sa ovim nalogom?",
+  authTelegramConfirm: "Poveži", authTelegramCancel: "Otkaži", authTelegramFailed: "Radnja sa Telegramom nije završena. Pokušajte ponovo ili se prijavite lozinkom.",
+  authTelegramLinked: "Telegram je povezan.", authTelegramUnlinked: "Veza sa Telegramom je prekinuta.",
+  authTelegramVerified: "Telegram je potvrđen", authTelegramContinue: "Nastavi",
+  authTelegramInviteInvalid: "Poziv je nevažeći ili je istekao. Zatražite novi kod.", authTelegramReauth: "Proverite lozinku i pokušajte ponovo.",
   authSigningIn: "Prijavljivanje…",
   authUsername: "Korisničko ime",
   authPassword: "Lozinka",
@@ -801,6 +833,14 @@ const srLatn: Record<MessageKey, string> = {
 
 const zhHans: Record<MessageKey, string> = {
   authSignIn: "登录",
+  authAccountSettings: "账户设置", authBack: "返回物品清单",
+  authTelegramSignIn: "使用 Telegram 登录", authTelegramInvite: "有 Telegram 邀请码？", authTelegramInviteToken: "邀请码",
+  authTelegramConnected: "Telegram 已连接。", authTelegramConnect: "连接 Telegram", authTelegramDisconnect: "断开 Telegram 连接",
+  authPasswordConfirm: "确认密码", authTelegramPending: "Telegram 账户已验证。要将其连接到此账户吗？",
+  authTelegramConfirm: "连接", authTelegramCancel: "取消", authTelegramFailed: "无法完成 Telegram 操作。请重试或使用密码登录。",
+  authTelegramLinked: "Telegram 已连接。", authTelegramUnlinked: "Telegram 已断开连接。",
+  authTelegramVerified: "Telegram 已验证", authTelegramContinue: "继续",
+  authTelegramInviteInvalid: "邀请码无效或已过期。请索取新邀请码。", authTelegramReauth: "请检查密码并重试连接。",
   authSigningIn: "正在登录…",
   authUsername: "用户名",
   authPassword: "密码",

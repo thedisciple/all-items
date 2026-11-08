@@ -35,6 +35,26 @@ async function sessionKey(directory:string){
   return readFile(file);
 }
 async function tokenHash(token:string,directory:string){return createHmac("sha256",await sessionKey(directory)).update(token).digest("hex");}
+export async function sessionTokenHash(token:string,directory:string){
+  if(!/^[A-Za-z0-9_-]{43}$/.test(token))throw new AccessError(401);
+  return tokenHash(token,directory);
+}
+export async function reauthenticateUser(client:Client,userId:string,password:unknown){
+  const secret=z.string().min(1).max(256).safeParse(password);
+  const row=(await client.execute({sql:"SELECT password_hash,disabled FROM auth_users WHERE id=?",args:[userId]})).rows[0];
+  return secret.success&&row&&row.disabled===0&&typeof row.password_hash==="string"&&await verifyPassword(secret.data,row.password_hash)?row.password_hash:null;
+}
+export async function federatedSession(client:Client,directory:string,userId:string,now=Date.now()){
+  const token=randomBytes(32).toString("base64url"),digest=await tokenHash(token,directory);
+  const tx=await client.transaction("write");try{
+    const user=(await tx.execute({sql:"SELECT id,username,is_admin,disabled FROM auth_users WHERE id=?",args:[userId]})).rows[0];
+    if(!user||user.disabled!==0)throw new AccessError(401);
+    await tx.execute({sql:"DELETE FROM auth_sessions WHERE expires_at<=? OR last_seen_at<=?",args:[now,now-IDLE_MS]});
+    await tx.execute({sql:"DELETE FROM auth_sessions WHERE token_hash IN (SELECT token_hash FROM auth_sessions WHERE user_id=? ORDER BY last_seen_at DESC LIMIT -1 OFFSET 4)",args:[userId]});
+    await tx.execute({sql:"INSERT INTO auth_sessions(token_hash,user_id,expires_at,last_seen_at) VALUES(?,?,?,?)",args:[digest,userId,now+SESSION_SECONDS*1000,now]});
+    await tx.commit();return{token,user:{id:String(user.id),username:String(user.username),isAdmin:user.is_admin===1} satisfies User};
+  }catch(error){await tx.rollback();throw error;}
+}
 export async function provisionAccount(client:Client,username:unknown,password:unknown,owner=false):Promise<User>{
   const name=usernameSchema.parse(username),encoded=await hashPassword(password),id=owner?ORIGINAL_OWNER_ID:randomUUID();
   const tx=await client.transaction("write");try{

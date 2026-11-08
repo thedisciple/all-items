@@ -1,6 +1,7 @@
 import {createInterface} from "node:readline/promises";
 import {getDatabase} from "@/db/client";
 import {ORIGINAL_OWNER_ID,passwordSchema,provisionAccount,resetAccount,usernameSchema} from "./core";
+import {createTelegramInvite,revokeTelegramInvite} from "./telegram";
 
 function hidden(question:string):Promise<string>{
   if(!process.stdin.isTTY||!process.stdout.isTTY)throw new Error("Use an interactive local terminal; passwords are never accepted in arguments or environment variables.");
@@ -8,12 +9,24 @@ function hidden(question:string):Promise<string>{
   return new Promise((resolve,reject)=>{let value="";const finish=()=>{process.stdin.off("data",read);process.stdin.setRawMode(false);process.stdin.pause();process.stdout.write("\n");};const read=(chunk:string)=>{for(const character of chunk){if(character==="\u0003"){finish();reject(new Error("Cancelled"));return;}if(character==="\r"||character==="\n"){finish();resolve(value);return;}if(character==="\u007f"||character==="\b")value=Array.from(value).slice(0,-1).join("");else if(character>=" "&&value.length<257)value+=character;}};process.stdin.on("data",read);});
 }
 async function main(){
-  const [command,...extra]=process.argv.slice(2);if(extra.length||!["owner","invite","reset","revoke","disable","revoke-all"].includes(command??""))throw new Error("Usage: npm run auth -- owner | invite | reset | revoke | disable | revoke-all");
+  const [command,...extra]=process.argv.slice(2);if(extra.length||!["owner","invite","reset","revoke","disable","revoke-all","telegram-invite","telegram-invite-revoke"].includes(command??""))throw new Error("Usage: npm run auth -- owner | invite | reset | revoke | disable | revoke-all | telegram-invite | telegram-invite-revoke");
   if(!process.stdin.isTTY||!process.stdout.isTTY)throw new Error("Run from a local interactive terminal.");
   const client=(await getDatabase()).$client;
   try{
     if(command==="revoke-all"){await client.execute("DELETE FROM auth_sessions");console.log("All sessions revoked.");return;}
     const rl=createInterface({input:process.stdin,output:process.stdout});let username:string;try{const input=await rl.question("Username (3–64 ASCII letters, digits, . _ -): ");const parsed=usernameSchema.safeParse(input);if(!parsed.success)throw new Error("Username must be 3–64 ASCII letters, digits, . _ or - and start with a letter or digit.");username=parsed.data;}finally{rl.close();}
+    if(command==="telegram-invite"){
+      if(!(await client.execute({sql:"SELECT id FROM auth_users WHERE id=? AND password_hash IS NOT NULL AND disabled=0",args:[ORIGINAL_OWNER_ID]})).rows.length)throw new Error("Initialize the original owner first.");
+      const invite=await createTelegramInvite(client,username);
+      console.log(`One-time Telegram invitation token (expires in one hour): ${invite.token}`);
+      console.log("Share privately. The invitee enters this token on the sign-in page before using Telegram. It never grants admin access.");
+      return;
+    }
+    if(command==="telegram-invite-revoke"){
+      const count=await revokeTelegramInvite(client,username);
+      console.log(count?"Unused Telegram invitation revoked.":"No unused Telegram invitation found.");
+      return;
+    }
     if(command==="owner"||command==="invite"||command==="reset"){
       if(command==="invite"&&!(await client.execute({sql:"SELECT id FROM auth_users WHERE id=? AND password_hash IS NOT NULL AND disabled=0",args:[ORIGINAL_OWNER_ID]})).rows.length)throw new Error("Initialize the original owner first.");
       const password=await hidden("Password (12–256 characters, hidden): "),again=await hidden("Repeat password (hidden): ");if(password!==again)throw new Error("Passwords differ.");if(!passwordSchema.safeParse(password).success)throw new Error("Password must be 12–256 characters and at most 1024 UTF-8 bytes. No account was changed; run the command again.");

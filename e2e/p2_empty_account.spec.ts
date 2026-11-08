@@ -11,8 +11,8 @@ for(const locale of locales)test(`new account uses the app shell: ${locale}`,asy
   test.setTimeout(90_000);
   await context.addCookies([{name:"all-items-language",value:locale,url:"http://127.0.0.1:3100"}]);
   await page.goto("/login");
-  await page.locator('input[name="username"]').fill(syntheticAccounts.alice.username);
-  await page.locator('input[name="password"]').fill(syntheticAccounts.alice.password);
+  await page.locator('input[name="username"]').fill(syntheticAccounts.empty.username);
+  await page.locator('input[name="password"]').fill(syntheticAccounts.empty.password);
   await page.locator('button[type="submit"]').click();
   await expect(page).toHaveURL("http://127.0.0.1:3100/");
   const shell=page.locator(".empty-account-shell");

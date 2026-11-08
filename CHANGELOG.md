@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — Pilot P2 candidate
+
+- Aligned the empty-account shell and removed the Add Item footer gutter; verified five languages and Edge layouts.
+- Added explicit HTTPS proxy trust, fail-closed startup preflight, security headers, a validated Caddy example and private Windows production configuration. No public deployment was made.
+- Added migration 0015 for optional Telegram OIDC identities, one-use invitation and flow state. Authorization Code/PKCE, signed ID-token verification, same-session link confirmation, password-confirmed unlink and local fallback are config-gated. Live Telegram login is untested.
+- Added synthetic HTTPS, identity, migration-preservation and signed-provider checks, with deployment, threat and operator runbooks. Physical-device and independent security gates remain open.
+
 ## Unreleased — Pilot P1
 
 - Separated Add Item into a stable header, one scrolling body and a safe-area footer.
