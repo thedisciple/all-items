@@ -194,6 +194,9 @@ The old number is not execution order. Recovery/usability groundwork and a separ
 - [ ] Invite real testers only after P2 acceptance
 - [x] P1 keeps development/private endpoints local; no public tunnel, listener or hostname enabled
 - [x] Implement config-gated optional Telegram OIDC with local password fallback, one-use invitations and explicit account linking; synthetic signed-provider tests only, live BotFather callback remains a P2 gate
+- [x] Evaluate Sites without deployment: current app needs an invasive runtime/storage port; retain it as a future optional hosted edition
+- [x] Prepare a first-beta Funnel route through a loopback Caddy adapter, with [explicit stop/recovery instructions](docs/architecture/p2-first-beta-runbook.md)
+- [ ] Approve and verify the actual external Funnel URL, live Telegram callback and physical mobile acceptance before inviting private records
 
 ## Future AI — NOT STARTED
 

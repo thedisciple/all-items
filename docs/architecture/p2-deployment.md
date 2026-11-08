@@ -1,5 +1,7 @@
 # P2 Windows HTTPS deployment preparation
 
+For the first pilot, use [the Funnel runbook](p2-first-beta-runbook.md) and [hosting decision](p2-hosting-decision.md). The direct-home/Caddy topology below remains a future option after actual network facts; do not configure both for this checkpoint.
+
 Status: configuration and synthetic tests only. Do not point a public domain, forward ports, open a firewall, or start a tunnel until the separate security and owner approval gates. This runbook describes the direct-home topology if a reachable permitted home address is verified; a CGNAT relay or managed tunnel needs a separately reviewed configuration.
 
 ## Read-only network choice

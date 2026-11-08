@@ -18,6 +18,8 @@ Choose an unused directory outside the repository; `owner` and `invite` prompt f
 
 ## Remote private-beta gate
 
+Use [the first-beta Funnel runbook](p2-first-beta-runbook.md) for exact private configuration, synthetic external acceptance, Telegram invitation, stop and rollback commands. The selected route does not require testers to join Tailscale. No Funnel account or external endpoint was configured during implementation.
+
 1. Read [P2 threat model](p2-threat-model.md), [deployment preparation](p2-deployment.md) and [Telegram setup](p2-telegram.md). Resolve open findings; document the actual SBB WAN/CGNAT, ISP policy, DNS, TLS renewal, PC uptime and chosen route without copying addresses or credentials into Git.
 2. Stop writers; create and verify a private installation backup, then drill it in a new isolated directory. Preserve the pre-upgrade copy and compare old row/media fingerprints, SQLite integrity and foreign keys after migration 0015. Never trial the migration against the owner's installation from a test command.
 3. Validate the private config, build the production version, test the exact proxy header/host/origin behavior and Secure cookies from a synthetic external browser. Confirm backup schedule, encrypted off-machine copy, health notifications, process restart/reboot and a recovery/rollback window.

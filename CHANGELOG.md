@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — P2 release preparation
+
+- Kept the existing Windows backend after the Sites compatibility gate; prepared a loopback Caddy adapter and a first-beta Funnel runbook with explicit publication, stop and recovery gates. No external service was enabled.
+- Moved authenticated language selection to Account Settings, removed the redundant empty-account header label, and made Restore default view select categories, quantity and date added while retaining stored preferences.
+- Replaced per-navigation backup payload hashing/SQLite inspection with bounded completion metadata. Explicit verification, creation, restore and retention remain fully checked and admin controls remain private.
+- Clarified sale readiness and source-based identification labels in all five dictionaries without changing stored enums.
+
 ## Unreleased — Pilot P2 candidate
 
 - Aligned the empty-account shell and removed the Add Item footer gutter; verified five languages and Edge layouts.

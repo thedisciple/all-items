@@ -1,0 +1,37 @@
+{
+	admin off
+	auto_https off
+	persist_config off
+	servers {
+		timeouts {
+			read_header 10s
+			read_body_idle 30s
+			write_idle 60s
+			idle 2m
+		}
+	}
+}
+
+# Funnel terminates TLS on this PC and forwards raw HTTP to this loopback adapter.
+# Do not point Funnel at Next directly. No certificates or public listeners here.
+http://:{$ALL_ITEMS_ADAPTER_PORT:8787} {
+	bind 127.0.0.1
+	@wrongHost expression `{http.request.hostport} != '{$ALL_ITEMS_DOMAIN}'`
+	route {
+		respond @wrongHost 421
+		request_body {
+			max_size 136MB
+		}
+		header Strict-Transport-Security "max-age=604800"
+		reverse_proxy 127.0.0.1:{$ALL_ITEMS_BACKEND_PORT:3000} {
+			header_up Host {$ALL_ITEMS_DOMAIN}
+			header_up X-Forwarded-Host {$ALL_ITEMS_DOMAIN}
+			header_up X-Forwarded-Proto https
+			header_up X-Forwarded-Port {$ALL_ITEMS_PUBLIC_PORT:443}
+			header_up X-All-Items-Proxy-Secret {$ALL_ITEMS_PROXY_SECRET}
+			header_up -Forwarded
+			header_up -X-Forwarded-For
+			header_up -Tailscale-*
+		}
+	}
+}

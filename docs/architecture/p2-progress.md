@@ -1,5 +1,7 @@
 # P2 continuation checkpoint
 
+Historical checkpoint. The newer [P2 release handoff](p2-release-progress.md) and [validation ledger](p2-release-validation.md) supersede its continuation list.
+
 Status: **candidate implementation complete; CI verification pending; no public/private-beta deployment is approved or live**. Starting Git commit: `f2df18c1a3c94065a4532f64fdf40bca67d1c7ef`. The user-supplied specification is the P2 private beta, Telegram OIDC and UX consolidation prompt attached in the conversation. Continue from the current checkout rather than assuming this document is the latest commit.
 
 The owner requested short, coherent checkpoints because the session usage window was nearly exhausted. Use one primary agent. Preserve the pre-existing unrelated working-tree changes in `package-lock.json` and `.vscode/`. Builds and tests must use isolated installations; do not modify the owner's configured database through testing. Do not configure public DNS, router, firewall, tunnel, Telegram credentials or a non-loopback listener without the separate approval and safety gate.
