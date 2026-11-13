@@ -317,7 +317,7 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
   const displayedUrl = externalPreview ? null : previewUrl ?? currentPhotoUrl;
 
   return <div className="photo-acquisition">
-    <input ref={inputRef} className="visually-hidden" type="file" name={name} accept="image/jpeg,image/png,image/webp" capture={multiple?undefined:"environment"} multiple={multiple} aria-hidden="true" tabIndex={-1} disabled={pending||quietDisabled} onChange={(event) => {
+    <input ref={inputRef} className="visually-hidden" type="file" name={name} accept="image/jpeg,image/png,image/webp" multiple={multiple} aria-hidden="true" tabIndex={-1} disabled={pending||quietDisabled} onChange={(event) => {
       if(onAcquireFiles){const input=event.currentTarget;closeSources();void Promise.resolve(onAcquireFiles([...input.files??[]])).catch(()=>setSelectionError("photoSelectionFailed")).finally(()=>{input.value="";});return;}
       const file = event.currentTarget.files?.[0];
       if (file) void selectFile(file);
@@ -326,7 +326,7 @@ export function PhotoAcquisition({ name = "photo", currentPhotoUrl = null, autoS
     <input ref={cropInputRef} type="hidden" name="crop" value={cropData ? JSON.stringify(cropData) : ""}/>
     {displayedUrl ? <div className="photo-preview-frame"><PrivateImage variant="preview" className="photo-preview" src={displayedUrl} alt={selectedFile ? t("photoPreviewSelected") : t("photo")}/></div> : null}
     <div className="photo-acquisition-actions">
-      {!hideAcquire?<button ref={triggerRef} type="button" className={currentPhotoUrl ? "photo-acquisition-secondary" : "photo-acquisition-primary photo-add-primary"} disabled={pending||quietDisabled} onClick={() => { setSourceOpen(true); setCameraMessage(""); }}>
+      {!hideAcquire?<button ref={triggerRef} type="button" className={currentPhotoUrl ? "photo-acquisition-secondary" : "photo-acquisition-primary photo-add-primary"} disabled={pending||quietDisabled} onClick={() => { setCameraMessage("");if(navigator.maxTouchPoints>0&&matchMedia("(pointer: coarse)").matches)inputRef.current?.click();else setSourceOpen(true); }}>
         {currentPhotoUrl ? <RefreshCw size={16} aria-hidden="true"/> : <ImagePlus size={16} aria-hidden="true"/>}
         <span>{checking?t("creationReadingPhotos"):pending&&autoSubmit ? t("savingPhoto") : selectedFile ? t("chooseAnotherPhoto") : currentPhotoUrl ? t("replacePhoto") : t("addPhoto")}</span>
       </button>:null}

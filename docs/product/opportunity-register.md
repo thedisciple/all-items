@@ -1,5 +1,7 @@
 # Product opportunity register
 
+M4C update: direct mobile tabs, contextual Data navigation, compact footer and bounded SQL pages/pickers are implemented; real-device acceptance remains open. Optional WebMCP and autoresearch are **planned**, with bounded implementation tasks in [m4c-experiments](../architecture/m4c-experiments.md). They are not beta prerequisites and do not replace the retained AI, DIY, sharing, marketplace or theme roadmap.
+
 Current interactions follow the [design manifesto](design-manifesto.md). Ordered galleries and ZIP revision 6 are implemented in M3.4. M4A adds creation parity and a reusable UX gate; [the planning audit](m4a-planning-audit.md) reconciles historical status and dependencies.
 
 This register retains prioritized proposals. Status vocabulary: idea, research, planned, implementing, implemented, rejected. Complexity: low, medium, high. Research evidence and inferences are separated in [design references](design-references.md). No future item below is implemented unless explicitly marked.

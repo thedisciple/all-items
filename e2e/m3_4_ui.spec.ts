@@ -1,3 +1,4 @@
+import {chooseChoice} from "./helpers/choice-picker";
 import { expect, test } from "./helpers/browser-reliability";
 import {chooseAccountLanguage} from "./helpers/language";
 import {draftSnapshot} from "./helpers/draft-state";
@@ -55,7 +56,7 @@ test("filters and category chips remain bounded at every requested width in all 
     await page.locator(".add-dialog-trigger").click();
     const draft = page.getByRole("dialog", { name: messages[locale].addItem });
     await draft.getByText(messages[locale].additionalDetails, { exact: true }).click();
-    await expect(draft.locator('select[name="askingCurrency"]')).toHaveValue(suggestedCurrency(locale));
+    await expect(draft.locator('[name="askingCurrency"]')).toHaveValue(suggestedCurrency(locale));
     await draft.getByRole("button", { name: messages[locale].close, exact: true }).first().click();
   }
 });
@@ -101,24 +102,25 @@ test("manual currency survives language, save, edit and archive restore; blank p
   await page.locator(".add-dialog-trigger").click();
   await dialog.getByLabel(messages.en.itemName, { exact: true }).fill("M3.4 currency literal");
   await dialog.getByText(messages.en.additionalDetails, { exact: true }).click();
-  await dialog.locator('select[name="askingCurrency"]').selectOption("UAH");
+  await chooseChoice(page,dialog.locator('.choice-picker [role="combobox"]'),"UAH");
+  await expect(dialog.locator('[name="askingCurrency"]')).toHaveValue("UAH");
   await dialog.locator('input[name="askingPrice"]').fill("12.34");
   await dialog.getByRole("button", { name: messages.en.close, exact: true }).first().click();
-  await expect.poll(async()=>(await draftSnapshot(page))?.fields.name).toBe("M3.4 currency literal");
+  await expect.poll(async()=>(await draftSnapshot(page))?.fields).toMatchObject({name:"M3.4 currency literal",askingCurrency:"UAH",askingPrice:"12.34"});
   await chooseAccountLanguage(page,"Русский");
   await page.locator(".add-dialog-trigger").click(); dialog = page.getByRole("dialog", { name: messages.ru.addItem });
   const restore=dialog.getByRole("button",{name:messages.ru.draftRestore,exact:true});
   if(await restore.isVisible())await restore.click();
-  await expect(dialog.locator('select[name="askingCurrency"]')).toHaveValue("UAH");
+  await expect(dialog.locator('[name="askingCurrency"]')).toHaveValue("UAH");
   await expect(dialog.locator('input[name="askingPrice"]')).toHaveValue("12.34");
   await dialog.getByRole("button", { name: messages.ru.saveItem, exact: true }).click(); await expect(page).toHaveURL(/added=/);
   await page.getByRole("link", { name: "M3.4 currency literal", exact: true }).click();
   await page.getByText(messages.ru.additionalDetails, { exact: true }).click();
-  await expect(page.locator('select[name="askingCurrency"]')).toHaveValue("UAH");
-  await page.locator('select[name="askingCurrency"]').selectOption("JPY"); await page.locator('input[name="askingPrice"]').fill("1.5");
+  await expect(page.locator('[name="askingCurrency"]')).toHaveValue("UAH");
+  await chooseChoice(page,page.locator('.choice-picker [role="combobox"]'),"JPY"); await page.locator('input[name="askingPrice"]').fill("1.5");
   await expect(page.locator('input[name="askingPrice"]')).toHaveAttribute("aria-invalid", "true");
   await expect(page.getByRole("button", { name: messages.ru.saveChanges, exact: true })).toBeDisabled();
-  await page.locator('select[name="askingCurrency"]').selectOption("KWD"); await page.locator('input[name="askingPrice"]').fill("1.234");
+  await chooseChoice(page,page.locator('.choice-picker [role="combobox"]'),"KWD"); await page.locator('input[name="askingPrice"]').fill("1.234");
   await page.getByRole("button", { name: messages.ru.saveChanges, exact: true }).click(); await expect(page).toHaveURL(new RegExp(`${base}$`));
   const archive = await (await page.request.get(`${base}/api/export/archive`)).body(); expect(verifyInventoryArchive(archive).version).toBe(6);
   const records = readInventoryArchive(archive).inventory.items as Array<Record<string, unknown>>;
@@ -131,7 +133,7 @@ test("manual currency survives language, save, edit and archive restore; blank p
   await page.getByRole("button", { name: messages.ru.importAsNew, exact: true }).click(); await expect(page).toHaveURL(/\/inventories\/[0-9a-f-]{36}$/, {timeout:60_000});
   await page.getByRole("link", { name: "M3.4 currency literal", exact: true }).click();
   await page.getByText(messages.ru.additionalDetails, { exact: true }).click();
-  await expect(page.locator('select[name="askingCurrency"]')).toHaveValue("KWD");
+  await expect(page.locator('[name="askingCurrency"]')).toHaveValue("KWD");
   await expect(page.locator('input[name="askingPrice"]')).toHaveValue("1.234");
 });
 

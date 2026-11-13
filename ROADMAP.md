@@ -2,6 +2,19 @@
 
 See [the opportunity register](docs/product/opportunity-register.md) for detailed concepts, dependencies, risk, complexity, and priority. Checkmarks describe implemented and verified work only.
 
+## M4C — Mobile UX and private-beta quality gate
+
+- [x] Responsive full brand, direct Inventory/Collections tabs, consistent header controls and contextual inventory Data navigation
+- [x] Bounded crop viewport/controls, touch-handle margins, limited themed aspect/currency choices, native phone intake and attached language menu
+- [x] Shared login/404 branding, ownership-aware legacy bookmarks, compact Data actions and localized public-project footer
+- [x] Database-backed item/member pagination with stable ties, counts, filters, page sizes and bounded on-demand collection pickers
+- [x] Focused issue/PR templates for reproducible synthetic UX reports
+- [x] Implementation-ready bounded [experiment and WebMCP tasks](docs/architecture/m4c-experiments.md); no runtime experimental tools or GPU/cloud dependency
+- [x] Final integration evidence: see [validation and limitations](docs/architecture/m4c-validation.md)
+- [ ] Real Android/iPhone [acceptance](docs/product/m4c-device-acceptance.md), independent security review and approved deployment/invitations through the existing P2 gate
+
+Retain local AI identification, DIY recommendations, sharing, marketplace, MCP and configurable themes below. M4C does not start those phases.
+
 ## M0 — Foundation and first working vertical slice
 
 - [x] Next.js, TypeScript, Tailwind, SQLite, and Drizzle foundation

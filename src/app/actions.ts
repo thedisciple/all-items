@@ -133,7 +133,7 @@ export async function updateItemAction(_previous: ActionFeedback, formData: Form
   try {
     await updateItem(context, id.data, formValues(formData) as ItemFields, JSON.parse(String(formData.get("stock") ?? "[]")));
     revalidatePath(inventoryPath(context), "layout"); revalidatePath(inventoryPath(context,`/items/${id.data}`)); revalidatePath(inventoryPath(context,"/collections"));
-    return { status: "success", message: "changesSaved", collectionId: returnTo.startsWith(inventoryPath(context,"/collections/")) ? returnTo.split("/").at(-1) : undefined };
+    return { status: "success", message: "changesSaved", collectionId: returnTo.startsWith(inventoryPath(context,"/collections/")) ? returnTo.split("?")[0].split("/").at(-1) : undefined };
   } catch (error) { return { status: "error", message: errorMessage(error, "itemUpdateGeneric") }; }
 }
 

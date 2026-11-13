@@ -3,7 +3,9 @@ import { inventoryPath } from "@/items/inventory-context";
 import { AppSidebar } from "@/app/components/app-sidebar";
 import { AddItemForm } from "@/app/components/add-item-form";
 import { categories, categoryMessageKey } from "@/items/categories";
-import { listCategoryValues, listItems } from "@/items/service";
+import { listCategoryValues, listItemsPage } from "@/items/service";
+import {listRouteQuery} from "@/items/pagination";
+import {ItemPagination} from "@/app/components/item-pagination";
 import { getLocale } from "@/i18n/server";
 import { translate } from "@/i18n/messages";
 import { AppHeader } from "@/app/components/app-header";
@@ -18,13 +20,14 @@ type Props = { params: Promise<{inventoryId:string}>; searchParams: Promise<{ q?
 export default async function Home({ searchParams, params: routeParams }: Props) {
   const context = await routeInventory((await routeParams).inventoryId);
   const base = inventoryPath(context);
-  const params = await searchParams;
+  const params = listRouteQuery(await searchParams);
   const [locale, presentation] = await Promise.all([getLocale(), getInventoryPresentation(context)]);
   const customEmoji = Object.fromEntries(presentation.categories.map(value => [value.category, value.emoji]));
-  const [items, storedCategories] = await Promise.all([
-    listItems(context, { search: params.q, unnamedLabel: translate(locale,"unidentifiedItemName"), category: params.category || undefined, status: params.status || undefined, sort: params.sort ?? presentation.preferences.sort }),
+  const [result, storedCategories] = await Promise.all([
+    listItemsPage(context, { search: params.q, unnamedLabel: translate(locale,"unidentifiedItemName"), category: params.category || undefined, status: params.status || undefined, sort: params.sort ?? presentation.preferences.sort },params),
     listCategoryValues(context),
   ]);
+  const items=result.items;
   const t = (key: Parameters<typeof translate>[1], values?: Record<string, string | number>) => translate(locale, key, values);
   const hasFilters = Boolean(params.q || params.category || params.status);
   const statusLabels: Record<string, string> = { unknown: t("itemStatusUnknown"), user_confirmed: t("itemStatusConfirmed"), source_verified: t("itemStatusVerified") };
@@ -36,9 +39,9 @@ export default async function Home({ searchParams, params: routeParams }: Props)
       <AppHeader/>
       <div className="content-wrap"><h1 className="visually-hidden">{t("inventory")}</h1>
         <InventoryViewProvider key={context.workspaceId} inventoryId={context.workspaceId}><ItemFilters actions={<AddItemForm key={context.workspaceId}/>} categories={categoryOptions} statuses={Object.entries(statusLabels).map(([value,label]) => ({ value, label }))} searchPlaceholder={t("searchItems")}/>
-        {hasFilters ? <div className="list-heading"><span className="list-total">{t("resultCount", { count: items.length })}</span></div> : <div className="inventory-list-spacing"/>}
+        {hasFilters ? <div className="list-heading"><span className="list-total">{t("resultCount", { count: result.total })}</span></div> : <div className="inventory-list-spacing"/>}
         {items.length ? <div className="item-list">{items.map(item => <InventoryItemRow key={String(item.id)} item={item} base={base} locale={locale} query={params} customEmoji={customEmoji} highlighted={params.added === String(item.id)}/>)}</div> : <div className="empty-state"><div className="empty-orbit">✳</div><h3>{hasFilters ? t("noMatches") : t("noItems")}</h3><p>{hasFilters ? t("adjustFilters") : t("addFirstItem")}</p></div>}
-        </InventoryViewProvider>
+        <ItemPagination page={result.page} pages={result.pages} total={result.total} pageSize={result.pageSize}/></InventoryViewProvider>
       </div>
     </section>
   </main>;

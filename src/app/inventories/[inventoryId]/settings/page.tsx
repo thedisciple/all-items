@@ -7,11 +7,12 @@ import { inventoryCounts } from "@/items/inventories";
 import { AppHeader } from "@/app/components/app-header";
 import { getLocale } from "@/i18n/server";
 import { translate } from "@/i18n/messages";
+import {Database} from "lucide-react";
 
 export const dynamic = "force-dynamic";
 export default async function InventorySettings({params}:{params:Promise<{inventoryId:string}>}) {
   const context=await routeInventory((await params).inventoryId);
   const counts=await inventoryCounts(context);
   const locale=await getLocale();
-  return <main className="app-shell"><AppSidebar active="settings" locale={locale}/><section className="main-content"><AppHeader/><div className="content-wrap"><Link className="settings-back" href={inventoryPath(context)}>← {translate(locale,"inventory")}</Link><h1>{translate(locale,"inventoryManage")}</h1><RenameInventoryControl/><InventorySortControl/><DeleteInventoryControl counts={counts}/></div></section></main>;
+  return <main className="app-shell"><AppSidebar active="settings" locale={locale}/><section className="main-content"><AppHeader/><div className="content-wrap"><Link className="settings-back" href={inventoryPath(context)}>← {translate(locale,"inventory")}</Link><h1>{translate(locale,"inventoryManage")}</h1><RenameInventoryControl/><InventorySortControl/><Link className="quiet-button settings-data-link" href={`${inventoryPath(context)}/data`}><Database size={17} aria-hidden="true"/>{translate(locale,"data")}</Link><DeleteInventoryControl counts={counts}/></div></section></main>;
 }

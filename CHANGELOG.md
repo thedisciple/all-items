@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — M4C
+
+- Kept the full brand and two direct mobile tabs, equalized header controls, and moved inventory Data access into inventory settings while preserving secured URLs.
+- Bounded the crop viewport and touch handles, made controls fit narrow/short screens, added themed aspect/currency popovers with native fallback, simplified phone acquisition and attached the language menu to its trigger.
+- Reused branding on login/404, corrected owned legacy entity redirects, aligned Data actions and added a compact localized public-project footer.
+- Added authorized SQL pagination with stable ordering, filtered counts, 25/50/100 sizes, history and validated edit-return context. Collection member/candidate/cover lists use bounded queries instead of eager full-inventory payloads. No schema migration or new dependency.
+- Added focused UX issue/PR templates. Prepared bounded autoresearch/WebMCP tasks without runtime AI features or live deployment changes. Physical Android/iPhone acceptance remains required.
+
 ## Unreleased — P2 release preparation
 
 - Kept the existing Windows backend after the Sites compatibility gate; prepared a loopback Caddy adapter and a first-beta Funnel runbook with explicit publication, stop and recovery gates. No external service was enabled.

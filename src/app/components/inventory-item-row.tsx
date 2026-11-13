@@ -6,12 +6,15 @@ import { categoryEmoji, categoryKeyForStoredValue, categoryMessageKey } from "@/
 import { translate, type Locale } from "@/i18n/messages";
 
 type Item = Record<string, unknown> & { categories: string[] };
-type Query = { q?: string; category?: string; status?: string; sort?: string };
+type Query = { q?: string; category?: string; status?: string; sort?: string; page?:number; pageSize?: number };
 
 export function InventoryItemRow({ item, base, locale, query, customEmoji = {}, collectionId, highlighted }: { item: Item; base: string; locale: Locale; query: Query; customEmoji?: Record<string, string>; collectionId?: string; highlighted?: boolean }) {
   const t=(key:Parameters<typeof translate>[1])=>translate(locale,key);
   const path=collectionId?`${base}/collections/${collectionId}`:base;
-  const itemPath=`${base}/items/${item.id}${collectionId?`?from=${collectionId}`:""}`;
+  const returnQuery=new URLSearchParams();for(const [key,value]of Object.entries(query))if(value&&["q","category","status","sort","page","pageSize"].includes(key)&&!(key==="page"&&value===1)&&!(key==="pageSize"&&value===25))returnQuery.set(key,String(value));
+  const destination=path+(returnQuery.size?"?"+returnQuery:"");
+  const itemParams=new URLSearchParams();if(returnQuery.size)itemParams.set("returnTo",destination);if(collectionId)itemParams.set("from",collectionId);
+  const itemPath=`${base}/items/${item.id}${itemParams.size?"?"+itemParams:""}`;
   const displayName=String(item.name) || t("unidentifiedItemName");
   const status=String(item.identification_status);
   const statusKey=status==="user_confirmed"?"itemStatusConfirmed":status==="source_verified"?"itemStatusVerified":collectionId?null:"itemStatusUnknown";
@@ -20,7 +23,7 @@ export function InventoryItemRow({ item, base, locale, query, customEmoji = {}, 
     <div className="item-identity"><Link href={itemPath} className="item-row-link" aria-label={displayName}><h3>{displayName}</h3><span className="visually-hidden">{String(item.inventory_number)} {String(item.quantity)}</span></Link><div className="item-identity-meta"><span className="inventory-number">{String(item.inventory_number)}</span>{item.model?<span className="item-model-brand">{String(item.model)}</span>:null}{item.brand?<span className="item-model-brand">{String(item.brand)}</span>:null}{!collectionId?<span className="item-added"><ItemTimestamp value={String(item.createdAt)}/></span>:null}</div></div>
     <div className="item-categories">{item.categories.map(value=>{
       const key=categoryKeyForStoredValue(value), label=key?translate(locale,categoryMessageKey(key)!):value;
-      const params=new URLSearchParams();for(const [name,entry] of Object.entries(query))if(entry&&["q","status","sort"].includes(name))params.set(name,entry);
+      const params=new URLSearchParams();for(const [name,entry] of Object.entries(query))if(entry&&["q","status","sort","pageSize"].includes(name))params.set(name,String(entry));
       params.set("category",key ?? value);
       return <Link key={value} href={`${path}?${params}`} scroll={false} className="category-chip item-category-filter" title={label} aria-label={label}>{key || customEmoji[value] ? <span aria-hidden="true">{key ? categoryEmoji[key] : customEmoji[value]}</span> : null}<span className="category-chip-label">{label}</span></Link>;
     })}</div>

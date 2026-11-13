@@ -52,6 +52,7 @@ export function ItemFilters({ categories, statuses, searchPlaceholder, actions }
     if (value) next.set(key, value);
     else next.delete(key);
     next.delete("updated");
+    next.delete("page");
     next.delete("added");
     const queryString = next.toString();
     rememberScroll();
@@ -70,6 +71,7 @@ export function ItemFilters({ categories, statuses, searchPlaceholder, actions }
     setQuery("");
     const next = new URLSearchParams(params);
     for (const key of filterKeys) next.delete(key);
+    next.delete("page");
     next.delete("added");
     next.delete("updated");
     const queryString = next.toString();

@@ -1,5 +1,5 @@
 import { routeInventory } from "@/app/inventory-routing";
-import { inventoryPath } from "@/items/inventory-context";
+import { inventoryPath,inventoryReturnPath } from "@/items/inventory-context";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { AppSidebar } from "@/app/components/app-sidebar";
@@ -20,7 +20,7 @@ import { translate } from "@/i18n/messages";
 import { AppHeader } from "@/app/components/app-header";
 
 export const dynamic = "force-dynamic";
-type Props = { params: Promise<{ id: string; inventoryId: string }>; searchParams: Promise<{ from?: string }> };
+type Props = { params: Promise<{ id: string; inventoryId: string }>; searchParams: Promise<{ from?: string;returnTo?:string }> };
 
 export default async function ItemPage({ params, searchParams }: Props) {
   const [{ id, inventoryId }, query] = await Promise.all([params, searchParams]);
@@ -43,7 +43,8 @@ export default async function ItemPage({ params, searchParams }: Props) {
     askingCurrency: item.asking_currency ?? "", description: item.description ?? "", notes: item.notes ?? "",
   };
   const fromCollection = z.uuid().safeParse(query.from ?? "");
-  const returnTo = fromCollection.success && collections.some(collection=>collection.id===fromCollection.data) ? `${base}/collections/${fromCollection.data}` : base;
+  let returnTo = fromCollection.success && collections.some(collection=>collection.id===fromCollection.data) ? `${base}/collections/${fromCollection.data}` : base;
+  try{if(query.returnTo){const safe=inventoryReturnPath(context,query.returnTo),pathname=safe.split("?")[0];if(pathname===base||collections.some(collection=>pathname===`${base}/collections/${collection.id}`))returnTo=safe;}}catch{/* Invalid return destinations fall back to the authorized inventory. */}
   return <main className="app-shell">
     <AppSidebar active="items" locale={locale}/>
     <section className="main-content"><AppHeader/>

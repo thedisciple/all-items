@@ -1,3 +1,4 @@
+import {chooseChoice} from "./helpers/choice-picker";
 import {test,expect} from "./helpers/browser-reliability";
 import type {Page} from "@playwright/test";
 import sharp from "sharp";
@@ -19,7 +20,7 @@ test("M4A creates three individually cropped ordered photos in one save with an 
   await dialog.locator('input[name="photo"]').setInputFiles(await files(3));await expect(dialog.locator(".gallery-thumbnail")).toHaveCount(3);
   for(const [index,aspect]of ["1:1","4:3","16:9"].entries()){
     await dialog.locator(".gallery-thumbnail").nth(index).click();await dialog.getByRole("button",{name:messages.ru.editCrop,exact:true}).click();
-    const crop=page.getByRole("dialog",{name:messages.ru.cropTitle,exact:true});await expect(crop.getByRole("button",{name:messages.ru.cropConfirm,exact:true})).toBeEnabled();await crop.getByRole("combobox",{name:messages.ru.cropAspect,exact:true}).selectOption(aspect);await accept(page);
+    const crop=page.getByRole("dialog",{name:messages.ru.cropTitle,exact:true});await expect(crop.getByRole("button",{name:messages.ru.cropConfirm,exact:true})).toBeEnabled();await chooseChoice(page,crop.getByRole("combobox",{name:messages.ru.cropAspect,exact:true}),aspect);await accept(page);
   }
   await dialog.locator(".gallery-primary-button").nth(1).click();
   const original=await dialog.locator(".gallery-thumb-wrap").evaluateAll(nodes=>nodes.map(node=>(node as HTMLElement).dataset.photoId));

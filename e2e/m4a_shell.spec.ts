@@ -29,7 +29,7 @@ test("M4A shared toolbar and header fit seven widths in five languages",async({p
     await page.locator(".add-dialog-trigger").click();
     const dialog=page.getByRole("dialog",{name:messages[locale].addItem,exact:true});
     await dialog.getByText(messages[locale].additionalDetails,{exact:true}).click();
-    const labels=await dialog.locator('select[name="askingCurrency"] option').allTextContents();expect(labels.every(label=>/^[A-Z]{3}$/.test(label))).toBe(true);
+    const labels=await dialog.locator('.choice-options [role="option"]').allTextContents();expect(labels.every(label=>/^[A-Z]{3}$/.test(label))).toBe(true);
     await dialog.getByRole("button",{name:messages[locale].close,exact:true}).first().click();
   }
 });

@@ -1,9 +1,12 @@
 import { redirect } from "next/navigation";
 import { routeInventory } from "@/app/inventory-routing";
-import { inventoryPath, ORIGINAL_INVENTORY_ID } from "@/items/inventory-context";
+import { inventoryPath } from "@/items/inventory-context";
+import {ownedLegacyInventory} from "@/items/legacy-routes";
+import {pageUser} from "@/auth/request";
+import {notFound} from "next/navigation";
 export const dynamic="force-dynamic";
 export default async function Legacy({params,searchParams}:{params:Promise<{id:string}>;searchParams:Promise<{from?:string}>}) {
- const context=await routeInventory(ORIGINAL_INVENTORY_ID);
  const {id}=await params; const {from}=await searchParams;
+ await pageUser();const owned=await ownedLegacyInventory("item",id);if(!owned)notFound();const context=await routeInventory(owned.workspaceId);
  redirect(inventoryPath(context,`/items/${id}`)+(from?`?from=${encodeURIComponent(from)}`:""));
 }

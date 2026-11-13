@@ -33,8 +33,8 @@ export function ExportControls({ locale }: { locale: Locale }) {
   }
   return <>
     <div className="export-actions">
-      <button className="add-button" type="button" disabled={pending !== null} onClick={() => void download("archive")}>{pending === "archive" ? <Download size={16} aria-hidden="true"/> : <Archive size={16} aria-hidden="true"/>}{pending === "archive" ? translate(locale, "exportPreparing") : translate(locale, "downloadArchive")}</button>
-      <div className="export-option"><button className="quiet-button" type="button" disabled={pending !== null} onClick={() => void download("csv")}>{pending === "csv" ? <Download size={16} aria-hidden="true"/> : <FileSpreadsheet size={16} aria-hidden="true"/>}{pending === "csv" ? translate(locale, "exportPreparing") : translate(locale, "exportCsv")}</button><p className="export-note">{translate(locale, "exportCsvNote")}</p></div>
+      <div className="export-option"><button className="quiet-button" type="button" disabled={pending !== null} onClick={() => void download("archive")}>{pending === "archive" ? <Download size={16} aria-hidden="true"/> : <Archive size={16} aria-hidden="true"/>}{pending === "archive" ? translate(locale, "exportPreparing") : translate(locale, "downloadArchive")}</button><p className="export-note">{translate(locale,"exportZipFormat")}</p></div>
+      <div className="export-option"><button className="quiet-button" type="button" disabled={pending !== null} onClick={() => void download("csv")}>{pending === "csv" ? <Download size={16} aria-hidden="true"/> : <FileSpreadsheet size={16} aria-hidden="true"/>}{pending === "csv" ? translate(locale, "exportPreparing") : translate(locale, "exportCsv")}</button><p className="export-note">{translate(locale, "exportCsvFormat")}</p></div>
     </div>
     {feedback ? <p className="form-feedback error" role="alert">{translate(locale,feedback)}</p> : null}
   </>;

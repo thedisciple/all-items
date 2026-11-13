@@ -1,5 +1,7 @@
 # All Items contributor instructions
 
+- Public repository content must be relevant and reusable for application users or contributors: product code, tests, portable setup/deployment/security documentation and technical design decisions. Keep personal IDE/AI-assistant setup instructions, owner-specific tool tutorials, chat transcripts, scratch continuation logs and machine-specific working notes in chat or outside the repository. Do not link those notes from public documentation. Before pushing, review both the branch contents and its unpublished commit history; deleting a private file in a later commit does not remove it from earlier commits. Never rewrite published history without explicit authorization.
+
 - For substantial user-visible design work, follow `docs/product/design-workflow.md`; use external references and generated concepts as evidence aids, not as product specifications.
 
 - Keep all system UI copy in complete local dictionaries for Russian, English, Ukrainian, Serbian Latin, and Simplified Chinese; keep code, comments, and public documentation in English. Preserve user-entered text without automatic translation.

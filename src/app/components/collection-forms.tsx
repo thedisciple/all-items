@@ -11,7 +11,7 @@ import { useInventory } from "./inventory-provider";
 import { useI18n } from "@/i18n/provider";
 import { Pencil, Plus, X } from "lucide-react";
 import { CollectionEmojiField } from "./collection-emoji-field";
-import { CollectionCoverManager, type CoverPhoto } from "./collection-tools";
+import { CollectionCoverManager } from "./collection-tools";
 import { CollectionCoverVisual, type CollectionVisualData } from "./collection-cover-visual";
 
 const idle: ActionFeedback = { status: "idle", message: "" };
@@ -56,7 +56,7 @@ export function CreateCollectionForm({ tile = false }: { tile?: boolean }) {
   </>;
 }
 
-export function CollectionManageForms({ id, name, icon, cover, options }: { id: string; name: string; icon: string | null; cover: CollectionVisualData; options: CoverPhoto[] }) {
+export function CollectionManageForms({ id, name, icon, cover }: { id: string; name: string; icon: string | null; cover: CollectionVisualData }) {
   const { base } = useInventory();
   const [coverOpen,setCoverOpen] = useState(false);
   const { t } = useI18n();
@@ -88,7 +88,7 @@ export function CollectionManageForms({ id, name, icon, cover, options }: { id: 
         <div className="dialog-actions"><FormSubmitButton disabled={draftName.trim() === name && draftIcon === (icon ?? "")} pendingLabel={t("savingChanges")}>{t("collectionRename")}</FormSubmitButton></div>
       </ActionForm></section></div>:null}
     </div>
-    {editing ? <CollectionCoverManager collectionId={id} options={options} controlledOpen={coverOpen} onOpenChange={setCoverOpen}/> : null}
+    {editing ? <CollectionCoverManager collectionId={id} controlledOpen={coverOpen} onOpenChange={setCoverOpen}/> : null}
     <DestructiveConfirmation action={deleteCollectionAction} label={t("collectionDelete")} description={`${t("collectionDeleteWarning")} «${name}»`} fields={{ id }}/>
     {renameFeedback.status === "success" && renameFeedback.message ? <p className="visually-hidden" role="status">{renameFeedback.message ? t(renameFeedback.message, renameFeedback.values) : ""}</p> : null}
   </div>;

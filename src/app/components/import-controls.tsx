@@ -51,7 +51,7 @@ export function ImportControls({ locale }: { locale: Locale }) {
   function cancel() { setFile(null); setPreview(null); setError(null);setSuggested(false); if (input.current) input.current.value = ""; }
 
   return <section className="import-panel" aria-labelledby="import-heading">
-    <h2 id="import-heading">{t("importArchive")}</h2>
+    <h2 id="import-heading" className="visually-hidden">{t("importArchive")}</h2>
     <input ref={input} className="visually-hidden" tabIndex={-1} aria-hidden="true" type="file" accept=".zip,application/zip" onChange={(event) => void choose(event.target.files?.[0] ?? null)}/>
     {!preview ? <button type="button" className="quiet-button import-pick-button" disabled={pending !== null} onClick={() => input.current?.click()}><Upload size={17} aria-hidden="true"/>{pending === "checking" ? t("importChecking") : t("importArchive")}</button> : <div className="import-preview" role="group" aria-labelledby="import-preview-heading">
       <h3 id="import-preview-heading">{t("importPreview")}</h3>
@@ -61,6 +61,7 @@ export function ImportControls({ locale }: { locale: Locale }) {
       {conflict?<p className="inline-status error-status" role="alert">{t("inventoryNameExists")}</p>:suggested?<p className="inline-status" role="status">{t("inventoryNameSuggestion")}</p>:null}
       <div className="import-actions"><button type="button" className="text-button" disabled={pending !== null} onClick={cancel}>{t("cancel")}</button><button type="button" className="add-button" disabled={pending !== null || !name.trim() || conflict} onClick={() => void restore()}>{pending === "restoring" ? t("importRunning") : t("importAsNew")}</button></div>
     </div>}
+    {!preview?<p className="export-note">{t("exportZipFormat")}</p>:null}
     {pending ? <p className="visually-hidden" role="status">{pending === "checking" ? t("importChecking") : t("importRunning")}</p> : null}
     {error ? <><p className="inline-status error-status" role="alert">{t(error)}</p>{file && !preview ? <button className="quiet-button" type="button" disabled={pending!==null} onClick={()=>void choose(file)}>{t("retry")}</button>:null}</> : null}
   </section>;

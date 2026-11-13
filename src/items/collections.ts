@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { inventoryDatabase } from "@/items/inventories";
 import type { InventoryContext } from "@/items/inventory-context";
+import {paginationInput} from "./pagination";
 
 const collectionIdSchema = z.string().uuid();
 export const collectionIcons = ["🙂", "⭐", "🎁", "🛠️", "🏠", "🌿", "📷", "📚", "🎨", "📦"] as const;
@@ -175,6 +176,19 @@ export async function listCollectionCoverOptions(context: InventoryContext, coll
     args: [collectionId, workspaceId],
   });
   return result.rows.map((row) => ({ itemId: String(row.itemId), name: String(row.name), model: row.model == null ? null : String(row.model), inventoryNumber: String(row.inventoryNumber), mediaId: String(row.mediaId) }));
+}
+
+export async function collectionCoverPage(context:InventoryContext,collectionIdValue:unknown,searchValue:unknown,pageValue:unknown){
+  const collectionId=collectionIdSchema.parse(collectionIdValue),search=z.string().trim().max(160).parse(searchValue),{page:requested}=paginationInput({page:pageValue});
+  const {db,workspaceId}=await inventoryDatabase(context);
+  const where=`FROM item_collection_memberships cm JOIN items i ON i.id=cm.item_id JOIN media_assets m ON m.item_id=i.id JOIN collections c ON c.id=cm.collection_id AND c.workspace_id=i.workspace_id WHERE cm.collection_id=? AND i.workspace_id=? AND (i.name LIKE ? OR i.model LIKE ? OR i.inventory_number LIKE ?)`;
+  const args=[collectionId,workspaceId,...Array(3).fill(`%${search}%`)];
+  const tx=await db.$client.transaction("read");
+  try{
+    const total=Number((await tx.execute({sql:`SELECT COUNT(*) AS total ${where}`,args})).rows[0]!.total),pages=Math.max(1,Math.ceil(total/24)),page=Math.min(requested,pages);
+    const result=await tx.execute({sql:`SELECT i.id AS itemId,i.name,i.model,i.inventory_number AS inventoryNumber,m.id AS mediaId, (SELECT COUNT(*) FROM media_assets earlier WHERE earlier.item_id=m.item_id AND (earlier.display_order<m.display_order OR (earlier.display_order=m.display_order AND earlier.id<=m.id))) AS position ${where} ORDER BY lower(i.name),i.id,m.display_order,m.id LIMIT 24 OFFSET ?`,args:[...args,(page-1)*24]});
+    await tx.commit();return{total,page,pages,items:result.rows.map(row=>({itemId:String(row.itemId),name:String(row.name),model:row.model==null?null:String(row.model),inventoryNumber:String(row.inventoryNumber),mediaId:String(row.mediaId),position:Number(row.position)}))};
+  }catch(error){await tx.rollback();throw error;}
 }
 
 export async function setCollectionCover(context: InventoryContext, collectionIdValue: unknown, input: unknown) {

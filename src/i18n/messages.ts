@@ -1,4 +1,8 @@
 const ru = {
+  notFoundTitle:"Страница не найдена",notFoundMessage:"Страница недоступна или адрес устарел.",notFoundReturn:"На главную",
+  exportZipFormat:".zip",exportCsvFormat:".csv (без фото)",
+  footerRepository:"Код на GitHub",footerContribute:"Участие в проекте",footerLicense:"GPLv3",footerChangelog:"Изменения",footerVersion:"Разработка {version}",
+  pageNavigation:"Страницы",pagePrevious:"Назад",pageNext:"Далее",pageSummary:"{from}–{to} из {count}",pageOf:"Страница {page} из {pages}",pageSize:"Вещей на странице",
   authSignIn: "Войти",
   authAccountSettings: "Настройки учётной записи", authBack: "Назад к инвентарю",
   authTelegramSignIn: "Войти через Telegram", authTelegramInvite: "Есть приглашение для Telegram?", authTelegramInviteToken: "Код приглашения",
@@ -365,6 +369,10 @@ const ru = {
 } as const;
 
 const en: Record<MessageKey, string> = {
+  notFoundTitle:"Page not found",notFoundMessage:"This page is unavailable or its address is out of date.",notFoundReturn:"Go home",
+  exportZipFormat:".zip",exportCsvFormat:".csv (without photos)",
+  footerRepository:"Source on GitHub",footerContribute:"Contributing",footerLicense:"GPLv3",footerChangelog:"Changelog",footerVersion:"Development {version}",
+  pageNavigation:"Pagination",pagePrevious:"Previous",pageNext:"Next",pageSummary:"{from}–{to} of {count}",pageOf:"Page {page} of {pages}",pageSize:"Items per page",
   authSignIn: "Sign in",
   authAccountSettings: "Account settings", authBack: "Back to inventory",
   authTelegramSignIn: "Sign in with Telegram", authTelegramInvite: "Have a Telegram invitation?", authTelegramInviteToken: "Invitation code",
@@ -564,6 +572,10 @@ const en: Record<MessageKey, string> = {
 };
 
 const uk: Record<MessageKey, string> = {
+  notFoundTitle:"Сторінку не знайдено",notFoundMessage:"Сторінка недоступна або адреса застаріла.",notFoundReturn:"На головну",
+  exportZipFormat:".zip",exportCsvFormat:".csv (без фото)",
+  footerRepository:"Код на GitHub",footerContribute:"Участь у проєкті",footerLicense:"GPLv3",footerChangelog:"Зміни",footerVersion:"Розробка {version}",
+  pageNavigation:"Сторінки",pagePrevious:"Назад",pageNext:"Далі",pageSummary:"{from}–{to} з {count}",pageOf:"Сторінка {page} з {pages}",pageSize:"Речей на сторінці",
   authSignIn: "Увійти",
   authAccountSettings: "Налаштування облікового запису", authBack: "Назад до інвентарю",
   authTelegramSignIn: "Увійти через Telegram", authTelegramInvite: "Є запрошення для Telegram?", authTelegramInviteToken: "Код запрошення",
@@ -702,6 +714,10 @@ const uk: Record<MessageKey, string> = {
 };
 
 const srLatn: Record<MessageKey, string> = {
+  notFoundTitle:"Stranica nije pronađena",notFoundMessage:"Stranica nije dostupna ili je adresa zastarela.",notFoundReturn:"Na početnu",
+  exportZipFormat:".zip",exportCsvFormat:".csv (bez fotografija)",
+  footerRepository:"Kod na GitHub-u",footerContribute:"Doprinos projektu",footerLicense:"GPLv3",footerChangelog:"Izmene",footerVersion:"Razvoj {version}",
+  pageNavigation:"Stranice",pagePrevious:"Prethodna",pageNext:"Sledeća",pageSummary:"{from}–{to} od {count}",pageOf:"Stranica {page} od {pages}",pageSize:"Stavki po stranici",
   authSignIn: "Prijavi se",
   authAccountSettings: "Podešavanja naloga", authBack: "Nazad na inventar",
   authTelegramSignIn: "Prijavi se preko Telegrama", authTelegramInvite: "Imate poziv za Telegram?", authTelegramInviteToken: "Kod poziva",
@@ -840,6 +856,10 @@ const srLatn: Record<MessageKey, string> = {
 };
 
 const zhHans: Record<MessageKey, string> = {
+  notFoundTitle:"未找到页面",notFoundMessage:"此页面不可用或地址已失效。",notFoundReturn:"返回首页",
+  exportZipFormat:".zip",exportCsvFormat:".csv（不含照片）",
+  footerRepository:"GitHub 源码",footerContribute:"参与贡献",footerLicense:"GPLv3",footerChangelog:"更新记录",footerVersion:"开发版 {version}",
+  pageNavigation:"分页",pagePrevious:"上一页",pageNext:"下一页",pageSummary:"第 {from}–{to} 项，共 {count} 项",pageOf:"第 {page} 页，共 {pages} 页",pageSize:"每页项目数",
   authSignIn: "登录",
   authAccountSettings: "账户设置", authBack: "返回物品清单",
   authTelegramSignIn: "使用 Telegram 登录", authTelegramInvite: "有 Telegram 邀请码？", authTelegramInviteToken: "邀请码",

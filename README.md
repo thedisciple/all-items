@@ -10,9 +10,11 @@ Creation prepares private metadata-stripped assets sequentially, then commits it
 
 The responsive header/toolbar, dialog insets, ISO-only currency labels and safe detail exit are covered by a reusable synthetic Edge acceptance gate. Exact price units, five complete local dictionaries and experimental ZIP revision 6 with tested revision 2–5 import recovery remain unchanged. See [M4A validation](docs/architecture/m4a-validation.md), [creation and retry architecture](docs/architecture/m4a-creation-plan.md), [gallery interactions](docs/architecture/m4a-gallery.md) and [ROADMAP.md](ROADMAP.md).
 
-M4A and M4B.1–M4B.2 provide local creation, usability and verified installation-backup groundwork. M4B.3 adds device-readiness and inventory presentation options. P1 adds local accounts. P2 prepares an opt-in, strictly configured HTTPS reverse-proxy mode and optional invite-only Telegram OIDC; no public endpoint or live Telegram connection is configured, and physical-device and independent security acceptance remain open. See the [P2 threat checklist](docs/architecture/p2-threat-model.md), [deployment guide](docs/architecture/p2-deployment.md), [Telegram setup](docs/architecture/p2-telegram.md), [operator checklist](docs/architecture/p2-operator-checklist.md) and [compatibility policy](docs/architecture/v0-1-compatibility.md).
+M4A and M4B.1–M4B.2 provide local creation, usability and verified installation-backup groundwork. M4B.3 adds device-readiness and inventory presentation options. P1 adds local accounts. P2 prepares an opt-in, strictly configured HTTPS reverse-proxy mode and optional invite-only Telegram OIDC; the owner reports subsequent ts.net access, while live Telegram verification and physical-device/independent security acceptance remain open. See the [P2 threat checklist](docs/architecture/p2-threat-model.md), [deployment guide](docs/architecture/p2-deployment.md), [Telegram setup](docs/architecture/p2-telegram.md), [operator checklist](docs/architecture/p2-operator-checklist.md) and [compatibility policy](docs/architecture/v0-1-compatibility.md).
 
 ## Run on Windows 11
+
+M4C adds mobile direct navigation, contextual Data access, a bounded photo editor and database-backed 25/50/100 item pages. See [mobile decisions](docs/product/m4c-mobile-design.md), [physical-device acceptance](docs/product/m4c-device-acceptance.md) and [optional experiment/WebMCP plans](docs/architecture/m4c-experiments.md). Real-device and independent security acceptance remain required before beta deployment.
 
 Use Node.js 24 (the local validation runtime) or a compatible Node.js version from package.json. CI uses Node.js 22, with a minimum of 22.13 required by ESLint 10. Then in PowerShell:
 
@@ -24,6 +26,8 @@ npm run db:migrate
 npm run auth -- owner
 npm run dev
 ```
+
+Account usernames deliberately accept 3–64 ASCII letters, digits, `.`, `_`, `-`, beginning with a letter or digit; surrounding whitespace is trimmed and case is normalized. Cyrillic/other Unicode usernames are rejected by policy. This is separate from PowerShell encoding. Item names and other user content support Unicode. Keep existing account identifiers unchanged.
 
 Open <http://127.0.0.1:3000>. The first start applies SQLite migrations. The app binds to loopback and stores the database and private media under `%LOCALAPPDATA%\AllItems`. To use a different private data directory for the current PowerShell session, set `$env:ALL_ITEMS_DATA_DIR` before starting the app; it must be outside the repository. On other systems the fallback is `~/.all-items`.
 
