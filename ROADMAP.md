@@ -1,5 +1,12 @@
 # Roadmap
 
+## Canonical delivery status
+
+- **Completed implementation:** M0–M4C, including P1/P2 authentication and deployment foundations; milestone reports distinguish synthetic checks from uncompleted physical/security acceptance.
+- **Current:** M4D — GitHub synchronization, immutable local preview and guarded synthetic-beta release operations. See [release workflow](docs/architecture/release-workflow.md). Merge, deployment and real invitations require separate approval.
+- **Next:** initial AI object identification and human-reviewed catalog enrichment, after M4D acceptance; no AI implementation is started here.
+- **Future:** DIY recommendations, cross-inventory projects, shared inventories, marketplace, gamification, WebMCP and optional themes/integrations. Historical progress files are evidence snapshots, not the task queue.
+
 See [the opportunity register](docs/product/opportunity-register.md) for detailed concepts, dependencies, risk, complexity, and priority. Checkmarks describe implemented and verified work only.
 
 ## M4C — Mobile UX and private-beta quality gate
@@ -85,7 +92,7 @@ M2D-R1 hardens Cropper.js readiness, zoom bounds, crop output validation, and or
 
 M2D-R2 passed the automated suite in Microsoft Edge on Windows: 25 unit tests and 7 Playwright scenarios, with no browser console warnings/errors or failed page responses in the cropper acceptance scenario. Physical touch-device acceptance remains untested.
 
-## M3 — Portability and personal organization — IN PROGRESS
+## M3 — Portability foundation — COMPLETE
 
 ### M3.1 UX refinements — COMPLETE
 
@@ -113,7 +120,7 @@ M2D-R2 passed the automated suite in Microsoft Edge on Windows: 25 unit tests an
 - [x] Restore into an empty inventory through private staging, a write transaction, integrity checks, rollback cleanup, and next-attempt interruption cleanup
 - [x] Verify a synthetic full-fidelity round trip and isolated Edge export/import flow
 
-M3.2-R1 now exports revision 3 and retains a tested revision 2 import adapter. Revision 1 was experimental and is unsupported for import. Import does not merge or replace a populated workspace. Preserve the source archive until the restore is checked; automated backup and broader recovery remain future work. Styled XLSX is planned as a distinct spreadsheet export.
+Historical M3.2 contract: revision 3 export with revision 2 recovery. Current contract: revision 6 with tested revision 2–5 importers; revision 1/unknown revisions are unsupported. Import creates a separate inventory and never silently merges or replaces populated data. M4B.2 installation backups and restore drills are implemented; styled XLSX remains a separate future spreadsheet export.
 
 ### M3.2-R1 Consolidation and pre-workspace architecture — COMPLETE
 
@@ -134,7 +141,7 @@ Validated with 38 unit tests, typecheck, lint, production build, the 13-scenario
 - [x] Scoped deletion with verified backup, explicit confirmation, cleanup recovery and preservation tests; no global Clear All or replacement shortcut
 - [x] Shared control geometry, stable filters, collection creation repair, full-cover viewer and semantic five-language errors
 
-Follow [the architecture decision](docs/architecture/adr-multiple-inventories.md). Future accounts remain a separate authorization boundary. The primary import workflow creates an independent inventory; existing inventories are never merged or replaced. See [validation](docs/architecture/m3-3a-validation.md).
+Follow [the architecture decision](docs/architecture/adr-multiple-inventories.md). P1 accounts now provide the separate verified ownership boundary. The primary import workflow creates an independent inventory; existing inventories are never merged or replaced. See [validation](docs/architecture/m3-3a-validation.md).
 
 ### M3.3B Recovery and preferences
 
@@ -152,7 +159,7 @@ Follow [the architecture decision](docs/architecture/adr-multiple-inventories.md
 - [x] Shared currency choices, exact integer parsing, historical exponent preservation and centered contained covers
 - [x] Synthetic unit/browser acceptance and explicit preservation safeguards; final delivery evidence is in [validation](docs/architecture/m3-4-validation.md)
 
-## M3 — Remaining personal organization
+## Future personal organization
 
 - [ ] Optional encrypted archive export as a future security enhancement
 - [x] M4B.2: verified local installation backups, opt-in retention and isolated restore drills; additional workflow recovery remains separate
@@ -175,7 +182,7 @@ M4A is complete as a scoped UX/create-flow milestone; it is not a public release
 - [x] Multi-photo creation, complete local draft recovery, bounded private staging and retry-safe final commit
 - [x] Synthetic Edge/keyboard/touch-mock regression gate and documentation reconciliation
 
-### M4B — Reliable recovery and usability release checks — IN PROGRESS
+### M4B — Recovery/usability implementation — COMPLETE; device acceptance separate
 
 - [x] M4B.1 UX refinement: contained gallery previews, contextual item actions and visual collection cover choice
 - [x] M4B.2 verified installation backups, optional scheduled CLI/retention and isolated restore drills
@@ -186,7 +193,8 @@ M4A is complete as a scoped UX/create-flow milestone; it is not a public release
 
 ### Release groundwork (gated; no release implied)
 
-- [ ] Mobile UX refinement, accessibility, and security review
+- [x] M4C mobile UX refinement and synthetic accessibility/layout checks
+- [ ] Physical-device and independent security review
 - [ ] Real task-based usability tests and interaction-count/form-completion measures
 - [ ] Error-recovery, performance, responsive consistency, and microcopy reviews
 - [x] CI for typecheck, lint, isolated unit tests and build
@@ -205,13 +213,13 @@ The old number is not execution order. Recovery/usability groundwork and a separ
 - [ ] P2 review actual production proxy/TLS, abuse/credential handling, scheduled recovery and privacy-conscious feedback reporting; [operator checklist](docs/architecture/p2-operator-checklist.md) is prepared
 - [x] P1 additive owner association with verified backup/isolated restoration and preservation checks; owner activates credentials locally
 - [ ] Invite real testers only after P2 acceptance
-- [x] P1 keeps development/private endpoints local; no public tunnel, listener or hostname enabled
+- [x] P1 keeps the backend loopback-bound; optional P2 Funnel exposure uses the authenticated Caddy adapter, never a public Next listener
 - [x] Implement config-gated optional Telegram OIDC with local password fallback, one-use invitations and explicit account linking; synthetic signed-provider tests only, live BotFather callback remains a P2 gate
 - [x] Evaluate Sites without deployment: current app needs an invasive runtime/storage port; retain it as a future optional hosted edition
 - [x] Prepare a first-beta Funnel route through a loopback Caddy adapter, with [explicit stop/recovery instructions](docs/architecture/p2-first-beta-runbook.md)
 - [ ] Approve and verify the actual external Funnel URL, live Telegram callback and physical mobile acceptance before inviting private records
 
-## Future AI — NOT STARTED
+## Next after M4D — AI identification and enrichment — NOT STARTED
 
 - [ ] Photo and multi-object identification with human-reviewed metadata proposals
 - [ ] Preserve original markings; use cited, verified datasheet references

@@ -1,5 +1,8 @@
 # P2 release continuation
 
+> Historical engineering snapshot. Pending CI/exposure statements below describe the recorded milestone, not current installation state. See [ROADMAP](../../ROADMAP.md) and [release workflow](release-workflow.md) for current status. External phone access has subsequently been reported; full physical/security/Telegram acceptance remains separate. The sanitized M4C checkpoint passed GitHub CI in [PR #1](https://github.com/thedisciple/all-items/pull/1).
+
+
 Starting HEAD: `6e75361bdb9d30501e42ad26a7f2b617652655fe` (2026-11-08). Preserve the pre-existing unstaged package-lock deletions and untracked `.vscode/`.
 
 Scope: hosting compatibility decision, specified UX/copy, lightweight backup listing, loopback Funnel adapter/runbook, one final integration gate. No public exposure or real database migration is authorized by this prompt.

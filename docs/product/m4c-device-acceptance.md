@@ -1,5 +1,12 @@
 # M4C physical-device acceptance
 
+This is also the short M4D multi-user beta checklist; run it against the exact approved release SHA. Automated browser/mock-service evidence never substitutes for physical Windows/Android/iPhone acceptance.
+
+- Use two independent synthetic users on Windows, Android and iPhone, on different home/mobile networks. Record pass/fail per device and SHA without recording credentials or personal media.
+- Verify valid HTTPS/certificate and session persistence/re-login after restart. Review service autostart and rehearse a cold reboot during an approved window; do not silently change service startup modes.
+- If Telegram is actually configured, verify signed-provider login, a single-use invitation (second use denied), password fallback and explicit linking/unlinking. Configuration presence alone is not acceptance; no real users are invited by automated checks.
+- Confirm a verified full backup, isolated restored migration and matching code/data rollback before broader tests. Preserve test edits in a separate backup when rolling back. Collect only error class, time, route shape and sanitized synthetic screenshots privately.
+
 Status: pending owner acceptance on actual Android and iPhone. Edge mobile emulation, synthetic camera results and local TLS/proxy simulation are separate evidence, not physical camera/touch/pinch/Back or external Funnel acceptance. The owner previously reached the ts.net site; M4C does not redeploy that site.
 
 Use synthetic accounts, inventories and photos. Record device, OS, browser/version, locale, commit and viewport/orientation. Keep private screenshots outside the repository. Follow the existing [P2 first-beta security/publication gate](../architecture/p2-first-beta-runbook.md) and [threat checklist](../architecture/p2-threat-model.md); this checklist grants no permission to enable Funnel, change services or invite users.

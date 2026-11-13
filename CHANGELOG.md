@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — M4D
+
+- Published the sanitized mobile milestone through a draft PR and established explicit checkpoint push/CI reporting rules; merge and deployment remain separate approvals.
+- Added immutable committed local preview builds, isolated marked data, explicit first-account setup and a minimal exact-origin health/version response.
+- Added guarded synthetic-beta status, preparation, approved switch/rollback and stop-sharing commands. Verified backups and restored migration copies preserve matching prior code/data; unknown legacy build identities refuse automatic adoption.
+- Consolidated current roadmap status and labelled historical P1/P2 evidence. Personal configuration, release state, credentials and journals remain outside Git. No live service, Funnel configuration or invitations were changed.
+
 ## Unreleased — M4C
 
 - Kept the full brand and two direct mobile tabs, equalized header controls, and moved inventory Data access into inventory settings while preserving secured URLs.

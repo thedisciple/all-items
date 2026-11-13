@@ -1,6 +1,8 @@
 node_modules/
 .next/
 .next-e2e/
+.next-*/
+.all-items-release.json
 .next-import-source/
 .next-import-target/
 out/

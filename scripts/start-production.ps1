@@ -34,6 +34,13 @@ foreach ($name in $allowed) {
   else { [Environment]::SetEnvironmentVariable($name,$null,'Process') }
 }
 Remove-Item Env:ALL_ITEMS_NEXT_DIST -ErrorAction SilentlyContinue
+Remove-Item Env:ALL_ITEMS_RELEASE_SHA -ErrorAction SilentlyContinue
+$receiptPath=Join-Path $repository '.all-items-release.json'
+if(Test-Path -LiteralPath $receiptPath){
+  $receipt=Get-Content -LiteralPath $receiptPath -Raw | ConvertFrom-Json
+  if($receipt.sha -cnotmatch '^[a-f0-9]{40}$'){throw 'Invalid release receipt'}
+  $env:ALL_ITEMS_RELEASE_SHA=$receipt.sha
+}
 Push-Location $repository
 try {
   & npm.cmd run config:check

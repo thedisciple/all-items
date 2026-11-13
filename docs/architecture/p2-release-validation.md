@@ -1,5 +1,8 @@
 # P2 release preparation: evidence and handoff
 
+> Historical engineering snapshot. Pending CI/exposure statements below describe the recorded milestone, not current installation state. See [ROADMAP](../../ROADMAP.md) and [release workflow](release-workflow.md) for current status. External phone access has subsequently been reported; full physical/security/Telegram acceptance remains separate. The sanitized M4C checkpoint passed GitHub CI in [PR #1](https://github.com/thedisciple/all-items/pull/1).
+
+
 Date: 2026-11-08. Starting HEAD: `6e75361bdb9d30501e42ad26a7f2b617652655fe`. No internet pilot is live. The delivered commit/CI links are in the release handoff; this record describes the bounded local gate.
 
 Logical checkpoints: `7d92ec4` records the hosting decision; `b59482d` implements UX/performance. The commit containing this validation adds the adapter, acceptance fixture and deployment handoff. Inspect CI for the delivered HEAD; do not restart local green suites merely to refresh this record.

@@ -1,5 +1,8 @@
 # P2 continuation checkpoint
 
+> Historical engineering snapshot. Pending CI/exposure statements below describe the recorded milestone, not current installation state. See [ROADMAP](../../ROADMAP.md) and [release workflow](release-workflow.md) for current status. External phone access has subsequently been reported; full physical/security/Telegram acceptance remains separate. The sanitized M4C checkpoint passed GitHub CI in [PR #1](https://github.com/thedisciple/all-items/pull/1).
+
+
 Historical checkpoint. The newer [P2 release handoff](p2-release-progress.md) and [validation ledger](p2-release-validation.md) supersede its continuation list.
 
 Status: **candidate implementation complete; CI verification pending; no public/private-beta deployment is approved or live**. Starting Git commit: `f2df18c1a3c94065a4532f64fdf40bca67d1c7ef`. The user-supplied specification is the P2 private beta, Telegram OIDC and UX consolidation prompt attached in the conversation. Continue from the current checkout rather than assuming this document is the latest commit.

@@ -1,5 +1,8 @@
 # First remote private beta: Windows + Funnel
 
+> Historical engineering snapshot. Pending CI/exposure statements below describe the recorded milestone, not current installation state. See [ROADMAP](../../ROADMAP.md) and [release workflow](release-workflow.md) for current status. External phone access has subsequently been reported; full physical/security/Telegram acceptance remains separate. The sanitized M4C checkpoint passed GitHub CI in [PR #1](https://github.com/thedisciple/all-items/pull/1).
+
+
 For M4C updates, complete the [physical-device checklist](../product/m4c-device-acceptance.md) after an explicitly approved deployment. The preparation-time evidence below does not certify any later installation or deployment.
 
 Prepared 2026-11-08. **External connectivity and live Telegram are NOT TESTED. No endpoint has been published.** The local acceptance gate uses synthetic data, a simulated TLS terminator and the real Caddy adapter; it cannot prove Tailscale/account/ISP/device behavior. Complete the security review and obtain explicit owner approval before any Funnel enable command below.
