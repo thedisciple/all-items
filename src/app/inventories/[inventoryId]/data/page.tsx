@@ -24,7 +24,7 @@ export default async function DataPage({params}: {params:Promise<{inventoryId:st
     <section className="main-content">
       <AppHeader/>
       <div className="content-wrap data-content"><div className="heading-row"><h1>{t("data")}</h1></div>
-        <section className="data-panel" aria-labelledby="data-backup-heading"><h2 id="data-backup-heading">{t("dataBackup")}</h2><ExportControls locale={locale}/><ImportControls locale={locale}/></section>
+        <section className="data-panel inventory-data-actions" aria-labelledby="data-backup-heading"><h2 id="data-backup-heading">{t("dataBackup")}</h2><ExportControls locale={locale}/><ImportControls locale={locale}/></section>
         {admin?<InstallationBackups backups={backups} listingFailed={listingFailed}/>:null}
       </div>
     </section>

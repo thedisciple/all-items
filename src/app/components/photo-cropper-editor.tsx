@@ -6,6 +6,7 @@ import { RefreshCcw, RotateCcw, RotateCw, X } from "lucide-react";
 import { Component, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { aspectRatioForPreset, getCropperImageMetrics, isValidCropCoordinates, safeZoomTarget } from "@/media/cropper-state";
 import { useI18n } from "@/i18n/provider";
+import {ChoicePicker} from "./choice-picker";
 
 type Props = {
   onCropChange?:(crop:CropperJS.Data)=>void;
@@ -51,9 +52,21 @@ export default function PhotoCropperEditor(props: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<""|"unavailable"|"failed"|"small"|"large"|"capacity">("");
   const dialogRef = useRef<HTMLElement>(null);
+  const viewportRef=useRef<HTMLDivElement>(null);
   const geometryAllowed=useRef(true);
   const geometryTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const geometryCallback=useRef(props.onCropChange);geometryCallback.current=props.onCropChange;
+
+  useEffect(()=>{
+    const viewport=viewportRef.current;if(!viewport||typeof ResizeObserver==="undefined")return;
+    let width=viewport.clientWidth,height=viewport.clientHeight,frame=0;
+    const observer=new ResizeObserver(()=>{
+      const nextWidth=viewport.clientWidth,nextHeight=viewport.clientHeight;
+      if(nextWidth===width&&nextHeight===height)return;
+      width=nextWidth;height=nextHeight;cancelAnimationFrame(frame);
+      frame=requestAnimationFrame(()=>{if(readyRef.current)window.dispatchEvent(new Event("resize"));});
+    });observer.observe(viewport);return()=>{observer.disconnect();cancelAnimationFrame(frame);};
+  },[]);
 
   useEffect(() => {
     alive.current = true;
@@ -274,9 +287,9 @@ export default function PhotoCropperEditor(props: Props) {
     <CropperErrorBoundary onCancel={cancel} onUseOriginal={useOriginal} unavailableLabel={props.unavailableLabel} cancelLabel={props.cancelLabel} originalLabel={props.originalLabel}>
       <section ref={dialogRef} className="photo-source-dialog crop-dialog" role="dialog" aria-modal="true" aria-labelledby="crop-dialog-title" onKeyDown={onDialogKeyDown}>
         <div className="dialog-heading"><h3 id="crop-dialog-title">{props.title}</h3><button type="button" className="icon-button crop-close-button" aria-label={props.cancelLabel} title={props.cancelLabel} onClick={cancel}><X size={18} aria-hidden="true"/></button></div>
-        <div className="crop-editor-body"><Cropper
+        <div className="crop-editor-body"><div className="crop-viewport" ref={viewportRef}><Cropper
           src={props.sourceUrl}
-          style={{ height: "min(54vh, 470px)", width: "100%" }}
+          style={{ height: "100%", width: "100%" }}
           className="photo-cropper-widget"
           alt={props.sourceAlt}
           viewMode={1}
@@ -286,7 +299,7 @@ export default function PhotoCropperEditor(props: Props) {
           guides
           background={false}
           responsive
-          restore={false}
+          restore
           cropBoxMovable
           cropBoxResizable
           movable
@@ -301,12 +314,10 @@ export default function PhotoCropperEditor(props: Props) {
           onError={onCropperError}
           zoom={onZoom}
           crop={onCrop}
-        />
+        /></div>
         {!isReady && !error ? <p className="crop-load-status" role="status">{props.busyLabel}</p> : null}
         <div className="crop-controls">
-          <label className="crop-aspect"><span>{props.aspectLabel}</span><select value={ratio} disabled={!instanceReady || busy} onChange={(event) => updateAspect(event.target.value)}>
-            <option value="free">{props.aspectFree}</option><option value="original">{props.aspectOriginal}</option><option value="1:1">1:1</option><option value="4:3">4:3</option><option value="3:2">3:2</option><option value="16:9">16:9</option>
-          </select></label>
+          <div className="crop-aspect"><span>{props.aspectLabel}</span><ChoicePicker label={props.aspectLabel} value={ratio} disabled={!instanceReady||busy} onChange={updateAspect} options={[{value:"free",label:props.aspectFree},{value:"original",label:props.aspectOriginal},...["1:1","4:3","3:2","16:9"].map(value=>({value,label:value}))]}/></div>
           <label className="crop-zoom"><span>{props.zoomLabel}</span><input aria-label={props.zoomLabel} type="range" min="0.25" max="4" step="0.01" value={zoom} disabled={!instanceReady || busy} onChange={(event) => { const value = Number(event.target.value); const target = safeZoomTarget(value, fitRatio.current); if (target) { setZoom(target.zoom); updateZoom(target.zoom); } }}/><output>× {new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(zoom)}</output></label>
         </div>
         <details className="crop-accessibility-controls" aria-label={props.keyboardLabel}>

@@ -1,5 +1,8 @@
 # Pilot P1 validation
 
+> Historical engineering snapshot. Pending CI/exposure statements below describe the recorded milestone, not current installation state. See [ROADMAP](../../ROADMAP.md) and [release workflow](release-workflow.md) for current status. External phone access has subsequently been reported; full physical/security/Telegram acceptance remains separate. The sanitized M4C checkpoint passed GitHub CI in [PR #1](https://github.com/thedisciple/all-items/pull/1).
+
+
 Starting main: `152ce3704656beba14a8600d325ac1aae306b3ec`. Checkpoint A was committed first as `bd96d38` (`fix: separate add-item dialog scroll and actions`). P1 remains local foundation; no public/LAN listener, proxy, tunnel, DNS change or real invitation was enabled.
 
 ## Automated evidence

@@ -19,7 +19,7 @@ for(const locale of locales)test(`new account uses the app shell: ${locale}`,asy
   await expect(shell.locator(".brand-mark")).toHaveText("A");
   await expect(shell.locator(".sidebar .brand")).toHaveAttribute("href","/");
   await expect(shell.getByRole("heading",{name:messages[locale].inventoryEmptyInstallation,exact:true})).toBeVisible();
-  await expect(shell.locator('.side-navigation [aria-disabled="true"]')).toHaveCount(3);
+  await expect(shell.locator('.side-navigation [aria-disabled="true"]')).toHaveCount(2);
   await expect(shell.locator(".side-navigation a")).toHaveCount(0);
   await expect(shell.locator(".inventory-create-button")).toHaveCount(1);
   await expect(shell.locator(".language-switcher,.empty-header-label")).toHaveCount(0);

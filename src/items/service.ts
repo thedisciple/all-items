@@ -6,6 +6,7 @@ import { canonicalCategories, categoryKeyForStoredValue } from "./categories";
 import { categoryPresentations, saveCategoryPresentations } from "./inventory-presentation";
 import type { Client } from "@libsql/client";
 import { insertWriteReceipt, readWriteReceipt, type WriteIdentity } from "./write-receipts";
+import {paginationInput,type PageResult} from "./pagination";
 
 const optionalText = (max: number) => z.string().trim().max(max).optional().transform((value) => value || null);
 export const itemFields = z.object({
@@ -74,6 +75,7 @@ const itemListFilters = z.object({
   sort: z.enum(["date", "name", "quantity"]).optional(),
   direction: z.enum(["asc", "desc"]).optional(),
   collectionId: z.string().uuid().optional(),
+  excludeCollectionId:z.string().uuid().optional(),
 });
 
 function rowObject(row: Record<string, unknown>) { return row; }
@@ -151,9 +153,10 @@ export async function createItem(context: InventoryContext, input: ItemFields, s
   });
 }
 
-export async function listItems(context: InventoryContext, filters: { search?: string; unnamedLabel?: string; category?: string; status?: string; sort?: string; direction?: string; collectionId?: string } = {}): Promise<Array<Record<string, unknown> & { categories: string[] }>> {
+export type ItemListFilters={search?:string;unnamedLabel?:string;category?:string;status?:string;sort?:string;direction?:string;collectionId?:string;excludeCollectionId?:string};
+export type ItemListRow=Record<string,unknown>&{categories:string[]};
+function itemQuery(workspaceId:string,filters:ItemListFilters){
   const parsedFilters = itemListFilters.parse(filters);
-  const { db, workspaceId } = await inventoryDatabase(context);
   const search = parsedFilters.search || "";
   const clauses = ["i.workspace_id = ?"];
   const args: (string | number)[] = [workspaceId];
@@ -174,15 +177,29 @@ export async function listItems(context: InventoryContext, filters: { search?: s
     clauses.push("EXISTS (SELECT 1 FROM item_collection_memberships icm INNER JOIN collections c ON c.id = icm.collection_id WHERE icm.item_id = i.id AND c.id = ? AND c.workspace_id = i.workspace_id)");
     args.push(parsedFilters.collectionId);
   }
+  if(parsedFilters.excludeCollectionId){clauses.push("NOT EXISTS (SELECT 1 FROM item_collection_memberships cm JOIN collections c ON c.id=cm.collection_id WHERE cm.item_id=i.id AND c.id=? AND c.workspace_id=i.workspace_id)");args.push(parsedFilters.excludeCollectionId);}
   const order = parsedFilters.sort === "name" ? "i.name" : parsedFilters.sort === "quantity" ? "quantity" : "i.created_at";
   const direction = parsedFilters.direction ? parsedFilters.direction === "asc" ? "ASC" : "DESC" : parsedFilters.sort === "name" ? "ASC" : "DESC";
-  const result = await db.$client.execute({
-    sql: `SELECT i.id, i.name, i.model, i.brand, (SELECT json_group_array(category) FROM (SELECT category FROM item_categories WHERE item_id=i.id ORDER BY category)) AS categories_json, i.original_marking, i.inventory_number, i.identification_status, i.tracking_mode, i.created_at AS createdAt, COALESCE(SUM(s.quantity), 0) AS quantity, GROUP_CONCAT(DISTINCT l.name) AS locations,
+  const where=clauses.join(" AND ");
+  return {args,where,sql:`SELECT i.id, i.name, i.model, i.brand, (SELECT json_group_array(category) FROM (SELECT category FROM item_categories WHERE item_id=i.id ORDER BY category)) AS categories_json, i.original_marking, i.inventory_number, i.identification_status, i.tracking_mode, i.created_at AS createdAt, COALESCE(SUM(s.quantity), 0) AS quantity, GROUP_CONCAT(DISTINCT l.name) AS locations,
                  (SELECT m.id FROM media_assets m WHERE m.item_id = i.id AND m.is_primary = 1 LIMIT 1) AS primary_media_id
           FROM items i LEFT JOIN stock_entries s ON s.item_id = i.id LEFT JOIN locations l ON l.id = s.location_id
-          WHERE ${clauses.join(" AND ")} GROUP BY i.id ORDER BY ${order} ${direction}, i.id ASC`, args,
-  });
-  return result.rows.map((row) => { const categories = JSON.parse(String(row.categories_json)) as string[]; return { ...rowObject(row as Record<string, unknown>), categories, category: categories[0] ?? null }; });
+          WHERE ${where} GROUP BY i.id ORDER BY ${order} ${direction}, i.id ASC`};
+}
+function listRows(rows:Record<string,unknown>[]):ItemListRow[]{return rows.map(row=>{const categories=JSON.parse(String(row.categories_json)) as string[];return{...rowObject(row),categories,category:categories[0]??null};});}
+export async function listItems(context:InventoryContext,filters:ItemListFilters={}):Promise<ItemListRow[]>{
+  const {db,workspaceId}=await inventoryDatabase(context),query=itemQuery(workspaceId,filters);
+  return listRows((await db.$client.execute({sql:query.sql,args:query.args})).rows);
+}
+export async function listItemsPage(context:InventoryContext,filters:ItemListFilters={},paging:{page?:unknown;pageSize?:unknown}={}):Promise<PageResult<ItemListRow>>{
+  const input=paginationInput(paging),{db,workspaceId}=await inventoryDatabase(context),query=itemQuery(workspaceId,filters);
+  const tx=await db.$client.transaction("read");
+  try{
+    const total=Number((await tx.execute({sql:`SELECT COUNT(*) AS total FROM items i WHERE ${query.where}`,args:query.args})).rows[0]!.total);
+    const pages=Math.max(1,Math.ceil(total/input.pageSize)),page=Math.min(input.page,pages);
+    const result=await tx.execute({sql:query.sql+" LIMIT ? OFFSET ?",args:[...query.args,input.pageSize,(page-1)*input.pageSize]});
+    await tx.commit();return{items:listRows(result.rows),total,page,pages,pageSize:input.pageSize};
+  }catch(error){await tx.rollback();throw error;}
 }
 
 export async function listCategoryValues(context: InventoryContext, collectionIdValue?: unknown) {

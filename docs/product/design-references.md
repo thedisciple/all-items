@@ -1,5 +1,11 @@
 # Product design references
 
+## M4C research update — 2026-11-13
+
+Verified: [Universe recap](https://github.com/events/universe/recap) presents focused review/PR and screenshot attachment workflows. Inference: a compact wrapping footer with project/contribution/license/changelog links suits All Items; no assets or interface were copied. Implemented M4C: footer, issue/PR templates, mobile shell and bounded lists. Physical-device acceptance remains separate.
+
+Verified: [autoresearch](https://github.com/karpathy/autoresearch) supplies a controlled experimental method; [Chrome WebMCP](https://developer.chrome.com/docs/modern-web-guidance/guides/webmcp/webmcp) currently documents document.modelContext and early-preview constraints. Planned: bounded synthetic performance experiments and optional authorized read-only tools, as specified in [the architecture task](../architecture/m4c-experiments.md). Neither an autonomous loop nor WebMCP runtime integration is implemented.
+
 Research reviewed 25 October 2026. These references inform interaction principles; All Items does not copy protected interfaces, branding, illustrations, or code. Reference-product functionality is separated from design interpretation and proposed All Items behavior.
 
 ## Mobbin MCP and AI-assisted design workflow

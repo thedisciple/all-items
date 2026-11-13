@@ -39,7 +39,16 @@ export async function sessionTokenHash(token:string,directory:string){
   if(!/^[A-Za-z0-9_-]{43}$/.test(token))throw new AccessError(401);
   return tokenHash(token,directory);
 }
-export async function reauthenticateUser(client:Client,userId:string,password:unknown){
+export async function reauthenticateUser(client:Client,userId:string,password:unknown,now=Date.now()){
+  // Reserve a persistent budget before expensive hashing, including incorrect passwords.
+  const budget=await client.transaction('write');
+  try{
+    await budget.execute({sql:'DELETE FROM auth_login_buckets WHERE started_at<=?',args:[now-WINDOW_MS]});
+    for(const [bucket,limit]of[['reauth-installation',30],['reauth:'+createHash('sha256').update(userId).digest('hex'),5]] as const){
+      const row=(await budget.execute({sql:'SELECT attempts FROM auth_login_buckets WHERE bucket=?',args:[bucket]})).rows[0];if(row&&Number(row.attempts)>=limit)throw new LoginError('authThrottled');
+      await budget.execute({sql:'INSERT INTO auth_login_buckets(bucket,started_at,attempts) VALUES(?,?,1) ON CONFLICT(bucket) DO UPDATE SET attempts=attempts+1',args:[bucket,now]});
+    }await budget.commit();
+  }catch(error){await budget.rollback();throw error;}
   const secret=z.string().min(1).max(256).safeParse(password);
   const row=(await client.execute({sql:"SELECT password_hash,disabled FROM auth_users WHERE id=?",args:[userId]})).rows[0];
   return secret.success&&row&&row.disabled===0&&typeof row.password_hash==="string"&&await verifyPassword(secret.data,row.password_hash)?row.password_hash:null;

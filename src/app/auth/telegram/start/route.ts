@@ -2,7 +2,7 @@ import {NextResponse} from "next/server";
 import {cookies} from "next/headers";
 import {z} from "zod";
 import {dataDirectory,getDatabase} from "@/db/client";
-import {reauthenticateUser,sessionUser,SESSION_COOKIE} from "@/auth/core";
+import {reauthenticateUser,sessionUser,SESSION_COOKIE,LoginError} from "@/auth/core";
 import {validRequest,trustedOrigin} from "@/auth/policy";
 import {telegramConfig} from "@/auth/telegram-config";
 import {beginTelegramFlow} from "@/auth/telegram";
@@ -13,7 +13,7 @@ export async function POST(request:Request){
   if(!validRequest(request.headers,true))return new Response(null,{status:403});
   const origin=trustedOrigin();let intent:"login"|"invite"|"link"="login";
   const wantsJson=request.headers.get("accept")?.includes("application/json")??false;
-  let failure:"authTelegramFailed"|"authTelegramInviteInvalid"|"authTelegramReauth"="authTelegramFailed";
+  let failure:"authTelegramFailed"|"authTelegramInviteInvalid"|"authTelegramReauth"|"authThrottled"="authTelegramFailed";
   try{
     const config=telegramConfig();if(!config)throw new Error("Telegram unavailable");
     const form=await request.formData();intent=intentSchema.parse(form.get("intent"));
@@ -31,8 +31,9 @@ export async function POST(request:Request){
     response.headers.set("Cache-Control","private, no-store");
     return response;
   }catch(error){
+    if(error instanceof LoginError&&error.code==='authThrottled')failure=error.code;
     if(intent==="invite"&&error instanceof Error&&error.message==="Invite unavailable")failure="authTelegramInviteInvalid";
-    if(wantsJson)return NextResponse.json({error:failure},{status:failure==="authTelegramFailed"?503:400,headers:{"Cache-Control":"private, no-store"}});
-    return NextResponse.redirect(new URL(intent==="link"?"/account?telegram=failed":"/login?telegram=failed",origin),303);
+    if(wantsJson)return NextResponse.json({error:failure},{status:failure==='authThrottled'?429:failure==="authTelegramFailed"?503:400,headers:{"Cache-Control":"private, no-store"}});
+    return NextResponse.redirect(new URL(intent==="link"?(failure==='authThrottled'?'/account?telegram=throttled':"/account?telegram=failed"):"/login?telegram=failed",origin),303);
   }
 }

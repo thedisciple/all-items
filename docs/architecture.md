@@ -1,5 +1,7 @@
 # Architecture
 
+Current operational entry points are documented in [release workflow](architecture/release-workflow.md); [ROADMAP](../ROADMAP.md) is the canonical status. Historical P1/P2 reports do not describe current service state. Local preview builds immutable committed releases with isolated data; beta switches migrate new restored copies and preserve matching previous code/snapshots.
+
 ## Pilot P1 local identity
 
 P1 adds local invite-only accounts, server-side sessions and one owning user per inventory through additive migration 0014. The original owner is disabled until explicit local credential bootstrap; existing data identities/content are retained. Shared domain checks cover reads and mutations, and installation backups require installation admin. See [identity ADR and entry-point map](architecture/adr-p1-local-identity.md), [account/upgrade/recovery runbook](architecture/p1-local-accounts.md) and [P2 gate](architecture/m4b-3-device-pilot.md). Older unauthenticated status statements below describe historical milestones. The app still binds loopback by default.

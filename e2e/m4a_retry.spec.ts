@@ -1,3 +1,4 @@
+import {chooseChoice} from "./helpers/choice-picker";
 import {test,expect} from "./helpers/browser-reliability";
 import type {Page} from "@playwright/test";
 import sharp from "sharp";
@@ -45,7 +46,7 @@ test.describe("explicit lost commit response",()=>{
     try{
       const form=page.locator(".gallery-add .photo-replacement-form");await form.locator('input[name="photo"]').setInputFiles(await file("#927765"));await acceptCrop(page);await expect(form.getByRole("alert")).toContainText(messages.ru.photoSaveGeneric);
       const committed=await record(page,name);expect(committed.mediaAssets).toHaveLength(2);
-      await form.getByRole("button",{name:messages.ru.editCrop,exact:true}).click();const crop=page.getByRole("dialog",{name:messages.ru.cropTitle,exact:true});await crop.getByRole("combobox",{name:messages.ru.cropAspect,exact:true}).selectOption("1:1");await acceptCrop(page);
+      await form.getByRole("button",{name:messages.ru.editCrop,exact:true}).click();const crop=page.getByRole("dialog",{name:messages.ru.cropTitle,exact:true});await chooseChoice(page,crop.getByRole("combobox",{name:messages.ru.cropAspect,exact:true}),"1:1");await acceptCrop(page);
       await expect(form.getByRole("alert")).toContainText(messages.ru.photoWriteConflict);expect((await record(page,name)).mediaAssets).toEqual(committed.mediaAssets);
       expect(await form.locator('input[name="photo"]').evaluate((input:HTMLInputElement)=>input.files?.length)).toBe(1);await expect(form.locator('img[src^="blob:"]')).toBeVisible();
       await form.getByRole("button",{name:messages.ru.cancelSelection,exact:true}).click();await expect(page.locator(".gallery-thumbnail")).toHaveCount(2);await expect(form.getByRole("alert")).toHaveCount(0);

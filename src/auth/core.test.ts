@@ -5,11 +5,15 @@ import os from "node:os";
 import path from "node:path";
 import {pathToFileURL} from "node:url";
 import {applyMigrations} from "@/db/migrate";
-import {provisionAccount,signIn,sessionUser,ORIGINAL_OWNER_ID} from "./core";
+import {provisionAccount,signIn,sessionUser,ORIGINAL_OWNER_ID,reauthenticateUser} from "./core";
 let directory:string,client:Client;
 const password="Synthetic isolated bootstrap password";
 beforeAll(async()=>{directory=await mkdtemp(path.join(os.tmpdir(),"all-items-p1-core-"));client=createClient({url:pathToFileURL(path.join(directory,"all-items.db")).href});await applyMigrations(client,path.join(process.cwd(),"src/db/migrations"));});
 afterAll(()=>client.close());
+it('reserves persistent reauthentication budgets before hashing and recovers after the fixed window',async()=>{
+  const user=await provisionAccount(client,'reauth-limited',password),now=Date.now();for(let attempt=0;attempt<5;attempt++)expect(await reauthenticateUser(client,user.id,'Synthetic incorrect password',now)).toBeNull();
+  const reopened=createClient({url:pathToFileURL(path.join(directory,'all-items.db')).href});try{await expect(reauthenticateUser(reopened,user.id,password,now)).rejects.toMatchObject({code:'authThrottled'});expect(await reauthenticateUser(reopened,user.id,password,now+16*60_000)).toMatch(/^scrypt:/);}finally{reopened.close();}
+});
 it("keeps the owner disabled until explicit bootstrap and never replaces initialized credentials",async()=>{
   const pending=(await client.execute({sql:"SELECT username,password_hash,disabled FROM auth_users WHERE id=?",args:[ORIGINAL_OWNER_ID]})).rows[0]!;expect(pending).toMatchObject({username:null,password_hash:null,disabled:1});
   await expect(signIn(client,directory,"owner",password)).rejects.toMatchObject({code:"authInvalid"});

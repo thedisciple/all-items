@@ -4,6 +4,8 @@
   "private": true,
   "license": "GPL-3.0-only",
   "scripts": {
+    "preview": "tsx scripts/preview.ts",
+    "beta": "tsx scripts/beta.ts",
     "dev": "npm run config:check && npm run db:migrate && next dev --hostname 127.0.0.1",
     "build": "next build",
     "start": "npm run config:check && npm run db:migrate && next start --hostname 127.0.0.1",

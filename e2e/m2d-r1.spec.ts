@@ -1,3 +1,4 @@
+import {chooseChoice} from "./helpers/choice-picker";
 import { expect, test, type Page } from "@playwright/test";
 import sharp from "sharp";
 
@@ -100,8 +101,8 @@ test("waits for image readiness, applies zoom and aspect controls, crops, and op
   await page.mouse.wheel(0, -120);
   await expect.poll(async () => (await readCropState(page)).image.width).toBeGreaterThan(beforeWheelZoom);
 
-  const aspect = editor.getByLabel("Формат кадра");
-  await aspect.selectOption("original");
+  const aspect = editor.getByRole("combobox",{name:"Формат кадра",exact:true});
+  await chooseChoice(page,aspect,"original");
   const originalFrame = await readCropState(page);
   expect(Math.abs(originalFrame.cropBox.width / originalFrame.cropBox.height - 4 / 3)).toBeLessThan(0.03);
   expect(Math.abs(originalFrame.cropBox.width - originalFrame.canvas.width)).toBeLessThan(2);
@@ -112,7 +113,7 @@ test("waits for image readiness, applies zoom and aspect controls, crops, and op
   expect(Math.abs(rotatedOriginalFrame.cropBox.width / rotatedOriginalFrame.cropBox.height - 3 / 4)).toBeLessThan(0.05);
   expect(Math.abs(rotatedOriginalFrame.cropBox.width - rotatedOriginalFrame.canvas.width)).toBeLessThan(2);
   expect(Math.abs(rotatedOriginalFrame.cropBox.height - rotatedOriginalFrame.canvas.height)).toBeLessThan(2);
-  await aspect.selectOption("16:9");
+  await chooseChoice(page,aspect,"16:9");
   expect(Math.abs((await readCropState(page)).cropBox.width / (await readCropState(page)).cropBox.height - 16 / 9)).toBeLessThan(0.05);
   const boxBeforeDrag = (await readCropState(page)).cropBox;
   const boxBounds = await editor.locator(".cropper-crop-box").boundingBox();
@@ -134,7 +135,7 @@ test("waits for image readiness, applies zoom and aspect controls, crops, and op
   await expect.poll(async () => (await readCropState(page)).cropBox.width).not.toBeCloseTo(boxBeforeResize.width, 0);
   await editor.getByRole("button", { name: "Сбросить правки" }).click();
   await expect.poll(async () => (await readCropState(page)).rotation).toBe(0);
-  await expect(aspect).toHaveValue("free");
+  await expect(aspect).toHaveText("Свободный");
   await editor.getByRole("button", { name: "Готово" }).click();
   await addDialog.getByLabel("Название").fill("M2D-R1 cropped item");
   await addDialog.getByRole("button", { name: "Сохранить вещь" }).click();
@@ -331,8 +332,8 @@ test("Original crop covers portrait source and rotated orientation", async ({ pa
   await page.locator(".add-dialog-trigger").click();
   const addDialog = page.getByRole("dialog", { name: "Добавить вещь" });
   const editor = await selectPhoto(page, "portrait.png", await syntheticPhoto(480, 640));
-  const aspect = editor.getByLabel("Формат кадра");
-  await aspect.selectOption("original");
+  const aspect = editor.getByRole("combobox",{name:"Формат кадра",exact:true});
+  await chooseChoice(page,aspect,"original");
   let state = await readCropState(page);
   expect(Math.abs(state.cropBox.width / state.cropBox.height - 0.75)).toBeLessThan(0.04);
   expect(Math.abs(state.cropBox.width - state.canvas.width)).toBeLessThan(2);

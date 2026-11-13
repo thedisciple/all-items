@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "purpose": "synthetic-only",
+  "installationId": "11111111-1111-4111-8111-111111111111",
+  "repository": "C:\\source\\all-items",
+  "dataDirectory": "C:\\private\\all-items-synthetic",
+  "personalDataDirectory": "C:\\private\\all-items-personal",
+  "releaseRoot": "C:\\private\\all-items-beta-releases",
+  "runtimeConfig": "C:\\private\\runtime.env",
+  "appService": "AllItemsApp",
+  "caddyService": "AllItemsCaddy",
+  "appServiceXml": "C:\\private\\services\\AllItemsApp.xml",
+  "publicOrigin": "https://example-node.example-tailnet.ts.net",
+  "tailscaleExecutable": "C:\\Program Files\\Tailscale\\tailscale.exe"
+}

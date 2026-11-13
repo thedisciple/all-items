@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition, type KeyboardEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useTransition, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { setLanguageAction } from "@/app/actions";
@@ -18,6 +18,13 @@ export function LanguageSwitcher() {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const [left,setLeft]=useState(0);
+  useLayoutEffect(()=>{
+    if(!open)return;
+    const fit=()=>{if(!rootRef.current||!menuRef.current)return;const root=rootRef.current.getBoundingClientRect(),width=menuRef.current.offsetWidth,viewport=window.visualViewport,edge=viewport?.offsetLeft??0;setLeft(Math.max(edge+10-root.left,Math.min(0,edge+(viewport?.width??innerWidth)-10-root.left-width)));};
+    fit();window.addEventListener("resize",fit);window.visualViewport?.addEventListener("resize",fit);
+    return()=>{window.removeEventListener("resize",fit);window.visualViewport?.removeEventListener("resize",fit);};
+  },[open]);
   useEffect(() => {
     if (!open) return;
     const closeOutside = (event: PointerEvent) => { if (!rootRef.current?.contains(event.target as Node)) setOpen(false); };
@@ -46,7 +53,7 @@ export function LanguageSwitcher() {
       <img src={`/flags/${flagFiles[locale]}.svg`} alt="" width="20" height="15"/>
       <span>{t(languageLabels[locale])}</span><ChevronDown size={15} aria-hidden="true"/>
     </button>
-    {open ? <div className="language-menu" role="menu" aria-label={t("language")} ref={menuRef}>
+    {open ? <div className="language-menu" style={{left}} role="menu" aria-label={t("language")} ref={menuRef}>
       <button type="button" role="menuitemradio" aria-checked={locale === "ru"} onClick={() => choose("ru")}><img src="/flags/ru.svg" alt="" width="20" height="15"/>{t("languageRussian")}</button>
       <button type="button" role="menuitemradio" aria-checked={locale === "en"} onClick={() => choose("en")}><img src="/flags/gb.svg" alt="" width="20" height="15"/>{t("languageEnglish")}</button>
       <button type="button" role="menuitemradio" aria-checked={locale === "uk"} onClick={() => choose("uk")}><img src="/flags/uk.svg" alt="" width="20" height="15"/>{t("languageUkrainian")}</button>

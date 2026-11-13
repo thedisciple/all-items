@@ -2,6 +2,13 @@
 
 This document distinguishes shipped behavior from current behavior and future proposals. Update it when a workflow changes.
 
+## M4C mobile and bounded list patterns
+
+- Inventory and Collections remain direct mobile destinations. Inventory Data lives in inventory settings; account preferences and administrative installation backups retain their separate scopes.
+- List filters reset to page one; 25/50/100 page size, other filters and browser history remain explicit in the URL. Counts describe all matching rows, not just the visible page. Removing a final-page row clamps to the last populated page. Item Done returns to an allowlisted inventory/collection route with bounded filter/page context.
+- Collection candidate and cover dialogs load bounded authorized pages only when needed, preserve selections across pages and recoverable errors, and offer retry without discarding selections.
+- Phone Add Photo invokes native acquisition once; desktop webcam acquisition remains available. Only aspect/currency receive themed feature-detected popovers. Keyboard, outside dismissal and focus behavior coexist with native select fallback. Physical OS Back/camera/touch acceptance remains an explicit device gate.
+
 ## Reliability patterns for M2D-R2
 
 - **Filters:** category, status, and sort changes navigate immediately; text search uses a short debounce. Preserve unrelated query parameters, restore state from browser history, and offer a clear action only while a filter is active.

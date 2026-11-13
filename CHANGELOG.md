@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased — M4E
+
+- Added clean synthetic-beta preparation, staged account/loopback preview commands and explicitly approved first activation, preserving unidentified legacy data and private configuration without inventing its SHA.
+- Read release state under the operation lock; report observed backend/proxy/external version separately from checkout/receipt, configuration blockers, cached failed acceptance and interruption recovery.
+- Kept emergency sharing closure available despite corrupt release state or unavailable journals, with truthful journal feedback.
+- Bound password reauthentication before expensive hashing for Telegram link/unlink; reused localized throttling feedback.
+- Added bounded production cancellation diagnostics without suppressing exceptions. Independent review, physical devices/networks, live Telegram and approved service/reboot acceptance remain separate gates. No live deployment, sharing, invitations or AI implementation is performed by this change.
+
+## Unreleased — M4D
+
+- Published the sanitized mobile milestone through a draft PR and established explicit checkpoint push/CI reporting rules; merge and deployment remain separate approvals.
+- Added immutable committed local preview builds, isolated marked data, explicit first-account setup and a minimal exact-origin health/version response.
+- Added guarded synthetic-beta status, preparation, approved switch/rollback and stop-sharing commands. Verified backups and restored migration copies preserve matching prior code/data; unknown legacy build identities refuse automatic adoption.
+- Consolidated current roadmap status and labelled historical P1/P2 evidence. Personal configuration, release state, credentials and journals remain outside Git. No live service, Funnel configuration or invitations were changed.
+
+## Unreleased — M4C
+
+- Kept the full brand and two direct mobile tabs, equalized header controls, and moved inventory Data access into inventory settings while preserving secured URLs.
+- Bounded the crop viewport and touch handles, made controls fit narrow/short screens, added themed aspect/currency popovers with native fallback, simplified phone acquisition and attached the language menu to its trigger.
+- Reused branding on login/404, corrected owned legacy entity redirects, aligned Data actions and added a compact localized public-project footer.
+- Added authorized SQL pagination with stable ordering, filtered counts, 25/50/100 sizes, history and validated edit-return context. Collection member/candidate/cover lists use bounded queries instead of eager full-inventory payloads. No schema migration or new dependency.
+- Added focused UX issue/PR templates. Prepared bounded autoresearch/WebMCP tasks without runtime AI features or live deployment changes. Physical Android/iPhone acceptance remains required.
+
 ## Unreleased — P2 release preparation
 
 - Kept the existing Windows backend after the Sites compatibility gate; prepared a loopback Caddy adapter and a first-beta Funnel runbook with explicit publication, stop and recovery gates. No external service was enabled.

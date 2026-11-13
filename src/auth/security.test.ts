@@ -34,6 +34,9 @@ import {installationBackupAction} from "@/app/backup-actions";
 import * as actions from "@/app/actions";
 import {stageCreationPhotoAction,finalizeCreationAction} from "@/app/creation-actions";
 import {renameInventoryAction,deleteInventoryAction,rememberInventoryAction,saveInventorySortAction} from "@/app/inventory-actions";
+import {ownedLegacyInventory} from "@/items/legacy-routes";
+import {listItemsPage} from "@/items/service";
+import {collectionCandidates,collectionPhotos} from "@/app/collection-read-actions";
 
 let directory:string,ownerToken:string,aliceToken:string,bobToken:string;
 let alice:{workspaceId:string},bob:{workspaceId:string},item:string,photo:string,collection:string,cover:string,image:File,archive:Uint8Array;
@@ -59,6 +62,14 @@ beforeAll(async()=>{
   request.token=bobToken;expect(await listInventories()).toEqual([]);bob=await createInventory("Synthetic shared name");await createItem(bob,{name:"Synthetic Bob item"});
 },120_000);
 afterAll(async()=>{await(await getDatabase()).$client.close();});
+it("secures paged collection reads and legacy bookmarks against other users and admin",async()=>{
+  request.headers=new Headers({host:"127.0.0.1:3000",origin:"http://127.0.0.1:3000"});
+  const input={inventoryId:alice.workspaceId,collectionId:collection,query:"",page:1};
+  request.token=aliceToken;expect(await ownedLegacyInventory("item",item)).toEqual({workspaceId:alice.workspaceId});expect(await ownedLegacyInventory("collection",collection)).toEqual({workspaceId:alice.workspaceId});
+  expect((await listItemsPage(alice)).total).toBe(1);expect((await collectionPhotos(input)).items[0]!.mediaId).toBe(photo);expect((await collectionCandidates(input)).total).toBe(0);
+  for(const token of[bobToken,ownerToken]){request.token=token;expect(await ownedLegacyInventory("item",item)).toBeNull();expect(await ownedLegacyInventory("collection",collection)).toBeNull();await expect(listItemsPage(alice)).rejects.toBeInstanceOf(AccessError);await expect(collectionPhotos(input)).rejects.toBeInstanceOf(AccessError);await expect(collectionCandidates(input)).rejects.toBeInstanceOf(AccessError);}
+  request.token=aliceToken;request.headers=new Headers({host:"127.0.0.1:3000",origin:"https://attacker.invalid"});await expect(collectionCandidates(input)).rejects.toThrow();await expect(collectionPhotos(input)).rejects.toThrow();request.headers=new Headers({host:"127.0.0.1:3000",origin:"http://127.0.0.1:3000"});
+});
 it("preserves the migrated owner's records and media and gives invitees no inherited inventory",async()=>{
   expect(migrationPreserved).toBe(true);const client=(await getDatabase()).$client;
   expect((await client.execute("PRAGMA integrity_check")).rows[0]!.integrity_check).toBe("ok");expect((await client.execute("PRAGMA foreign_key_check")).rows).toHaveLength(0);

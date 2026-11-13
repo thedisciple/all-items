@@ -38,7 +38,7 @@ describe("locale selection and formatting", () => {
       if (locale !== "ru" && locale !== "en") {
         const unchanged = keys.filter((key) => messages[locale][key as keyof typeof messages["ru"]] === messages.en[key as keyof typeof messages["en"]]);
         // The gallery counter contains only parameters and a separator, no words.
-        const intentionallyShared = new Set(["galleryCounter", "categoryUnknown", "itemModel", "languageChinese", "languageEnglish", "languageRussian", "languageSerbian", "languageUkrainian", "locationUnknown"]);
+        const intentionallyShared = new Set(["galleryCounter", "categoryUnknown", "itemModel", "languageChinese", "languageEnglish", "languageRussian", "languageSerbian", "languageUkrainian", "locationUnknown","exportZipFormat","footerLicense"]);
         expect(unchanged.every((key) => intentionallyShared.has(key))).toBe(true);
         expect(unchanged.length).toBeLessThanOrEqual(intentionallyShared.size);
       }
