@@ -14,6 +14,6 @@ export function runtimeValues(text:string){
   return result;
 }
 export function pinnedFunnel(value:unknown,origin:string){
-  const schema=z.object({AllowFunnel:z.record(z.string(),z.boolean()),TCP:z.record(z.string(),z.object({TCPForward:z.string().optional()}).passthrough())}).passthrough();
-  const parsed=schema.safeParse(value);return parsed.success&&parsed.data.AllowFunnel[new URL(origin).host+':443']===true&&parsed.data.TCP['443']?.TCPForward==='127.0.0.1:8787';
+  const schema=z.object({AllowFunnel:z.record(z.string(),z.boolean()),TCP:z.record(z.string(),z.object({TCPForward:z.string().optional(),TerminateTLS:z.string().optional(),ProxyProtocol:z.number().optional()}).passthrough())}).passthrough();
+  const parsed=schema.safeParse(value),url=new URL(origin);return parsed.success&&parsed.data.AllowFunnel[url.host+':443']===true&&parsed.data.TCP['443']?.TCPForward==='127.0.0.1:8787'&&parsed.data.TCP['443']?.TerminateTLS===url.hostname&&!(parsed.data.TCP['443']?.ProxyProtocol);
 }

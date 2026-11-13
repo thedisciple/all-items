@@ -24,6 +24,7 @@ export function windowsAdapter(config:BetaConfig,configFile:string):ReleaseAdapt
     assertData,
     services:async()=>JSON.parse(await service('status')),
     candidate:async sha=>{
+      if(await command('git',['status','--porcelain','--untracked-files=normal'],config.repository))throw new Error('Commit and review controller changes before beta preparation');
       const branch=await command('git',['branch','--show-current'],config.repository);if(!branch)throw new Error('A reviewable feature branch is required');
       const remote=await command('git',['ls-remote','origin',`refs/heads/${branch}`],config.repository);if(remote.split(/\s/)[0]!==sha)throw new Error('Candidate must be the pushed branch head');
       const pr=JSON.parse(await command('gh',['pr','view',branch,'--json','headRefOid,state,isDraft,url,statusCheckRollup'],config.repository));

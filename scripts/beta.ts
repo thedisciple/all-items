@@ -38,4 +38,4 @@ async function main(){
   throw new Error('Usage: npm run beta -- status|dry-run|prepare|deploy|rollback|stop-sharing --config PRIVATE.json [--sha SHA] [--plan PLAN] [--approve INSTALLATION_UUID]');
   });
 }
-main().catch(()=>{console.error('Beta operation refused or failed. Services/data were not assumed healthy; inspect the private journal and run status. Never overwrite personal data.');process.exitCode=1;});
+main().catch(error=>{const detail=error instanceof z.ZodError?'Invalid private configuration or release state.':error instanceof Error&&!('code' in error)?error.message:'Private operation I/O failed.';console.error(detail);console.error('Beta operation refused or failed. Inspect the private journal and run status; do not assume services are healthy or overwrite personal data.');process.exitCode=1;});

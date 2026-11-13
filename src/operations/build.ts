@@ -15,7 +15,9 @@ export async function materialize(repository:string,root:string,sha:string){
 export async function buildRelease(repository:string,root:string,sha:string){
   const release=await materialize(repository,root,sha),lock=createHash('sha256').update(await readFile(path.join(release,"package-lock.json"))).digest('hex');
   const receipt=path.join(release,".all-items-release.json");
-  try{const previous=JSON.parse(await readFile(receipt,"utf8"));if(previous.sha===sha&&previous.lock===lock&&previous.node===process.versions.node.split('.')[0]){await access(path.join(release,".next/BUILD_ID"));return release;}}catch{/* A missing or incompatible build is rebuilt in the isolated release only. */}
-  const env:NodeJS.ProcessEnv={...isolatedEnvironment(path.join(root,"build-unused-data"),"http://127.0.0.1:3200",sha),NODE_ENV:'production'};await npm(release,["ci","--include=dev"],env);await npm(release,["run","build"],env);
+  let previous;try{previous=JSON.parse(await readFile(receipt,"utf8"));}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw new Error('Invalid existing release receipt; choose a new release root');}
+  if(previous){if(previous.sha!==sha||previous.lock!==lock||previous.node!==process.versions.node.split('.')[0])throw new Error('Existing release is incompatible; choose a new release root, never rebuild a potentially running release');await access(path.join(release,".next/BUILD_ID"));return release;}
+  try{await access(path.join(release,'.next/BUILD_ID'));throw new Error('Existing unreceipted build refused; choose a new release root');}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;}
+  const env:NodeJS.ProcessEnv={...isolatedEnvironment(path.join(root,"build-unused-data"),"http://127.0.0.1:3200",sha),NODE_ENV:'production'};await npm(release,["ci","--include=dev","--no-audit","--no-fund","--prefer-offline"],env);await npm(release,["run","build"],env);
   await writeFile(receipt,JSON.stringify({sha,lock,node:process.versions.node.split('.')[0],builtAt:new Date().toISOString()}),{mode:0o600});return release;
 }

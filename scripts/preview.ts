@@ -25,6 +25,7 @@ async function main(){
   await assertSynthetic(data,marker.installationId,personal,repository);
   if(values['check-only']){console.log(JSON.stringify({sha,url:env.ALL_ITEMS_ORIGIN,data}));return;}
   if(!values.owner)await new Promise<void>((resolve,reject)=>{const probe=createServer();probe.once('error',()=>reject(new Error('Preview port is occupied; choose --port without stopping another installation')));probe.listen(port,'127.0.0.1',()=>probe.close(error=>error?reject(error):resolve()));});
+  console.log(`Preparing committed All Items ${sha}; dependencies/build are isolated. Preview: ${env.ALL_ITEMS_ORIGIN}`);
   const release=await buildRelease(repository,root,sha);
   await command(process.execPath,['--import','tsx','src/auth/check-config.ts'],release,env);
   await command(process.execPath,['--import','tsx','src/db/migrate.ts'],release,env);
