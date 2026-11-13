@@ -1,6 +1,6 @@
 # M4C physical-device acceptance
 
-This is also the short M4D multi-user beta checklist; run it against the exact approved release SHA. Automated browser/mock-service evidence never substitutes for physical Windows/Android/iPhone acceptance.
+This is also the M4D/M4E multi-user beta checklist; run it against the exact approved release SHA. Automated browser/mock-service evidence never substitutes for physical Windows/Android/iPhone acceptance. Record separate Windows-host, Android Wi-Fi, Android mobile-data and independent-network iPhone results. Owner-specific SHA/device/operator instructions and invitation drafts stay outside Git.
 
 - Use two independent synthetic users on Windows, Android and iPhone, on different home/mobile networks. Record pass/fail per device and SHA without recording credentials or personal media.
 - Verify valid HTTPS/certificate and session persistence/re-login after restart. Review service autostart and rehearse a cold reboot during an approved window; do not silently change service startup modes.

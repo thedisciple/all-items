@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — M4E
+
+- Added clean synthetic-beta preparation, staged account/loopback preview commands and explicitly approved first activation, preserving unidentified legacy data and private configuration without inventing its SHA.
+- Read release state under the operation lock; report observed backend/proxy/external version separately from checkout/receipt, configuration blockers, cached failed acceptance and interruption recovery.
+- Kept emergency sharing closure available despite corrupt release state or unavailable journals, with truthful journal feedback.
+- Bound password reauthentication before expensive hashing for Telegram link/unlink; reused localized throttling feedback.
+- Added bounded production cancellation diagnostics without suppressing exceptions. Independent review, physical devices/networks, live Telegram and approved service/reboot acceptance remain separate gates. No live deployment, sharing, invitations or AI implementation is performed by this change.
+
 ## Unreleased — M4D
 
 - Published the sanitized mobile milestone through a draft PR and established explicit checkpoint push/CI reporting rules; merge and deployment remain separate approvals.

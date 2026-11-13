@@ -8,6 +8,9 @@ import {assertSynthetic,plainPath,within} from "./paths";
 import {runtimeValues,isolatedEnvironment,pinnedFunnel} from "./environment";
 import {buildRelease} from "./build";
 import {command} from "./process";
+import {observeInstallation,classifyStatus,type HealthObservation} from './observation';
+import {readPrivateJson,recoveryRequired} from './state';
+import type {CleanAdapter} from './clean';
 
 export async function loadConfig(file:string){
   const config=configSchema.parse(JSON.parse(await readFile(file,'utf8')));
@@ -17,7 +20,7 @@ export async function loadConfig(file:string){
   return config;
 }
 async function durable(file:string,value:unknown){await mkdir(path.dirname(file),{recursive:true});const temporary=file+'.'+randomUUID(),handle=await open(temporary,'wx',0o600);try{await handle.writeFile(JSON.stringify(value,null,2));await handle.sync();}finally{await handle.close();}await rename(temporary,file);}
-export function windowsAdapter(config:BetaConfig,configFile:string):ReleaseAdapter{
+export function windowsAdapter(config:BetaConfig,configFile:string):CleanAdapter{
   const service=(action:string,extra:string[]=[])=>command('powershell.exe',['-NoProfile','-NonInteractive','-File',path.join(config.repository,'scripts/beta-services.ps1'),'-Action',action,'-ConfigPath',configFile,...extra],config.repository);
   const assertData=async(data:string)=>{await assertSynthetic(data,config.installationId,config.personalDataDirectory,config.repository);};
   return{
@@ -55,12 +58,14 @@ export function windowsAdapter(config:BetaConfig,configFile:string):ReleaseAdapt
       const target=path.join(config.releaseRoot,'private',sha+'-'+randomUUID()+'.env');await mkdir(path.dirname(target),{recursive:true});await writeFile(target,Object.entries(old).map(([key,value])=>`${key}=${value}`).join('\n'),{flag:'wx',mode:0o600});return target;
     },
     stopApp:async()=>{await service('stop-app');},startApp:async()=>{await service('start-app');},stopSharing:async()=>{await service('stop-sharing');},
+    restoreServiceXml:async(file,sha256)=>{if(!within(path.join(config.releaseRoot,'private'),file))throw new Error('Unmanaged recovery pointer');await plainPath(file);await service('restore-configuration',['-RecoveryXml',file,'-RecoveryHash',sha256]);},
     switchApp:async release=>{
       if(!within(config.releaseRoot,release.release)||path.basename(release.release)!==release.sha)throw new Error('Unmanaged release refused');await plainPath(release.release);await assertData(release.data);
       const receipt=JSON.parse(await readFile(path.join(release.release,'.all-items-release.json'),'utf8'));if(receipt.sha!==release.sha)throw new Error('Release build receipt mismatch');await access(path.join(release.release,'.next/BUILD_ID'));
       await service('switch',['-Release',release.release,'-Runtime',release.runtime]);
     },
     probe:async release=>{
+      try{
       const services=JSON.parse(await service('status'));if(services.app!=='Running'||services.caddy!=='Running')throw new Error('Service health failed');
       const runtime=runtimeValues(await readFile(release.runtime,'utf8'));
       let ready=false;const deadline=Date.now()+45000;
@@ -68,21 +73,27 @@ export function windowsAdapter(config:BetaConfig,configFile:string):ReleaseAdapt
       if(!ready)throw new Error('Loopback adapter readiness/version deadline exceeded');
       // Credentials are supplied only in a separate private acceptance file.
       await command(process.execPath,['--import','tsx','scripts/beta-probe.ts','--origin',config.publicOrigin,'--sha',release.sha,'--credentials',path.join(config.releaseRoot,'private','acceptance.json')],config.repository,{...isolatedEnvironment(release.data,'http://127.0.0.1:3200',release.sha),ALL_ITEMS_EXPECT_TELEGRAM:runtime.ALL_ITEMS_TELEGRAM_CLIENT_ID?'configured':'absent'});
+      await durable(path.join(config.releaseRoot,'last-acceptance.json'),{sha:release.sha,state:'passed',at:new Date().toISOString()});
+      }catch(error){await durable(path.join(config.releaseRoot,'last-acceptance.json'),{sha:release.sha,state:'failed',at:new Date().toISOString()}).catch(()=>{});throw error;}
     },
     save:state=>durable(path.join(config.releaseRoot,'state.json'),state),
     journal:async(event,value)=>{
       const record={event,at:new Date().toISOString(),value};await durable(path.join(config.releaseRoot,'journals',Date.now()+'-'+randomUUID()+'.json'),record);
-      const latch=path.join(config.releaseRoot,'recovery-required.json');if(['stopping','rollback-stopping'].includes(event))await durable(latch,record);
-      if(['complete','rollback-complete','recovered'].includes(event))await unlink(latch).catch(error=>{if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;});
+      const latch=path.join(config.releaseRoot,'recovery-required.json');if(['stopping','rollback-stopping','clean-stopping'].includes(event))await durable(latch,record);
+      if(['complete','rollback-complete','recovered','clean-complete'].includes(event))await unlink(latch).catch(error=>{if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;});
     },
   };
 }
-export async function status(config:BetaConfig,state:State|null,adapter:ReleaseAdapter){
+export async function status(config:BetaConfig,state:State|null,adapter:ReleaseAdapter,options:{stateUnreadable?:boolean;observe?:typeof observeInstallation}={}){
   const blocks:string[]=[];try{await adapter.assertData(state?.current.data??config.dataDirectory);}catch{blocks.push('synthetic-marker-or-private-path-not-verified');}
   try{await adapter.validateRuntime(state?.current.runtime??config.runtimeConfig,state?.current.data??config.dataDirectory);}catch{blocks.push('runtime-not-verified');}
   const services=await adapter.services().catch(()=>({app:'Unknown',caddy:'Unknown'}));if(services.app!=='Running'||services.caddy!=='Running')blocks.push('services-not-already-running');
   let tunnel='unavailable';try{const value=JSON.parse(await command(config.tailscaleExecutable,['funnel','status','--json'],config.repository));tunnel=pinnedFunnel(value,config.publicOrigin)?'pinned-loopback-adapter':'not-configured-or-mismatched';if(tunnel!=='pinned-loopback-adapter')blocks.push('tunnel-not-pinned');}catch{blocks.push('tunnel-status-unavailable');}
   if(!state)blocks.push('deployed-build-sha-unknown-needs-reviewed-baseline');
-  try{await access(path.join(config.releaseRoot,'recovery-required.json'));blocks.push('interrupted-operation-needs-review');}catch{/* No recorded interrupted switch. */}
-  return{deployedSha:state?.current.sha??null,checkoutSha:await command('git',['rev-parse','HEAD'],config.repository),services,tunnel,blocks};
+  let recovery=Boolean(options.stateUnreadable);try{recovery=await recoveryRequired(config.releaseRoot)||recovery;}catch{recovery=true;blocks.push('recovery-status-unreadable');}if(recovery)blocks.push('interrupted-operation-needs-review');
+  const unavailable:HealthObservation={state:'unavailable',sha:null,http:null};let health={backend:unavailable,proxy:unavailable,external:unavailable};try{health=await(options.observe??observeInstallation)(config,state?.current??null);}catch{blocks.push('health-configuration-unverified');}
+  let lastAcceptance:{sha:string;state:string;at:string}|null=null;try{const value=await readPrivateJson(path.join(config.releaseRoot,'last-acceptance.json'));if(value&&typeof value==='object'&&'sha'in value&&'state'in value&&'at'in value&&typeof value.sha==='string'&&typeof value.state==='string'&&typeof value.at==='string')lastAcceptance={sha:value.sha,state:value.state,at:value.at};}catch{/* A missing record is not acceptance evidence. */}
+  const result=classifyStatus(services,state?.current??null,health,recovery,lastAcceptance?.state==='failed'&&lastAcceptance.sha===health.backend.sha);
+  if(result.state==='running-and-version-verified'&&blocks.length)result.state='configuration-not-verified';
+  return{...result,checkoutSha:await command('git',['rev-parse','HEAD'],config.repository),services,tunnel,blocks,lastAcceptance,acceptanceRecordIsCached:true,manualAcceptance:'not-established-by-status'};
 }

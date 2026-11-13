@@ -24,11 +24,36 @@ The Funnel gate checks port 443, the exact allowed hostname, TCPForward to 127.0
 
 Prepare builds the candidate in a separate release directory, creates and fully verifies a pinned installation backup, restores a new isolated copy, runs candidate migrations there, and checks integrity/foreign keys/media. It creates a private plan valid for 30 minutes. It does not stop services or mutate live database rows. Immutable referenced media are verified by the existing backup service; changing/missing media aborts. The completed initial backup/drill is checked again through a fresh stopped-writer snapshot during actual deployment.
 
-## First adoption of an older installation
+## First managed installation: prefer a separate clean beta
+
+For an unidentified legacy installation with no tester data requiring transfer, choose **Option B**. Do not mark or migrate its data, copy a fabricated SHA or write managed state on its behalf. These commands operate on fresh generated directories; existing services/runtime and personal data are untouched during preparation:
+
+```powershell
+npm run beta -- prepare-new --config C:\private\beta.json --sha FULL_SHA
+npm run beta -- accounts-new --config C:\private\beta.json --plan GENERATED_PLAN --account owner
+npm run beta -- accounts-new --config C:\private\beta.json --plan GENERATED_PLAN --account invite
+npm run beta -- preview-new --config C:\private\beta.json --plan GENERATED_PLAN
+```
+
+Prepare requires the pushed green-CI draft-PR candidate, builds an immutable release, migrates **new empty marked data only**, writes a separate private runtime, and performs a verified pinned backup and isolated restore drill. It does not require an already working Caddy/Funnel or an old baseline. The returned plan expires after seven days. Account commands are interactive with hidden passwords; no default account, real invitation or shared admin is installed. Create two ordinary synthetic accounts, then populate their separate inventories/photos in the staged loopback preview (3201, separate browser profile). Stop the preview before release operations; it holds the operation lock. Save their acceptance fixture privately in the existing format below. No Telegram is enabled in local preview.
+
+After independent review and **specific owner approval** of installation/service/exposure actions, verify the exact existing hostname, Caddy and pinned Funnel configuration through the P2 gate. This tool does not start Caddy or enable Funnel. Only then:
+
+```powershell
+npm run beta -- activate-new --config C:\private\beta.json --plan GENERATED_PLAN --approve INSTALLATION_UUID
+```
+
+Activation requires no existing managed state, a matching synthetic marker, pushed green candidate and already running correctly configured Caddy/Funnel. It privately preserves the original service XML/runtime (legacy SHA stays unknown), journals/latches before stopping writers, snapshots staged edits, restores **another new durable data copy**, then switches the app. Only successful HTTPS/version/two-user acceptance permits the first managed state. The old data/runtime remain unchanged and no old SHA is inferred. There is **no previous managed release** immediately after this transition; normal matching-code/data rollback becomes available after the next managed update.
+
+On failed activation, the exact checksummed service XML is restored and the previously running legacy app is restarted. Its unknown identity prevents automatic acceptance: the recovery latch stays set for explicit inspection. On interruption/reboot, inspect the private `clean-stopping`/`clean-switching` journal, service XML and actual health before resuming. Preserved `private/legacy-UUID/recovery.json`, `service.xml` and `runtime.env` provide manual legacy recovery, never a fabricated managed receipt. In an approved recovery window, stop the app, invoke the existing service adapter's `restore-configuration` with the captured XML and hash, restore its previous Running/Stopped state, and inspect it. Preserve new staged/restored data and backup copies for investigation. Do not blindly clear stale locks/latches or overwrite state. Local administrator/service permissions are still required.
+
+Status independently probes backend, loopback adapter and external HTTPS, and compares observed SHA and service XML binding with recorded state. It reports actual `deployedSha`, `recordedSha` and `checkoutSha` separately; unavailable/unknown/mismatch/proxy/remote/failure/recovery states cannot become generic success. Health is a version/transport check, not full database integrity or physical acceptance. The acceptance record is explicitly cached. Emergency `stop-sharing` bypasses state/data/operation-lock reads so corrupt state or a stranded lock cannot prevent closing Caddy; journal failure is reported. It does not clear recovery state or reconfigure Funnel.
+
+## Alternative: verified adoption of an older installation
 
 An older service pointing at a mutable checkout must not be silently labelled as a verified release. If state/marker/receipt is absent, deployment refuses. After explicit owner approval, an operator must: attest that the selected installation contains only synthetic records; stop all writers in a maintenance window; preserve original service XML/runtime configuration/code/build/data privately; verify a full backup and restore drill; build and review a receipt-bearing baseline in the release root; switch to that baseline under the existing P2 gate; verify its `/api/health` revision and synthetic access checks; then record `state.json` with `current: {sha, release, data, runtime}` matching the actual running baseline. Preserve the old configuration and snapshot for manual recovery during adoption. Do not invent an old build SHA or copy an unverified receipt onto an existing build.
 
-This one-time transition is intentionally operator approved, not an automatic command. All subsequent prepare/deploy/rollback operations use the recorded managed releases. The current milestone tests that managed workflow against mocked services and real synthetic backups, and provides a read-only dry-run for an older installation; it does not perform initial adoption or claim an unverified legacy rollback is ready.
+This alternative adoption procedure remains manual and operator approved. Prefer the clean commands above when preserving an old tester database is unnecessary. Subsequent prepare/deploy/rollback operations use genuinely recorded managed releases. Mocked service transitions and real isolated backups do not establish live activation or legacy rollback acceptance.
 
 ## Approved update and rollback
 
@@ -44,4 +69,6 @@ Rollback preserves the current test installation in another verified backup and 
 
 `releaseRoot/private/acceptance.json` must contain exactly two independent synthetic users with username/password and their known inventory/item/media UUIDs (`users: [{username,password,inventory,item,media}, ...]`). Create these explicitly through ordinary authenticated workflows; never use personal accounts. The post-switch probe verifies the HTTPS certificate, expected SHA, both logins, owned item/media/archive access and foreign-resource denial. It records no credentials/media/response bodies. Telegram configuration is not equivalent to live provider acceptance; use the device checklist when enabled.
 
-Stopping sharing stops only the configured Caddy adapter; it does not reset the node's entire Funnel configuration or stop the backend. DNS/Funnel registration may remain, but the app route should be unreachable; verify externally. Do not assume autostart: inspect service start modes and rehearse restart/reboot separately. Follow [P2 security and exposure gates](p2-first-beta-runbook.md) and [device/multi-user acceptance](../product/m4c-device-acceptance.md). Observed aborted-connection server-log messages remain a runtime-diagnostics follow-up, not suppressed exceptions.
+Stopping sharing stops only the configured Caddy adapter; it does not reset the node's entire Funnel configuration or stop the backend. DNS/Funnel registration may remain, but the app route should be unreachable; verify externally. Do not assume autostart: inspect service start modes and rehearse restart/reboot separately. Follow [P2 security and exposure gates](p2-first-beta-runbook.md) and [device/multi-user acceptance](../product/m4c-device-acceptance.md).
+
+For bounded isolated production diagnostics, set `ALL_ITEMS_E2E_CHECKOUT` to the immutable built release, `ALL_ITEMS_E2E_SHA` to its full SHA, and optionally `ALL_ITEMS_RUNTIME_DIAGNOSTICS` to an `all-items-*.jsonl` file in OS temporary storage; run `npx playwright test --config playwright.operations.config.ts`. The test-only monitor observes aborted requests and uncaught exceptions without consuming/replacing error handlers. One scenario separates settled requests, deliberate disconnects, rapid navigation and settled recovery. Expected browser cancellation is caught immediately; settled failures and page errors remain failures. Do not classify arbitrary ECONNRESET as benign: correlate phase/timestamps/server frames and verify subsequent requests. A short successful run cannot establish absence of leaks or explain every historical error. Keep raw logs/reports private, and report any unreproduced case explicitly.

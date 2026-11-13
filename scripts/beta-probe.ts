@@ -1,13 +1,12 @@
 import {parseArgs} from "node:util";
-import {readFile} from "node:fs/promises";
 import {z} from "zod";
 import {chromium} from "@playwright/test";
 import {revision} from "../src/operations/environment";
+import {readAcceptanceFixture} from '../src/operations/acceptance';
 
 async function main(){
   const {values}=parseArgs({options:{origin:{type:'string'},sha:{type:'string'},credentials:{type:'string'}}});const origin=new URL(z.string().parse(values.origin));if(origin.protocol!=='https:'||!origin.hostname.endsWith('.ts.net'))throw new Error('Exact beta HTTPS origin required');
-  const sha=revision.parse(values.sha),schema=z.object({users:z.array(z.object({username:z.string().min(3).max(64),password:z.string().min(12).max(256),inventory:z.string().uuid(),item:z.string().uuid(),media:z.string().uuid()}).strict()).length(2)}).strict();
-  const fixture=schema.parse(JSON.parse(await readFile(z.string().parse(values.credentials),'utf8')));if(fixture.users[0].username===fixture.users[1].username||fixture.users[0].inventory===fixture.users[1].inventory)throw new Error('Two independent synthetic users required');
+  const sha=revision.parse(values.sha),fixture=await readAcceptanceFixture(z.string().parse(values.credentials));
   const health=await fetch(new URL('/api/health',origin),{signal:AbortSignal.timeout(15000)});if(!health.ok||(await health.json()).revision!==sha)throw new Error('External HTTPS revision mismatch');
   const browser=await chromium.launch({channel:'msedge'});
   try{for(const [index,user]of fixture.users.entries()){

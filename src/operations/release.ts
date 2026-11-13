@@ -8,7 +8,7 @@ export type Deployed=z.infer<typeof deployedSchema>;
 export type Backup={id:string;source:string;semanticHash:string};
 export type State={current:Deployed;previous?:Deployed&{backup:Backup}};
 export type Plan={format:1;id:string;installationId:string;candidate:string;previous:Deployed;createdAt:number;release:string;preflight:Backup;drill:string};
-export type Services={app:string;caddy:string};
+export type Services={app:string;caddy:string;binding?:{release:string;runtime:string|null}|null};
 
 // Injectable boundary: tests use real isolated backups and mocked services; no hidden live mode.
 export interface ReleaseAdapter{
@@ -66,4 +66,4 @@ export async function rollback(config:BetaConfig,state:State,approved:string,ada
     const result={current:next,previous:{...state.current,backup:preservation}};await adapter.save(result);await adapter.journal('rollback-complete',{sha:next.sha});return result;
   }catch(error){await adapter.journal('rollback-failed',{});await adapter.stopApp();await adapter.switchApp(state.current);await adapter.startApp();await adapter.probe(state.current);await adapter.save(state);await adapter.journal('recovered',{sha:state.current.sha});throw error;}
 }
-export async function stopSharing(config:BetaConfig,approved:string,adapter:ReleaseAdapter){approval(config,approved);await adapter.assertData(config.dataDirectory);await adapter.journal('stop-sharing',{});await adapter.stopSharing();}
+export async function stopSharing(config:BetaConfig,approved:string,adapter:ReleaseAdapter){approval(config,approved);await adapter.stopSharing();try{await adapter.journal('stop-sharing',{});return{journalRecorded:true};}catch{return{journalRecorded:false};}}

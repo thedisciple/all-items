@@ -40,5 +40,6 @@ it('rolls back matching code plus restored snapshot, preserving current test cha
   const restored=await rollback(config,installed,id,f.adapter);expect(restored.current.sha).toBe(sha);expect(restored.current.data).not.toBe(state.current.data);expect(f.events).not.toContain('migrate:/synthetic/old');expect(f.events.indexOf('backup')).toBeLessThan(f.events.indexOf('restore'));expect(f.events).toContain('switch:'+sha);
 });
 it('stops only the known sharing adapter after explicit installation approval',async()=>{
-  const f=fixture();await expect(stopSharing(config,'',f.adapter)).rejects.toThrow();expect(f.events).toEqual([]);await stopSharing(config,id,f.adapter);expect(f.events).toEqual(['assert-data','journal:stop-sharing','stop-sharing']);
+  const f=fixture();await expect(stopSharing(config,'',f.adapter)).rejects.toThrow();expect(f.events).toEqual([]);await stopSharing(config,id,f.adapter);expect(f.events).toEqual(['stop-sharing','journal:stop-sharing']);
+  const unavailable=fixture('journal:stop-sharing');unavailable.adapter.assertData=async()=>{throw new Error('Corrupt data');};await expect(stopSharing(config,id,unavailable.adapter)).resolves.toEqual({journalRecorded:false});expect(unavailable.events[0]).toBe('stop-sharing');
 });

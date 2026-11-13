@@ -3,8 +3,8 @@
 ## Canonical delivery status
 
 - **Completed implementation:** M0–M4C, including P1/P2 authentication and deployment foundations; milestone reports distinguish synthetic checks from uncompleted physical/security acceptance.
-- **Current:** M4D — GitHub synchronization, immutable local preview and guarded synthetic-beta release operations. See [release workflow](docs/architecture/release-workflow.md). Merge, deployment and real invitations require separate approval.
-- **Next:** initial AI object identification and human-reviewed catalog enrichment, after M4D acceptance; no AI implementation is started here.
+- **Current:** M4E — final private-beta engineering and release acceptance, following M4D synchronization/immutable releases. Clean synthetic preparation, observed service identity, persistent reauthentication budgets and interruption safeguards are implemented. Independent security review, approved first activation, physical/network/Telegram and reboot acceptance remain pending. See [release workflow](docs/architecture/release-workflow.md) and [security gate](docs/architecture/p2-threat-model.md). No merge, service change or invitations are implied.
+- **Next:** M5A — initial AI object identification with human-reviewed suggestions, after the private-beta gate; no AI implementation is started here.
 - **Future:** DIY recommendations, cross-inventory projects, shared inventories, marketplace, gamification, WebMCP and optional themes/integrations. Historical progress files are evidence snapshots, not the task queue.
 
 See [the opportunity register](docs/product/opportunity-register.md) for detailed concepts, dependencies, risk, complexity, and priority. Checkmarks describe implemented and verified work only.
@@ -219,7 +219,11 @@ The old number is not execution order. Recovery/usability groundwork and a separ
 - [x] Prepare a first-beta Funnel route through a loopback Caddy adapter, with [explicit stop/recovery instructions](docs/architecture/p2-first-beta-runbook.md)
 - [ ] Approve and verify the actual external Funnel URL, live Telegram callback and physical mobile acceptance before inviting private records
 
-## Next after M4D — AI identification and enrichment — NOT STARTED
+## M5A — AI identification and enrichment — NOT STARTED
+
+First slice: an explicit Identify action on selected existing photos; a server-only provider interface returns validated name/model/category/description suggestions, provenance and an uncertainty/failure state. Prefer optional local Ollama where practical, behind time/concurrency/result-size limits; ordinary inventory functions require neither AI nor a running provider. A separately enabled cloud adapter must disclose the destination and obtain explicit consent before sending any photograph. Never include browser-draft originals, credentials or unrelated inventory metadata.
+
+Show suggestions for field-by-field human approval through the existing validated save operation. Preserve user-entered fields and source photographs; never silently overwrite markings, publish, share or change categories. Provider timeout/unavailability leaves the existing item and edits intact. Test deterministic fake-provider cases (valid, invalid, timeout, refusal), ownership and consent boundaries before any real provider credentials. Datasheet research and project recommendations remain later work, not hidden network activity. No AI runtime, account, model download or cloud key is installed in M4E.
 
 - [ ] Photo and multi-object identification with human-reviewed metadata proposals
 - [ ] Preserve original markings; use cited, verified datasheet references

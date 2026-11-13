@@ -2,7 +2,7 @@
 import {cookies} from "next/headers";
 import {redirect} from "next/navigation";
 import {dataDirectory,getDatabase} from "@/db/client";
-import {SESSION_COOKIE,sessionTokenHash} from "@/auth/core";
+import {SESSION_COOKIE,sessionTokenHash,LoginError} from "@/auth/core";
 import {assertActionOrigin,pageUser} from "@/auth/request";
 import {cancelTelegramLink,confirmTelegramLink,unlinkTelegram} from "@/auth/telegram";
 
@@ -27,6 +27,6 @@ export async function cancelTelegramAction(){
 }
 export async function unlinkTelegramAction(data:FormData){
   const {user,client}=await context();
-  try{await unlinkTelegram(client,user.id,data.get("password"));}catch{redirect("/account?telegram=failed");}
+  try{await unlinkTelegram(client,user.id,data.get("password"));}catch(error){redirect(error instanceof LoginError&&error.code==='authThrottled'?'/account?telegram=throttled':"/account?telegram=failed");}
   redirect("/account?telegram=unlinked");
 }
