@@ -19,7 +19,9 @@ $document=New-Object System.Xml.XmlDocument
 try{$document.Load($reader)}finally{$reader.Close()}
 if($document.service.id -cne $configuration.appService -or [IO.Path]::GetFileName($document.service.executable) -ine 'powershell.exe'){throw 'Unsupported service adapter; review it explicitly'}
 $document.service.workingdirectory=$Release
-$document.service.arguments='-NoProfile -NonInteractive -File "'+(Join-Path $Release 'scripts\start-production.ps1')+'" -ConfigPath "'+$Runtime+'"'
+$policy=''
+if([string]$document.service.arguments -match '(?i)-ExecutionPolicy\s+(Bypass|RemoteSigned|AllSigned|Restricted|Unrestricted|Default)(?:\s|$)'){$policy='-ExecutionPolicy '+$Matches[1]+' '}
+$document.service.arguments='-NoProfile -NonInteractive '+$policy+'-File "'+(Join-Path $Release 'scripts\start-production.ps1')+'" -ConfigPath "'+$Runtime+'"'
 $temporary=$configuration.appServiceXml+'.prepared'
 $document.Save($temporary)
 Move-Item -LiteralPath $temporary -Destination $configuration.appServiceXml -Force
