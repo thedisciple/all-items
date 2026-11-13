@@ -62,7 +62,9 @@ export function windowsAdapter(config:BetaConfig,configFile:string):ReleaseAdapt
     probe:async release=>{
       const services=JSON.parse(await service('status'));if(services.app!=='Running'||services.caddy!=='Running')throw new Error('Service health failed');
       const runtime=runtimeValues(await readFile(release.runtime,'utf8'));
-      const local=await fetch('http://127.0.0.1:8787/api/health',{headers:{Host:new URL(config.publicOrigin).host},signal:AbortSignal.timeout(15000)});const health=await local.json();if(!local.ok||health.revision!==release.sha)throw new Error('Loopback adapter version mismatch');
+      let ready=false;const deadline=Date.now()+45000;
+      while(Date.now()<deadline){try{const local=await fetch('http://127.0.0.1:8787/api/health',{headers:{Host:new URL(config.publicOrigin).host},signal:AbortSignal.timeout(3000)});const health=await local.json();if(local.ok&&health.revision===release.sha){ready=true;break;}}catch{/* WinSW can report Running before Next is ready. */}await new Promise(resolve=>setTimeout(resolve,500));}
+      if(!ready)throw new Error('Loopback adapter readiness/version deadline exceeded');
       // Credentials are supplied only in a separate private acceptance file.
       await command(process.execPath,['--import','tsx','scripts/beta-probe.ts','--origin',config.publicOrigin,'--sha',release.sha,'--credentials',path.join(config.releaseRoot,'private','acceptance.json')],config.repository,{...isolatedEnvironment(release.data,'http://127.0.0.1:3200',release.sha),ALL_ITEMS_EXPECT_TELEGRAM:runtime.ALL_ITEMS_TELEGRAM_CLIENT_ID?'configured':'absent'});
     },

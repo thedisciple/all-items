@@ -52,7 +52,7 @@ export async function deploy(config:BetaConfig,state:State,plan:Plan,approved:st
     const result={current:next,previous:{...state.current,backup}};await adapter.save(result);await adapter.journal('complete',{sha:next.sha});return result;
   }catch(error){
     await adapter.journal('failed',{plan:plan.id,switched});
-    if(switched){await adapter.stopApp();await adapter.switchApp(state.current);}await adapter.startApp();await adapter.probe(state.current);await adapter.journal('recovered',{sha:state.current.sha});
+    if(switched){await adapter.stopApp();await adapter.switchApp(state.current);}await adapter.startApp();await adapter.probe(state.current);await adapter.save(state);await adapter.journal('recovered',{sha:state.current.sha});
     // The old data directory was never migrated or overwritten.
     throw error;
   }
@@ -64,6 +64,6 @@ export async function rollback(config:BetaConfig,state:State,approved:string,ada
     const preservation=await adapter.backup(state.current.data),data=await adapter.restore(state.previous.backup),runtime=await adapter.runtime(state.previous.runtime,data,state.previous.sha);
     const next={sha:state.previous.sha,release:state.previous.release,data,runtime};await adapter.journal('rollback-switching',{next,preservation});await adapter.switchApp(next);await adapter.startApp();await adapter.probe(next);
     const result={current:next,previous:{...state.current,backup:preservation}};await adapter.save(result);await adapter.journal('rollback-complete',{sha:next.sha});return result;
-  }catch(error){await adapter.journal('rollback-failed',{});await adapter.stopApp();await adapter.switchApp(state.current);await adapter.startApp();await adapter.probe(state.current);await adapter.journal('recovered',{sha:state.current.sha});throw error;}
+  }catch(error){await adapter.journal('rollback-failed',{});await adapter.stopApp();await adapter.switchApp(state.current);await adapter.startApp();await adapter.probe(state.current);await adapter.save(state);await adapter.journal('recovered',{sha:state.current.sha});throw error;}
 }
 export async function stopSharing(config:BetaConfig,approved:string,adapter:ReleaseAdapter){approval(config,approved);await adapter.assertData(config.dataDirectory);await adapter.journal('stop-sharing',{});await adapter.stopSharing();}

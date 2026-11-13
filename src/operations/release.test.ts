@@ -32,7 +32,7 @@ it('takes a fresh stopped backup, migrates only a new copy, probes before commit
 it('keeps original code/data reachable on snapshot, migration and post-switch failures',async()=>{
   for(const failure of['backup','migrate:/synthetic/copy-2','probe']){
     const f=fixture(),plan=await prepare(config,state,next,f.adapter);if(failure==='backup')f.adapter.backup=async()=>{f.events.push('backup');throw new Error('Injected backup');};else if(failure.startsWith('migrate:'))f.adapter.migrate=async(_release,data)=>{f.events.push('migrate:'+data);if(data.endsWith('2'))throw new Error('Injected migration');};else f.adapter.probe=async()=>{throw new Error('Injected probe');};
-    await expect(deploy(config,state,plan,id,f.adapter)).rejects.toThrow();expect(f.saved).toBeUndefined();expect(f.events).toContain('start');if(failure==='probe')expect(f.events).toContain('switch:'+sha);
+    await expect(deploy(config,state,plan,id,f.adapter)).rejects.toThrow();if(f.saved)expect(f.saved).toEqual(state);expect(f.events).toContain('start');if(failure==='probe')expect(f.events).toContain('switch:'+sha);
   }
 });
 it('rolls back matching code plus restored snapshot, preserving current test changes separately',async()=>{
