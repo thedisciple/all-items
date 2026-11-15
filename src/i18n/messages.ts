@@ -1,4 +1,8 @@
 const ru = {
+aiDraftIdentify:"Определить по фото",
+aiDraftPrimary:"Будет использовано принятое основное фото.",
+aiDraftUse:"Перенести выбранное в форму",
+sourceRestart:"Начать проверку заново",
 sourceTitle:"Проверить по источнику",
 sourceRecorded:"Проверено владельцем по записанному источнику",
 sourceLegacy:"Старый статус: источник не записан",
@@ -404,6 +408,10 @@ aiStale: "Карточка изменилась. Закройте предлож
 } as const;
 
 const en: Record<MessageKey, string> = {
+aiDraftIdentify:"Identify from photo",
+aiDraftPrimary:"Uses the accepted primary photo.",
+aiDraftUse:"Use selected in form",
+sourceRestart:"Restart source review",
 sourceTitle:"Verify with a source",
 sourceRecorded:"Owner-reviewed, with recorded citation",
 sourceLegacy:"Legacy status: no recorded citation",
@@ -642,6 +650,10 @@ aiStale: "This item changed. Close suggestions, reload the item and try again.",
 };
 
 const uk: Record<MessageKey, string> = {
+aiDraftIdentify:"Визначити за фото",
+aiDraftPrimary:"Буде використано прийняте основне фото.",
+aiDraftUse:"Перенести вибране у форму",
+sourceRestart:"Почати перевірку заново",
 sourceTitle:"Перевірити за джерелом",
 sourceRecorded:"Перевірено власником із записаним джерелом",
 sourceLegacy:"Старий статус: джерело не записано",
@@ -819,6 +831,10 @@ aiStale: "Картка змінилася. Закрийте пропозиції
 };
 
 const srLatn: Record<MessageKey, string> = {
+aiDraftIdentify:"Prepoznaj sa fotografije",
+aiDraftPrimary:"Koristi prihvaćenu glavnu fotografiju.",
+aiDraftUse:"Prenesi izabrano u obrazac",
+sourceRestart:"Ponovo pregledaj izvor",
 sourceTitle:"Proveri uz izvor",
 sourceRecorded:"Vlasnik je proverio uz sačuvan izvor",
 sourceLegacy:"Stari status: nema sačuvanog izvora",
@@ -996,6 +1012,10 @@ aiStale: "Stavka je promenjena. Zatvorite predloge, osvežite stavku i ponovite.
 };
 
 const zhHans: Record<MessageKey, string> = {
+aiDraftIdentify:"根据照片识别",
+aiDraftPrimary:"使用已确认的主照片。",
+aiDraftUse:"将所选建议填入表单",
+sourceRestart:"重新核对来源",
 sourceTitle:"根据来源核对",
 sourceRecorded:"用户已核对并保存来源",
 sourceLegacy:"旧状态：未记录来源",

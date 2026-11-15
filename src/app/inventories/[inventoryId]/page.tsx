@@ -1,3 +1,4 @@
+import {aiConfiguration} from "@/ai/config";
 import { routeInventory } from "@/app/inventory-routing";
 import { inventoryPath } from "@/items/inventory-context";
 import { AppSidebar } from "@/app/components/app-sidebar";
@@ -38,7 +39,7 @@ export default async function Home({ searchParams, params: routeParams }: Props)
     <section className="main-content">
       <AppHeader/>
       <div className="content-wrap"><h1 className="visually-hidden">{t("inventory")}</h1>
-        <InventoryViewProvider key={context.workspaceId} inventoryId={context.workspaceId}><ItemFilters actions={<AddItemForm key={context.workspaceId}/>} categories={categoryOptions} statuses={Object.entries(statusLabels).map(([value,label]) => ({ value, label }))} searchPlaceholder={t("searchItems")}/>
+        <InventoryViewProvider key={context.workspaceId} inventoryId={context.workspaceId}><ItemFilters actions={<AddItemForm key={context.workspaceId} aiEnabled={Boolean(aiConfiguration())}/>} categories={categoryOptions} statuses={Object.entries(statusLabels).map(([value,label]) => ({ value, label }))} searchPlaceholder={t("searchItems")}/>
         {hasFilters ? <div className="list-heading"><span className="list-total">{t("resultCount", { count: result.total })}</span></div> : <div className="inventory-list-spacing"/>}
         {items.length ? <div className="item-list">{items.map(item => <InventoryItemRow key={String(item.id)} item={item} base={base} locale={locale} query={params} customEmoji={customEmoji} highlighted={params.added === String(item.id)}/>)}</div> : <div className="empty-state"><div className="empty-orbit">✳</div><h3>{hasFilters ? t("noMatches") : t("noItems")}</h3><p>{hasFilters ? t("adjustFilters") : t("addFirstItem")}</p></div>}
         <ItemPagination page={result.page} pages={result.pages} total={result.total} pageSize={result.pageSize}/></InventoryViewProvider>

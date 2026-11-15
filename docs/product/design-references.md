@@ -154,3 +154,7 @@ Browser header preflight follows the [W3C PNG specification](https://www.w3.org/
 The shared gesture implementation and full multi-photo workflow are now exercised by synthetic Edge mouse, keyboard, CDP touch and fake-device camera tests. These verify those tested interactions rather than physical hardware or comparative usability. No generated concept was necessary for the concrete correction; original private photos were not sent to any external service.
 
 M4A production traces observed streamed localized metadata after the initial head, intermittent hydration errors and an automatic missing favicon.ico request. The [Next 15 htmlLimitedBots documentation](https://nextjs.org/docs/15/app/api-reference/config/next-config-js/htmlLimitedBots) explicitly supports disabling metadata streaming for all agents. All Items chooses blocking delivery for its inexpensive local title/description/icon, and tests initial-head placement plus repeated five-locale hydration; this is an implementation decision, not a general claim that metadata streaming is invalid.
+
+## M5C — Inline creation review
+
+Design inference: retain one Add Item dialog and its established crop/gallery controls, with inline current/proposed fields and contextual transfer. Avoid a second dialog, extra save or automatic processing. A changed text field requires renewed explicit selection. Saved source review is a separate owner-attested task; its active input remains revision-bound across refresh. Synthetic desktop/360px inspection is required; physical acceptance remains separate.

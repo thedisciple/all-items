@@ -68,6 +68,12 @@ export async function preflightPhoto(file:File){
 }
 
 const thumbnails=new WeakMap<File,Promise<Blob>>();
+export async function analysisPhoto(file:File){
+ await preflightPhoto(file);const bitmap=await createImageBitmap(file),canvas=document.createElement('canvas');
+ try{const scale=Math.min(1024/bitmap.width,1024/bitmap.height,1);canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));const context=canvas.getContext('2d');if(!context)throw new Error('Canvas unavailable');context.drawImage(bitmap,0,0,canvas.width,canvas.height);
+ for(const quality of [.82,.65,.45]){const blob=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,'image/jpeg',quality));if(blob&&blob.size<=512*1024)return blob;}throw new Error('Analysis image budget exceeded');
+ }finally{bitmap.close();canvas.width=0;canvas.height=0;}
+}
 let work:Promise<unknown>=Promise.resolve();
 export function draftThumbnail(file:File):Promise<Blob>{
   const cached=thumbnails.get(file);if(cached)return cached;
