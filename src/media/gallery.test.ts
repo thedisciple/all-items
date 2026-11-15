@@ -158,7 +158,7 @@ it("round-trips an ordered gallery twice as new inventories with exact media byt
   await addItemToCollection(inventory,collection.id,item.id);
   await setCollectionCover(inventory,collection.id,{type:"item_photo",itemId:item.id,mediaId:first.id});
   const bytes = await createInventoryArchive(inventory,{client,directory});
-  expect(verifyInventoryArchive(bytes).version).toBe(6);
+  expect(verifyInventoryArchive(bytes).version).toBe(7);
   const original = readInventoryArchive(bytes);
   const records = original.inventory as PortableInventory;
   const archivedItem = records.items.find(row=>row.id===item.id)!;
@@ -220,7 +220,7 @@ it("keeps over-cap legacy galleries editable, ordered and portable without trunc
   await replaceItemPhoto(inventory,item.id,extra,file);
   const ids=(await listItemPhotos(inventory,item.id)).map(photo=>photo.id).reverse();await reorderItemPhotos(inventory,item.id,ids);await setItemPrimaryPhoto(inventory,item.id,ids[0]!);
   const archive=await createInventoryArchive(inventory,{client,directory});
-  expect(verifyInventoryArchive(archive).version).toBe(6);
+  expect(verifyInventoryArchive(archive).version).toBe(7);
   const record=(readInventoryArchive(archive).inventory as PortableInventory).items.find(value=>value.id===item.id)!;expect(record.mediaAssets).toHaveLength(11);
   const restored=await importArchiveAsNew(inventory,archive,"Synthetic over-cap restore",{client,directory});
   const reread=readInventoryArchive(await createInventoryArchive({workspaceId:restored.inventoryId},{client,directory}));
