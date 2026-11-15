@@ -79,7 +79,7 @@ test('closed analysis cannot apply a late response and manual save remains avail
     const wait = new Promise<void>(resolve => release = resolve);
     let received!: () => void;
     const incoming = new Promise<void>(resolve => received = resolve);
-    await page.route('**/identify-draft', async (route) => { received(); await wait; await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'aiTimeout' }) }).catch(() => { }); });
+    await page.route('**/identify-draft', async route => { received(); await wait; await route.fulfill({contentType:'application/json',body:JSON.stringify({requestId:route.request().headers()['x-all-items-ai-request'],suggestion:{version:1,name:'Late proposed name',brand:'',model:'Late proposed model',description:'',categories:[],visibleMarking:'',uncertainty:'unknown',uncertainties:[]}})}).catch(()=>{}); });
     await dialog.getByRole('button', { name: messages.en.aiDraftIdentify, exact: true }).click();
     await incoming;
     await dialog.locator('.dialog-heading button').click();
@@ -103,7 +103,7 @@ test('recropping invalidates analysis and timeout leaves manual creation usable'
     const before = await counts();
     let release!: () => void, received!: () => void;
     const wait = new Promise<void>(resolve => release = resolve), incoming = new Promise<void>(resolve => received = resolve);
-    await page.route('**/identify-draft', async (route) => { received(); await wait; await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'aiTimeout' }) }).catch(() => { }); });
+    let requests=0;await page.route('**/identify-draft', async route => { const first=++requests===1;received();await wait;await route.fulfill(first?{contentType:'application/json',body:JSON.stringify({requestId:route.request().headers()['x-all-items-ai-request'],suggestion:{version:1,name:'Late recrop name',brand:'',model:'Late recrop model',description:'',categories:[],visibleMarking:'',uncertainty:'unknown',uncertainties:[]}})}:{status:503,contentType:'application/json',body:JSON.stringify({error:'aiTimeout'})}).catch(()=>{}); });
     await dialog.getByRole('button', { name: messages.en.aiDraftIdentify, exact: true }).click();
     await incoming;
     await dialog.getByRole('button', { name: messages.en.editCrop, exact: true }).click();
