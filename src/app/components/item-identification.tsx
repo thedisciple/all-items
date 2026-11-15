@@ -62,7 +62,7 @@ export function ItemIdentification({itemId,photos,current,revision,dirty,onBusy,
       </section>:null}
       {error?<p role="alert" className="error-status">{t(error)}</p>:null}
       {dirty?<p role="status">{t('aiSaveFirst')}</p>:null}
-      <div className="dialog-actions"><button type="button" className="quiet-button" disabled={pending||applying||ids.length===0} onClick={()=>void identify()}>{t('aiIdentify')}</button>{proposal?<button type="button" className="primary-button" disabled={pending||applying||dirty||changed||!selected.length||(selected.includes('name')&&!values.name.trim())} onClick={()=>void apply()}>{t('aiApply')}</button>:null}</div>
+      <div className="dialog-actions"><button type="button" className="quiet-button" disabled={pending||applying||ids.length===0} onClick={()=>void identify()}>{t('aiIdentify')}</button>{proposal?<button type="button" className="add-button" disabled={pending||applying||dirty||changed||!selected.length||(selected.includes('name')&&!values.name.trim())} onClick={()=>void apply()}>{t('aiApply')}</button>:null}</div>
     </dialog>,document.body):null}
   </div>;
 }

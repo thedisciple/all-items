@@ -11,8 +11,9 @@ For development, set server environment `ALL_ITEMS_AI_PROVIDER=ollama` and `ALL_
 For an isolated committed preview, use the same explicit isolated data selection in both commands and a separate browser profile:
 
 ```powershell
-npm run preview -- --port 3202 --ai-model qwen3.5:4b --owner
-npm run preview -- --port 3202 --ai-model qwen3.5:4b
+$m5aData = Join-Path $env:LOCALAPPDATA 'AllItems-M5A-Preview'
+npm run preview -- --data $m5aData --port 3202 --ai-model qwen3.5:4b --owner
+npm run preview -- --data $m5aData --port 3202 --ai-model qwen3.5:4b
 ```
 
 The owner command is only for a new marked preview installation. Preview scrubs inherited AI/proxy/Telegram settings; only the explicit model option enables local inference. Open an item with saved photos, choose Identify, optionally select up to three photos/include saved brand/model/marking, review/edit fields, then Apply selected. Existing nonempty fields are unchecked by default. Accepted categories are **additions**, retaining existing/custom assignments. Visible marking is informational, never an automatic overwrite. Save/cancel unrelated normal item edits before applying.
@@ -31,7 +32,7 @@ The review preserves inputs and normal unsaved edits on failure, aborts inferenc
 
 ## Validation and remaining gates
 
-Provider/domain tests cover missing/remote/non-vision models, malformed/oversized output, cancellation/deadline, hostile text, lock/budgets, selected authorized media, two users/Origin/CSRF, selective saves, stale revisions and unrelated-data preservation. `playwright.ai.config.ts` uses a **test-only preload** in new OS-temp data to emulate the fixed Ollama endpoint and exercise real UI/routes without Ollama. There is no production fake-provider flag. Run from one checkout/dependency tree; do not mix Playwright installations. `--headed` demonstrates the synthetic workflow. Generated reports/screenshots stay outside Git.
+Provider/domain tests cover missing/remote/non-vision models, malformed/oversized output, cancellation/deadline, hostile text, lock/budgets, selected authorized media, two users/Origin/CSRF, selective saves, stale revisions and unrelated-data preservation. The focused provider/domain plus affected item-service group passed 34 tests. `playwright.ai.config.ts` uses a **test-only preload** in new OS-temp data to emulate the fixed Ollama endpoint and exercise real UI/routes without Ollama. Its two production Edge scenarios passed, including all five 360px locale shells, reviewed application, stale/CSRF denial, reload and retained unsaved input. Native focus/dialog geometry and a synthetic 360px screenshot were inspected; physical devices remain untested. There is no production fake-provider flag. Run from one checkout/dependency tree; do not mix Playwright installations. `--headed` demonstrates the synthetic workflow. Generated reports/screenshots stay outside Git.
 
 The explicit optional real check sets `ALL_ITEMS_OLLAMA_SMOKE=1` then runs `npx vitest run src/ai/vision-smoke.test.ts`. Ordinary tests/CI skip it. It sends one original synthetic equipment drawing to already installed 4B, never personal media. Measured local result: 78,260 ms including metadata/load/inference, valid structured vision response; Ollama reported 3,140,495,604 resident VRAM bytes on RTX A4000 (16,376 MiB total). Installed 9B was inspected but not inferred/benchmarked. This is not an accuracy or latency guarantee.
 
