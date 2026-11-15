@@ -4,6 +4,8 @@ All Items is a local-first, self-hosted inventory for the physical things people
 
 ## Current status
 
+M5A adds experimental, default-off local identification for existing saved item photos. Review/edit suggestions before selectively applying them; a photo hypothesis is never source verification. Ordinary inventory works without AI. See [setup, limits and privacy](docs/architecture/local-identification.md). This local-only feature does not close beta release gates.
+
 M0–M4C implementation is complete with documented synthetic validation. M4D adds GitHub synchronization and isolated preview/releases; M4E adds clean synthetic-beta preparation, observed release status and final security/acceptance safeguards. Physical-device, independent security, real-network/Telegram and approved activation gates remain open. [ROADMAP.md](ROADMAP.md) is the canonical status; older milestone reports retain historical evidence.
 
 For a separate local preview use `npm run preview` (first account setup: `npm run preview -- --owner`). The command identifies the selected committed SHA, prepares an isolated release/build and data directory, and starts loopback port 3200. It refuses occupied ports and unmarked existing data; no credentials are installed automatically. Use `--port 3201` if another preview is already running. See [preview and approved beta operations](docs/architecture/release-workflow.md) for options, backup and rollback gates.

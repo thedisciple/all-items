@@ -378,7 +378,7 @@ export async function getPrimaryPhoto(context: InventoryContext, itemId: string)
   return result.rows.length ? result.rows[0] as unknown as { id: string; width: number; height: number; createdAt: string } : null;
 }
 
-export async function readItemPhoto(context: InventoryContext, itemId: string, mediaId: string, variantValue: string | null) {
+export async function readItemPhoto(context: InventoryContext, itemId: string, mediaId: string, variantValue: string | null, maxBytes?:number) {
   itemId = mediaIdSchema.parse(itemId);
   mediaId = mediaIdSchema.parse(mediaId);
   const variant: Variant = variantValue === "source" ? "source" : mediaVariantSchema.parse(variantValue ?? "image");
@@ -394,6 +394,7 @@ export async function readItemPhoto(context: InventoryContext, itemId: string, m
   const paths = assertStoredPaths(record);
   const target = variant === "thumbnail" ? paths.thumbnail : variant === "source" && record.source_storage_path ? paths.source : paths.full;
   await assertPrivatePath(dataDirectory(), target);
+  if(maxBytes!==undefined){const handle=await open(target,'r');try{if((await handle.stat()).size>maxBytes)throw new MediaValidationError('Photo exceeds analysis budget');const buffer=Buffer.alloc(maxBytes+1),{bytesRead}=await handle.read(buffer,0,buffer.length,0);if(bytesRead>maxBytes)throw new MediaValidationError('Photo exceeds analysis budget');return buffer.subarray(0,bytesRead);}finally{await handle.close();}}
   return readFile(target);
 }
 

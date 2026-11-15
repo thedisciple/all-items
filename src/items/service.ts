@@ -7,6 +7,8 @@ import { categoryPresentations, saveCategoryPresentations } from "./inventory-pr
 import type { Client } from "@libsql/client";
 import { insertWriteReceipt, readWriteReceipt, type WriteIdentity } from "./write-receipts";
 import {paginationInput,type PageResult} from "./pagination";
+import {itemRevision,reviewedPatch,StaleItemReview,type ReviewedPatch} from './review';
+import {priceDecimal} from './currencies';
 
 const optionalText = (max: number) => z.string().trim().max(max).optional().transform((value) => value || null);
 export const itemFields = z.object({
@@ -306,15 +308,26 @@ async function replaceStock(tx: Awaited<ReturnType<typeof beginWriteTransaction>
 
 }
 
-export async function updateItem(context: InventoryContext, id: string, input: ItemFields, stock?: unknown) {
+export async function getItemRevision(context:InventoryContext,id:string){
+  id=itemIdInput.parse(id);const {db,workspaceId}=await inventoryDatabase(context),tx=await db.$client.transaction('read');
+  try{const revision=await itemRevision(tx,id,workspaceId);await tx.commit();return revision;}catch(error){await tx.rollback();throw error;}
+}
+
+export async function updateItem(context: InventoryContext, id: string, input: ItemFields, stock?: unknown, review?:{revision:string;patch:ReviewedPatch}) {
   id = itemIdInput.parse(id);
-  const parsed = photoItemFields.parse(input);
+  let parsed = photoItemFields.parse(input);
   return serializeLocalWrite(async () => {
     const { db, workspaceId } = await inventoryDatabase(context);
     const tx = await beginWriteTransaction(db);
     try {
-      const existing = await tx.execute({ sql: "SELECT id,name,asking_currency,asking_price_minor,asking_price_exponent FROM items WHERE id=? AND workspace_id=?", args: [id,workspaceId] });
+      const existing = await tx.execute({ sql: "SELECT * FROM items WHERE id=? AND workspace_id=?", args: [id,workspaceId] });
       if (!existing.rows.length) throw new Error("Item not found");
+      if(review){
+        if(!z.string().regex(/^[a-f0-9]{64}$/).safeParse(review.revision).success||await itemRevision(tx,id,workspaceId)!==review.revision)throw new StaleItemReview();
+        const patch=reviewedPatch.parse(review.patch),row=existing.rows[0]!,currentCategories=(await tx.execute({sql:'SELECT category FROM item_categories WHERE item_id=? ORDER BY category',args:[id]})).rows.map(row=>String(row.category));
+        input={name:String(row.name),model:row.model==null?undefined:String(row.model),brand:row.brand==null?undefined:String(row.brand),originalMarking:row.original_marking==null?undefined:String(row.original_marking),notes:row.notes==null?undefined:String(row.notes),description:row.description==null?undefined:String(row.description),identificationStatus:row.identification_status as ItemFields['identificationStatus'],trackingMode:row.tracking_mode as ItemFields['trackingMode'],saleIntent:row.sale_intent as ItemFields['saleIntent'],askingPrice:row.asking_price_minor==null?'':priceDecimal(Number(row.asking_price_minor),String(row.asking_currency),Number(row.asking_price_exponent)),askingCurrency:row.asking_currency==null?'':String(row.asking_currency),...patch,categories:canonicalCategories([...currentCategories,...(patch.categories??[])])};
+        parsed=photoItemFields.parse(input);
+      }
       if (!parsed.name && existing.rows[0]!.name !== "") itemFields.parse(input);
       const exponent = existing.rows[0]!.asking_price_minor !== null && parsed.askingCurrency === existing.rows[0]!.asking_currency ? Number(existing.rows[0]!.asking_price_exponent) : currencyDigits(parsed.askingCurrency);
       const price = parsePriceMinor(parsed.askingPrice, parsed.askingCurrency, exponent);

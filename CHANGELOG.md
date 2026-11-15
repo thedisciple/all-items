@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — M5A
+
+- Added default-off local saved-photo identification through installed Ollama vision models, unavailable through beta proxy mode; no downloads, external providers or migration.
+- Added five-language selective review/edit/application, uncertainty and ephemeral provenance; preserved human metadata, custom categories, stock, sale intent and gallery. No automatic verification/marking overwrite.
+- Reused validated item transactions with revision checks, bounded normalized images, concurrency/rate/deadline controls and deterministic provider/security/UI test infrastructure.
+- Kept M4E runtime/security/device/Telegram/reboot beta gates open. No live installation, sharing or invitation change.
+
 ## Unreleased — M4E
 
 - Added clean synthetic-beta preparation, staged account/loopback preview commands and explicitly approved first activation, preserving unidentified legacy data and private configuration without inventing its SHA.

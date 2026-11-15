@@ -4,7 +4,7 @@
 
 - **Completed implementation:** M0–M4C, including P1/P2 authentication and deployment foundations; milestone reports distinguish synthetic checks from uncompleted physical/security acceptance.
 - **Current:** M4E — final private-beta engineering and release acceptance, following M4D synchronization/immutable releases. Clean synthetic preparation, observed service identity, persistent reauthentication budgets and interruption safeguards are implemented. Independent security review, approved first activation, physical/network/Telegram and reboot acceptance remain pending. See [release workflow](docs/architecture/release-workflow.md) and [security gate](docs/architecture/p2-threat-model.md). No merge, service change or invitations are implied.
-- **Next:** M5A — initial AI object identification with human-reviewed suggestions, after the private-beta gate; no AI implementation is started here.
+- **Local development:** M5A — opt-in saved-photo identification with human-reviewed application, independently of beta activation. See [local identification](docs/architecture/local-identification.md). M4E test-server loss and cancellation ECONNRESET remain beta blockers; targeted green reruns do not resolve them.
 - **Future:** DIY recommendations, cross-inventory projects, shared inventories, marketplace, gamification, WebMCP and optional themes/integrations. Historical progress files are evidence snapshots, not the task queue.
 
 See [the opportunity register](docs/product/opportunity-register.md) for detailed concepts, dependencies, risk, complexity, and priority. Checkmarks describe implemented and verified work only.
@@ -219,15 +219,20 @@ The old number is not execution order. Recovery/usability groundwork and a separ
 - [x] Prepare a first-beta Funnel route through a loopback Caddy adapter, with [explicit stop/recovery instructions](docs/architecture/p2-first-beta-runbook.md)
 - [ ] Approve and verify the actual external Funnel URL, live Telegram callback and physical mobile acceptance before inviting private records
 
-## M5A — AI identification and enrichment — NOT STARTED
+## M5A — Local identification and human review
 
-First slice: an explicit Identify action on selected existing photos; a server-only provider interface returns validated name/model/category/description suggestions, provenance and an uncertainty/failure state. Prefer optional local Ollama where practical, behind time/concurrency/result-size limits; ordinary inventory functions require neither AI nor a running provider. A separately enabled cloud adapter must disclose the destination and obtain explicit consent before sending any photograph. Never include browser-draft originals, credentials or unrelated inventory metadata.
+- [x] Default-off loopback Ollama adapter, installed vision checks, structured output, normalized media/deadline bounds, one inference lock and persistent per-user/installation budgets
+- [x] Five-language existing-item selective review through the shared save, additive categories and transactional stale-revision protection; no migration or automatic verification
+- [x] Deterministic provider/domain checks and test-only UI harness; one actual synthetic 4B vision/schema smoke (not an accuracy benchmark)
+- [ ] M4E runtime, independent security, physical/network/Telegram/reboot gates remain open; no public activation or merge
 
-Show suggestions for field-by-field human approval through the existing validated save operation. Preserve user-entered fields and source photographs; never silently overwrite markings, publish, share or change categories. Provider timeout/unavailability leaves the existing item and edits intact. Test deterministic fake-provider cases (valid, invalid, timeout, refusal), ownership and consent boundaries before any real provider credentials. Datasheet research and project recommendations remain later work, not hidden network activity. No AI runtime, account, model download or cloud key is installed in M4E.
+The local first slice identifies explicitly selected saved photos and returns editable suggestions/provenance/uncertainty. Future cloud adapters require destination-specific consent before any photo transfer; no browser-draft originals, credentials or unrelated inventory metadata.
 
-- [ ] Photo and multi-object identification with human-reviewed metadata proposals
+Human review preserves existing fields/source photos; provider failure leaves ordinary editing available. Datasheets, project recommendations, cloud accounts and model downloads remain separate future work.
+
+- [ ] Multi-object detection and broader photo identification evaluation beyond the saved-item first slice
 - [ ] Preserve original markings; use cited, verified datasheet references
-- [ ] Local Ollama, optional cloud providers, BYOK, and eligible ChatGPT integrations
+- [ ] Optional cloud providers/BYOK and separately evaluated eligible integrations; local Ollama first slice is implemented above
 - [ ] Inventory curator, DIY project discovery, compatibility analysis, missing-component identification, and MCP integrations
 
 ## Achievements & Guided Discovery — future concept only

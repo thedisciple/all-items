@@ -1,5 +1,7 @@
 # Product opportunity register
 
+M5A implements only optional local saved-photo suggestions and explicit field review. Source-verified datasheets, broader curation/projects, cloud/BYOK, background jobs and MCP remain future opportunities. M4E runtime/security/device acceptance stays open; local AI does not imply beta release readiness. See the canonical roadmap and [implementation boundaries](../architecture/local-identification.md).
+
 Canonical execution order is in [ROADMAP](../../ROADMAP.md): M0–M4C implementation complete; M4D release workflow and beta acceptance current; initial human-reviewed AI identification next. Research opportunities below remain proposals unless explicitly implemented. Public runtime experiments and marketplace/sharing work do not start in M4D.
 
 M4C update: direct mobile tabs, contextual Data navigation, compact footer and bounded SQL pages/pickers are implemented; real-device acceptance remains open. Optional WebMCP and autoresearch are **planned**, with bounded implementation tasks in [m4c-experiments](../architecture/m4c-experiments.md). They are not beta prerequisites and do not replace the retained AI, DIY, sharing, marketplace or theme roadmap.

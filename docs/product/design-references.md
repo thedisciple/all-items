@@ -1,5 +1,9 @@
 # Product design references
 
+## M5A — reviewed local suggestions
+
+Task: help an owner identify a saved photographed object while preserving an existing human name and handling an ambiguous result. Design inference: reuse the current gallery context, native focus-contained dialog and field editing controls, show current/proposed values, default nonempty fields unchecked, keep uncertainty visible and retain inputs on error. No chat/dashboard or generated visual concept is needed for this constrained extension. The implemented synthetic 360px/five-locale gate supplies layout evidence; physical touch acceptance stays separate. Provider protocol references are in [local identification](../architecture/local-identification.md), not a visual product specification.
+
 ## M4C research update — 2026-11-13
 
 Verified: [Universe recap](https://github.com/events/universe/recap) presents focused review/PR and screenshot attachment workflows. Inference: a compact wrapping footer with project/contribution/license/changelog links suits All Items; no assets or interface were copied. Implemented M4C: footer, issue/PR templates, mobile shell and bounded lists. Physical-device acceptance remains separate.

@@ -8,14 +8,16 @@ import {command,serve} from "../src/operations/process";
 import {isolatedEnvironment} from "../src/operations/environment";
 import {assertSynthetic,plainPath,within} from "../src/operations/paths";
 import {buildRelease} from "../src/operations/build";
+import {modelName} from '../src/ai/config';
 
 async function main(){
-  const {values}=parseArgs({options:{checkout:{type:"string"},revision:{type:"string"},data:{type:"string"},root:{type:"string"},port:{type:"string",default:"3200"},owner:{type:"boolean",default:false},"check-only":{type:"boolean",default:false}}});
+  const {values}=parseArgs({options:{checkout:{type:"string"},revision:{type:"string"},data:{type:"string"},root:{type:"string"},port:{type:"string",default:"3200"},owner:{type:"boolean",default:false},"ai-model":{type:'string'},"check-only":{type:"boolean",default:false}}});
   const repository=path.resolve(values.checkout??process.cwd()),base=process.env.LOCALAPPDATA??path.join(os.homedir(),'.local/share'),personal=process.platform==='win32'?path.join(base,'AllItems'):path.join(os.homedir(),'.all-items');
   const data=await plainPath(path.resolve(values.data??path.join(base,"AllItems-Preview"))),root=path.resolve(values.root??path.join(base,"AllItems-Preview-Releases"));
   const port=Number(values.port);if(!Number.isInteger(port)||port<1024||port>65535||port===3000)throw new Error("Use an independent unprivileged preview port");
   if(within(personal,data)||within(data,personal)||within(repository,data)||within(data,repository)||within(root,data)||within(data,root))throw new Error("Preview data must be isolated from personal data, repository and release storage");
   const sha=await command('git',['rev-parse','--verify',`${values.revision??'HEAD'}^{commit}`],repository),env=isolatedEnvironment(data,`http://127.0.0.1:${port}`,sha);
+  if(values['ai-model']){env.ALL_ITEMS_AI_PROVIDER='ollama';env.ALL_ITEMS_AI_MODEL=modelName.parse(values['ai-model']);}
   let marker;try{marker=JSON.parse(await readFile(path.join(data,'synthetic-installation.json'),'utf8'));}catch{
     // Never adopt an existing unmarked directory, even if its name looks synthetic.
     try{await lstat(data);throw new Error("Existing unmarked preview directory refused");}catch(error){if((error as NodeJS.ErrnoException).code!=="ENOENT")throw error;}
