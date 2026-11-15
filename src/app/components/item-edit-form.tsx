@@ -27,9 +27,11 @@ type Draft = {
   askingCurrency: string; description: string; notes: string;
 };
 
-export function ItemEditForm({ itemId, initial, initialRows, returnTo, initialPriceExponent = 2,aiPhotos=[],aiRevision='' }: { aiRevision?:string; aiPhotos?:ItemPhotoDTO[]; initialPriceExponent?: number; itemId: string; initial: Draft; initialRows: { location: string | null; quantity: number }[]; returnTo: string }) {
+export function ItemEditForm({ itemId, initial, initialRows, returnTo, initialPriceExponent = 2,aiPhotos=[],aiRevision='',hasSource=false }: { hasSource?:boolean; aiRevision?:string; aiPhotos?:ItemPhotoDTO[]; initialPriceExponent?: number; itemId: string; initial: Draft; initialRows: { location: string | null; quantity: number }[]; returnTo: string }) {
   const { locale, t } = useI18n();
   const [draft, setDraft] = useState(initial);
+  const previousInitial=useRef(initial);
+  useEffect(()=>{const previous=previousInitial.current;setDraft(old=>Object.fromEntries(Object.entries(initial).map(([key,value])=>[key,JSON.stringify(old[key as keyof Draft])===JSON.stringify(previous[key as keyof Draft])?value:old[key as keyof Draft]])) as Draft);previousInitial.current=initial;},[initial]);
   const [categoryDraft, setCategoryDraft] = useState<Presentation[]>([]);
   const initialStock = initialRows.length ? initialRows.map(row => ({ location: row.location ?? "", quantity: String(row.quantity) })) : [{ location: "", quantity: initial.trackingMode === "unique" ? "1" : "0" }];
   const [rows, setRows] = useState<StockDraft[]>(initialStock);
@@ -58,7 +60,7 @@ export function ItemEditForm({ itemId, initial, initialRows, returnTo, initialPr
     <InventoryStockFields mode={draft.trackingMode} rows={rows} onModeChange={trackingMode => setDraft(value => ({ ...value, trackingMode }))} onRowsChange={setRows}/>
     <details id="item-details" className="advanced-fields"><summary>{t("additionalDetails")}</summary><div className="detail-grid advanced-item-fields">
       <label className="field"><span>{t("itemOriginalMarking")}</span><input maxLength={160} name="originalMarking" value={draft.originalMarking} onChange={field("originalMarking")}/></label>
-      <label className="field"><span>{t("identificationStatus")}</span><select name="identificationStatus" value={draft.identificationStatus} onChange={field("identificationStatus")}><option value="unknown">{t("itemStatusUnknown")}</option><option value="user_confirmed">{t("itemStatusConfirmed")}</option><option value="source_verified">{t("itemStatusVerified")}</option></select></label>
+      <label className="field"><span>{t("identificationStatus")}</span><select name="identificationStatus" value={draft.identificationStatus} onChange={field("identificationStatus")}><option value="unknown">{t("itemStatusUnknown")}</option><option value="user_confirmed">{t("itemStatusConfirmed")}</option>{initial.identificationStatus==="source_verified"?<option value="source_verified">{t(hasSource?"sourceRecorded":"sourceLegacy")}</option>:null}</select></label>
 
       <label className="field"><span className="private-field-label"><LockKeyhole size={12} aria-hidden="true"/>{t("saleIntent")}</span><select name="saleIntent" value={draft.saleIntent} onChange={field("saleIntent")}><option value="not_for_sale">{t("saleNo")}</option><option value="considering">{t("saleConsidering")}</option><option value="willing_to_sell">{t("saleYes")}</option></select></label>
             <CurrencyFields exponent={draft.askingCurrency === initial.askingCurrency ? initialPriceExponent : currencyDigits(draft.askingCurrency || suggestedCurrency(locale))} price={draft.askingPrice} currency={draft.askingCurrency} onPriceChange={askingPrice => setDraft(value => ({...value,askingPrice}))} onCurrencyChange={askingCurrency => setDraft(value => ({...value,askingCurrency}))}/>

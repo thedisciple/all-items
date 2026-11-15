@@ -1018,3 +1018,10 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .ai-use, .ai-categories label { display: flex; align-items: center; gap: 8px; min-height: 40px; }
 .ai-categories { display: flex; flex-wrap: wrap; gap: 4px 16px; }
 .ai-review-dialog .dialog-actions { position: sticky; bottom: -20px; background: var(--panel, #171a18); padding-block: 12px; gap: 8px; flex-wrap: wrap; }
+
+.source-review,.source-fields { display: grid; gap: 10px; min-width: 0; }
+.source-review { margin-block: 16px; }
+.source-review p,.source-review a,.source-review small { overflow-wrap: anywhere; min-width: 0; }
+.source-review > button { justify-self: start; }
+.source-fields input,.source-fields textarea { max-width: 100%; min-width: 0; }
+.source-fields .dialog-actions { flex-wrap: wrap; gap: 8px; }

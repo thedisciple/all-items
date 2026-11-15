@@ -135,7 +135,7 @@ describe("current and transitional archive restore", () => {
       expect((await target.client.execute("SELECT COUNT(*) AS n FROM inventory_preferences")).rows[0]!.n).toBe(0);
       expect((await target.client.execute("SELECT COUNT(*) AS n FROM custom_category_presentation")).rows[0]!.n).toBe(0);
       const exported=readInventoryArchive(await createInventoryArchive(target,target));
-      expect(exported.manifest.version).toBe(6);
+      expect(exported.manifest.version).toBe(7);
       expect((exported.inventory.items as Array<{categories: string[]}>)[0]!.categories).toContain("electronics");
     } finally { target.client.close(); }
   });
@@ -354,4 +354,18 @@ describe("non-destructive imports",()=>{
       expect(Number((await target.client.execute("SELECT COUNT(*) AS n FROM workspaces")).rows[0]!.n)).toBe(1);
     } finally {target.client.close();}
   });
+  it("round trips revision 7 evidence with fresh identities and rejects malformed citations",async()=>{
+    const row=(await source.client.execute({sql:"SELECT * FROM items WHERE id=?",args:[itemA]})).rows[0]!;
+    const citation={version:1,url:"https://manufacturer.example/manual",label:"Official",match:"Exact variant",locator:"Section 2",brand:String(row.brand??""),model:String(row.model??""),marking:String(row.original_marking??""),reviewedAt:"2026-11-15T00:00:00.000Z"};
+    await source.client.execute({sql:"UPDATE items SET identification_status='source_verified',source_evidence=? WHERE id=?",args:[JSON.stringify(citation),itemA]});
+    try{const bytes=await createInventoryArchive({workspaceId},source),target=await installation(path.join(root,"evidence"));try{const result=await importArchiveAsNew(target,bytes,"Evidence",target);const imported=(await target.client.execute({sql:"SELECT * FROM items WHERE workspace_id=? AND inventory_number=?",args:[result.inventoryId,row.inventory_number]})).rows[0]!;expect(imported.id).not.toBe(itemA);expect(JSON.parse(String(imported.source_evidence))).toEqual(citation);}finally{target.client.close();}
+    await source.client.execute({sql:"UPDATE items SET source_evidence=? WHERE id=?",args:[JSON.stringify({...citation,url:"javascript:alert(1)"}),itemA]});await expect(createInventoryArchive({workspaceId},source)).rejects.toThrow();
+    }finally{await source.client.execute({sql:"UPDATE items SET source_evidence=NULL,identification_status=? WHERE id=?",args:[row.identification_status,itemA]});}
+  });
+
+  it("imports an unchanged revision 6 gallery without evidence",async()=>{
+    const bytes=modifiedArchive(files=>{const manifest=JSON.parse(Buffer.from(files["manifest.json"]!).toString());manifest.version=6;files["manifest.json"]=Buffer.from(JSON.stringify(manifest));const inventory=JSON.parse(Buffer.from(files["inventory.json"]!).toString());for(const item of inventory.items)delete item.source_evidence;files["inventory.json"]=Buffer.from(JSON.stringify(inventory));});
+    const target=await installation(path.join(root,"actual-v6"));try{await restoreInventoryArchive(bytes,target);expect((await target.client.execute("SELECT source_evidence FROM items")).rows.every(row=>row.source_evidence===null)).toBe(true);}finally{target.client.close();}
+  });
+
 });

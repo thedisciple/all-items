@@ -1,3 +1,4 @@
+import {POST as SOURCE} from "@/app/inventories/[inventoryId]/items/[id]/source/route";
 import {beforeAll,afterAll,it,expect,vi} from 'vitest';
 import {mkdtemp,writeFile,unlink} from 'node:fs/promises';
 import path from 'node:path';
@@ -43,9 +44,9 @@ it('rejects saturation and cancellation and releases the private lock on failure
 });
 it('protects the exact inference/apply HTTP routes from missing sessions, foreign inventories and hostile origins',async()=>{
   const params={params:Promise.resolve({inventoryId:inventory.workspaceId,id})},headers={host:'127.0.0.1:3000',origin:'http://127.0.0.1:3000','content-type':'application/json'};
-  request.token='';expect((await POST(new Request('http://127.0.0.1:3000/test',{method:'POST',headers,body:'{}'}),params)).status).toBe(401);
-  request.token=b;expect((await PATCH(new Request('http://127.0.0.1:3000/test',{method:'PATCH',headers,body:'{}'}),params)).status).toBe(404);
-  request.token=a;expect((await POST(new Request('http://127.0.0.1:3000/test',{method:'POST',headers:{...headers,origin:'https://attacker.invalid'},body:'{}'}),params)).status).toBe(403);
+  request.token='';expect((await SOURCE(new Request('http://127.0.0.1:3000/test',{method:'POST',headers,body:'{}'}),params)).status).toBe(401);expect((await POST(new Request('http://127.0.0.1:3000/test',{method:'POST',headers,body:'{}'}),params)).status).toBe(401);
+  request.token=b;expect((await SOURCE(new Request('http://127.0.0.1:3000/test',{method:'POST',headers,body:'{}'}),params)).status).toBe(404);expect((await PATCH(new Request('http://127.0.0.1:3000/test',{method:'PATCH',headers,body:'{}'}),params)).status).toBe(404);
+  request.token=a;expect((await SOURCE(new Request('http://127.0.0.1:3000/test',{method:'POST',headers:{...headers,origin:'https://attacker.invalid'},body:'{}'}),params)).status).toBe(403);expect((await POST(new Request('http://127.0.0.1:3000/test',{method:'POST',headers:{...headers,origin:'https://attacker.invalid'},body:'{}'}),params)).status).toBe(403);
 });
 it('persists the per-user throttle and refuses work before provider invocation',async()=>{
   const {createHash}=await import('node:crypto');await client.execute({sql:'INSERT INTO auth_login_buckets(bucket,started_at,attempts) VALUES(?,?,6) ON CONFLICT(bucket) DO UPDATE SET attempts=6,started_at=excluded.started_at',args:['ai:'+createHash('sha256').update('synthetic-owner').digest('hex'),Date.now()]});const before=calls;

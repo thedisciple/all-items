@@ -1,3 +1,4 @@
+import {validateEvidenceRecord} from "@/items/source-evidence";
 import { priceDecimal } from "@/items/currencies";
 import { createHash } from "node:crypto";
 import { lstat, readFile } from "node:fs/promises";
@@ -10,7 +11,7 @@ import { portablePreferences, categoryPresentations } from "@/items/inventory-pr
 import { getDatabase, dataDirectory } from "@/db/client";
 
 export const ARCHIVE_FORMAT = "all-items-portable-inventory";
-export const ARCHIVE_VERSION = 6;
+export const ARCHIVE_VERSION = 7;
 export const MAX_ARCHIVE_BYTES = 128 * 1024 * 1024;
 export const MAX_ENTRY_BYTES = 32 * 1024 * 1024;
 export const MAX_ARCHIVE_ENTRIES = 20_000;
@@ -80,7 +81,7 @@ function canonicalizeInventory(inventory: Record<string, unknown>, assets: Recor
   return { inventory: copy, assets: mapped };
 }
 const manifestSchema = z.object({
-  format: z.literal(ARCHIVE_FORMAT), version: z.union([z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(ARCHIVE_VERSION)]), exportedAt: z.string().datetime(), applicationVersion: z.string(),
+  format: z.literal(ARCHIVE_FORMAT), version: z.union([z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6), z.literal(ARCHIVE_VERSION)]), exportedAt: z.string().datetime(), applicationVersion: z.string(),
   entries: z.array(z.object({ path: z.string(), size: z.number().int().nonnegative(), sha256: z.string().regex(/^[0-9a-f]{64}$/) })).max(MAX_ARCHIVE_ENTRIES),
 });
 const portableInventorySchema = z.object({
@@ -114,7 +115,7 @@ export function readInventoryArchive(input: Uint8Array) {
   let rawManifest: unknown;
   try { rawManifest = JSON.parse(Buffer.from(manifestBytes).toString("utf8")); }
   catch { throw new ArchiveError("The archive manifest is invalid."); }
-  if (typeof rawManifest !== "object" || rawManifest === null || (rawManifest as Record<string, unknown>).format !== ARCHIVE_FORMAT || ![2, 3, 4, 5, ARCHIVE_VERSION].includes(Number((rawManifest as Record<string, unknown>).version))) throw new ArchiveError("Unsupported archive format. Regenerate the archive from the current All Items installation.");
+  if (typeof rawManifest !== "object" || rawManifest === null || (rawManifest as Record<string, unknown>).format !== ARCHIVE_FORMAT || ![2, 3, 4, 5, 6, ARCHIVE_VERSION].includes(Number((rawManifest as Record<string, unknown>).version))) throw new ArchiveError("Unsupported archive format. Regenerate the archive from the current All Items installation.");
   try { manifest = manifestSchema.parse(rawManifest); inventory = portableInventorySchema.parse(JSON.parse(Buffer.from(inventoryBytes).toString("utf8"))); }
   catch { throw new ArchiveError("The archive metadata is invalid."); }
   const expected = new Map<string, { size: number; sha256: string }>();
@@ -143,6 +144,7 @@ export function readInventoryArchive(input: Uint8Array) {
   if (manifest.version >= 5) {
     if (!portablePreferences.safeParse(inventory.preferences).success || !categoryPresentations.safeParse(inventory.customCategories).success) throw new ArchiveError("The archive has invalid inventory preferences or category presentation.");
   } else { inventory.preferences = { version: 1, sort: "date" }; inventory.customCategories = []; }
+  for(const item of inventory.items as Record<string,unknown>[]){if(manifest.version<7 && item.source_evidence!=null)throw new ArchiveError("Evidence requires revision 7");if(manifest.version===7 && !("source_evidence" in item))throw new ArchiveError("Missing evidence field");validateEvidenceRecord(item);}
   validateReferences(inventory, files, manifest.version);
   return { manifest, inventory, files };
 }
@@ -265,6 +267,7 @@ function validateReferences(inventory: Record<string, unknown>, files: Record<st
 }
 
 export function buildInventoryArchive(inventory: Record<string, unknown>, assets: Record<string, Uint8Array> = {}) {
+  inventory={...inventory,items:(inventory.items as Record<string,unknown>[]).map(item=>({source_evidence:null,...item}))};
   const entries: Record<string, Uint8Array> = {};
   const canonical = canonicalizeInventory({ preferences: { version: 1, sort: "date" }, customCategories: [], ...inventory }, assets);
   if (!portablePreferences.safeParse(canonical.inventory.preferences).success || !categoryPresentations.safeParse(canonical.inventory.customCategories).success) throw new ArchiveError("Inventory preferences or category presentation are invalid.");

@@ -106,6 +106,7 @@ async function beginWriteTransaction(db: Awaited<ReturnType<typeof inventoryData
 
 export function validateItemCreation(input:ItemFields,stock:unknown,hasPhoto:boolean){
   const parsed = (hasPhoto ? photoItemFields : itemFields).parse(input);
+  if(parsed.identificationStatus==="source_verified")throw new Error("Use explicit source review");
   const price = parsePriceMinor(parsed.askingPrice, parsed.askingCurrency);
   if (price !== null && !isSupportedCurrency(parsed.askingCurrency)) throw new Error("Unsupported currency");
   const rows = normalizedStock(stock ?? [{ location: "", quantity: parsed.trackingMode === "unique" ? 1 : 0 }], parsed.trackingMode);
@@ -115,6 +116,7 @@ export function validateItemCreation(input:ItemFields,stock:unknown,hasPhoto:boo
 export async function createItem(context: InventoryContext, input: ItemFields, stock?: unknown, attach?: (tx: Pick<Client, "execute">, id: string) => Promise<void>, write?: {id:string;identity:WriteIdentity}) {
   return serializeLocalWrite(async () => {
   const {parsed,price,rows}=validateItemCreation(input,stock,Boolean(attach));
+  if(parsed.identificationStatus==="source_verified")throw new Error("Use explicit source review");
   const { db, workspaceId } = await inventoryDatabase(context);
   const tx = await beginWriteTransaction(db);
   try {
@@ -322,6 +324,7 @@ export async function updateItem(context: InventoryContext, id: string, input: I
     try {
       const existing = await tx.execute({ sql: "SELECT * FROM items WHERE id=? AND workspace_id=?", args: [id,workspaceId] });
       if (!existing.rows.length) throw new Error("Item not found");
+      if(parsed.identificationStatus==="source_verified" && existing.rows[0]!.identification_status!=="source_verified")throw new Error("Use explicit source review");
       if(review){
         if(!z.string().regex(/^[a-f0-9]{64}$/).safeParse(review.revision).success||await itemRevision(tx,id,workspaceId)!==review.revision)throw new StaleItemReview();
         const patch=reviewedPatch.parse(review.patch),row=existing.rows[0]!,currentCategories=(await tx.execute({sql:'SELECT category FROM item_categories WHERE item_id=? ORDER BY category',args:[id]})).rows.map(row=>String(row.category));
@@ -339,6 +342,7 @@ export async function updateItem(context: InventoryContext, id: string, input: I
         sql: `UPDATE items SET name=?,model=?,brand=?,original_marking=?,notes=?,description=?,identification_status=?,tracking_mode=?,sale_intent=?,asking_price_minor=?,asking_currency=?,asking_price_exponent=?,updated_at=? WHERE id=? AND workspace_id=?`,
         args: [parsed.name,parsed.model,parsed.brand,parsed.originalMarking,parsed.notes,parsed.description,parsed.identificationStatus,parsed.trackingMode,parsed.saleIntent,price,price !== null ? parsed.askingCurrency : null,price !== null ? exponent : 2,now,id,workspaceId],
       });
+      if(parsed.identificationStatus!=="source_verified")await tx.execute({sql:"UPDATE items SET source_evidence=NULL WHERE id=?",args:[id]});
       if (parsed.categories !== undefined || input.category !== undefined) await replaceCategories(tx,id,parsed.categories ?? (parsed.category ? [parsed.category] : []));
       if (parsed.categoryPresentation) await saveCategoryPresentations(tx, workspaceId, parsed.categoryPresentation, canonicalCategories(parsed.categories ?? (parsed.category ? [parsed.category] : [])));
       if (stock !== undefined) await replaceStock(tx,id,workspaceId,rows,now);

@@ -1,3 +1,5 @@
+import {SourceReview} from "@/app/components/source-review";
+import {readEvidence} from "@/items/source-evidence";
 import { routeInventory } from "@/app/inventory-routing";
 import { inventoryPath,inventoryReturnPath } from "@/items/inventory-context";
 import { notFound } from "next/navigation";
@@ -46,6 +48,7 @@ export default async function ItemPage({ params, searchParams }: Props) {
   const fromCollection = z.uuid().safeParse(query.from ?? "");
   let returnTo = fromCollection.success && collections.some(collection=>collection.id===fromCollection.data) ? `${base}/collections/${fromCollection.data}` : base;
   try{if(query.returnTo){const safe=inventoryReturnPath(context,query.returnTo),pathname=safe.split("?")[0];if(pathname===base||collections.some(collection=>pathname===`${base}/collections/${collection.id}`))returnTo=safe;}}catch{/* Invalid return destinations fall back to the authorized inventory. */}
+  const citation=await readEvidence(context,id);
   return <main className="app-shell">
     <AppSidebar active="items" locale={locale}/>
     <section className="main-content"><AppHeader/>
@@ -56,8 +59,8 @@ export default async function ItemPage({ params, searchParams }: Props) {
         <section className="photo-detail-panel" aria-label={t("photo")}>
           <PhotoGallery itemId={id} photos={photos} itemName={item.name || t("unidentifiedItemName")}/>
         </section>
-        <ItemEditForm aiRevision={aiConfiguration()&&photos.length?await getItemRevision(context,id):''} aiPhotos={aiConfiguration()?photos:[]} initialPriceExponent={item.asking_price_exponent} itemId={id} initial={draft} initialRows={item.stock} returnTo={returnTo}/>
-        <CollectionMembership itemId={id} collections={collections.map(({ id: collectionId, name }) => ({ id: collectionId, name }))} memberships={memberships}/>
+        <ItemEditForm hasSource={Boolean(citation)} aiRevision={aiConfiguration()&&photos.length?await getItemRevision(context,id):''} aiPhotos={aiConfiguration()?photos:[]} initialPriceExponent={item.asking_price_exponent} itemId={id} initial={draft} initialRows={item.stock} returnTo={returnTo}/>
+        <SourceReview base={base} id={id} revision={await getItemRevision(context,id)} brand={item.brand??""} model={item.model??""} marking={item.original_marking??""} status={item.identification_status} citation={citation}/><CollectionMembership itemId={id} collections={collections.map(({ id: collectionId, name }) => ({ id: collectionId, name }))} memberships={memberships}/>
         <DestructiveConfirmation action={removeItem} label={t("itemDelete")} description={t("itemDeleteWarning")} fields={{ id }}/>
       </div>
     </section>
