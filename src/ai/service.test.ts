@@ -1,3 +1,6 @@
+import {POST as DRAFT} from "@/app/inventories/[inventoryId]/identify-draft/route";
+import {identifyDraft} from "./draft-image";
+import {OllamaProvider} from './ollama';
 import {POST as SOURCE} from "@/app/inventories/[inventoryId]/items/[id]/source/route";
 import {beforeAll,afterAll,it,expect,vi} from 'vitest';
 import {mkdtemp,writeFile,unlink} from 'node:fs/promises';
@@ -48,7 +51,28 @@ it('protects the exact inference/apply HTTP routes from missing sessions, foreig
   request.token=b;expect((await SOURCE(new Request('http://127.0.0.1:3000/test',{method:'POST',headers,body:'{}'}),params)).status).toBe(404);expect((await PATCH(new Request('http://127.0.0.1:3000/test',{method:'PATCH',headers,body:'{}'}),params)).status).toBe(404);
   request.token=a;expect((await SOURCE(new Request('http://127.0.0.1:3000/test',{method:'POST',headers:{...headers,origin:'https://attacker.invalid'},body:'{}'}),params)).status).toBe(403);expect((await POST(new Request('http://127.0.0.1:3000/test',{method:'POST',headers:{...headers,origin:'https://attacker.invalid'},body:'{}'}),params)).status).toBe(403);
 });
+it('draft analysis normalizes a single image without creating items/media/receipts and shares saved-photo limits',async()=>{
+  request.token=a;const before=(await client.execute('SELECT * FROM items')).rows,media=(await client.execute('SELECT * FROM media_assets')).rows,receipts=(await client.execute('SELECT * FROM item_write_receipts')).rows;
+  const bytes=await sharp({create:{width:800,height:500,channels:3,background:'green'}}).withExif({IFD0:{Artist:'Synthetic metadata'}}).png().toBuffer();
+  const make=(data:Buffer)=>new Request('http://127.0.0.1:3000/test',{method:'POST',headers:{'content-type':'image/png'},body:new Uint8Array(data)});
+  await identifyDraft(inventory,'synthetic-owner',make(bytes),fake,'en');expect((await client.execute('SELECT * FROM items')).rows).toEqual(before);expect((await client.execute('SELECT * FROM media_assets')).rows).toEqual(media);expect((await client.execute('SELECT * FROM item_write_receipts')).rows).toEqual(receipts);
+  const large=await sharp({create:{width:1300,height:100,channels:3,background:'blue'}}).png().toBuffer();await expect(identifyDraft(inventory,'synthetic-owner',make(large),fake,'en')).rejects.toThrow();
+  await writeFile(path.join(directory,'.ai-inference.lock'),'other');await expect(identifyDraft(inventory,'synthetic-owner',make(bytes),fake,'en')).rejects.toMatchObject({key:'aiBusy'});await unlink(path.join(directory,'.ai-inference.lock'));
+});
+it('draft HTTP boundary authenticates and scopes before consuming the body, including disabled AI',async()=>{
+ const params={params:Promise.resolve({inventoryId:inventory.workspaceId})};for(const [token,origin,status]of [['','http://127.0.0.1:3000',401],[b,'http://127.0.0.1:3000',404],[a,'https://attacker.invalid',403],[a,'http://127.0.0.1:3000',400]] as const){request.token=token;const req=new Request('http://127.0.0.1:3000/test',{method:'POST',headers:{host:'127.0.0.1:3000',origin,'content-type':'image/jpeg'},body:'not an image'});expect((await DRAFT(req,params)).status).toBe(status);expect(req.bodyUsed).toBe(false);}request.token=a;
+});
+it('runs the configured draft HTTP boundary with a bounded image',async()=>{
+ request.token=a;vi.stubEnv('ALL_ITEMS_AI_PROVIDER','ollama');vi.stubEnv('ALL_ITEMS_AI_MODEL','synthetic');const spy=vi.spyOn(OllamaProvider.prototype,'identify').mockImplementation(fake.identify);
+ try{const bytes=await sharp({create:{width:500,height:350,channels:3,background:'green'}}).jpeg().toBuffer();const req=new Request('http://127.0.0.1:3000/test',{method:'POST',headers:{host:'127.0.0.1:3000',origin:'http://127.0.0.1:3000','content-type':'image/jpeg','x-all-items-ai-request':crypto.randomUUID(),'x-all-items-locale':'en'},body:new Uint8Array(bytes)});const response=await DRAFT(req,{params:Promise.resolve({inventoryId:inventory.workspaceId})});expect(await response.json()).toMatchObject({suggestion:{name:'Suggested name'}});expect(response.status).toBe(200);}finally{spy.mockRestore();vi.unstubAllEnvs();}
+});
+it('rejects malformed and mismatched image bytes without contacting the provider',async()=>{
+ const before=calls;const png=await sharp({create:{width:10,height:10,channels:3,background:'blue'}}).png().toBuffer();
+ for(const data of [Buffer.from('not an image'),png])await expect(identifyDraft(inventory,'malformed-owner',new Request('http://localhost',{method:'POST',headers:{'content-type':'image/jpeg'},body:new Uint8Array(data)}),fake,'en')).rejects.toThrow();expect(calls).toBe(before);
+});
 it('persists the per-user throttle and refuses work before provider invocation',async()=>{
   const {createHash}=await import('node:crypto');await client.execute({sql:'INSERT INTO auth_login_buckets(bucket,started_at,attempts) VALUES(?,?,6) ON CONFLICT(bucket) DO UPDATE SET attempts=6,started_at=excluded.started_at',args:['ai:'+createHash('sha256').update('synthetic-owner').digest('hex'),Date.now()]});const before=calls;
   await expect(identifyItem(inventory,id,'synthetic-owner',{photoIds:[photoId]},fake,new AbortController().signal)).rejects.toMatchObject({key:'aiBusy'});expect(calls).toBe(before);
+  await expect(identifyDraft(inventory,'synthetic-owner',new Request('http://localhost',{method:'POST',headers:{'content-type':'image/jpeg'},body:'unused'}),fake,'en')).rejects.toMatchObject({key:'aiBusy'});expect(calls).toBe(before);
+  await client.execute({sql:"UPDATE auth_login_buckets SET attempts=12,started_at=? WHERE bucket='ai:installation'",args:[Date.now()]});await expect(identifyDraft(inventory,'another-user',new Request('http://localhost',{method:'POST',headers:{'content-type':'image/jpeg'},body:'unused'}),fake,'en')).rejects.toMatchObject({key:'aiBusy'});expect(calls).toBe(before);
 });

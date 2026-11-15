@@ -1025,3 +1025,6 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .source-review > button { justify-self: start; }
 .source-fields input,.source-fields textarea { max-width: 100%; min-width: 0; }
 .source-fields .dialog-actions { flex-wrap: wrap; gap: 8px; }
+
+.draft-identification { min-width: 0; }
+.draft-identification p, .draft-identification small { overflow-wrap: anywhere; }

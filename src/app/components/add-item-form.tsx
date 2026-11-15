@@ -1,4 +1,5 @@
 "use client";
+import {DraftIdentification} from "./draft-identification";
 
 import {browserUUID} from "@/lib/browser-crypto";
 
@@ -26,12 +27,12 @@ const idle:CreationFeedback={status:"idle",message:""};
 type Draft={name:string;model:string;brand:string;categories:string[];trackingMode:string;originalMarking:string;description:string;notes:string;identificationStatus:string;saleIntent:string;askingPrice:string;askingCurrency:string};
 const emptyFields=():Draft=>({name:"",model:"",brand:"",categories:[],trackingMode:"unique",originalMarking:"",description:"",notes:"",identificationStatus:"unknown",saleIntent:"not_for_sale",askingPrice:"",askingCurrency:""});
 
-export function AddItemForm(){
+export function AddItemForm({aiEnabled=false}:{aiEnabled?:boolean}){
   const {inventory}=useInventory();
-  return <ScopedAddItemForm key={inventory.workspaceId}/>;
+  return <ScopedAddItemForm key={inventory.workspaceId} aiEnabled={aiEnabled}/>;
 }
 
-function ScopedAddItemForm(){
+function ScopedAddItemForm({aiEnabled}:{aiEnabled:boolean}){
   const {locale,t}=useI18n();
   const {base,inventory}=useInventory();
   const exit=useItemExit(),router=useRouter();
@@ -180,7 +181,8 @@ function ScopedAddItemForm(){
           {storageError?<p className="form-error" role="alert">{t(storageError)}</p>:null}
           {pending||cleanupPending?<p role="status" aria-live="polite">{progress&&progress!=="commit"?t("creationPreparingPhotos",progress):t("creationCommitting")}</p>:null}
           {!storageReady?<p role="status">{t("draftLoading")}</p>:storedDraft?<div className="draft-recovery" role="group" aria-label={t("draftRecoveryTitle")}><h3>{t("draftRecoveryTitle")}</h3><p>{t("draftRecoveryPrompt")}</p><div className="dialog-actions"><button type="button" className="add-button" onClick={restoreStored}>{t("draftRestore")}</button><button type="button" className="quiet-button" onClick={()=>void discardStored()}>{t("draftDiscardSaved")}</button></div></div>:<div className="add-dialog-fields" inert={pending||cleanupPending}>
-          <MultiPhotoDraft key={resetToken} value={gallery} onChange={setGallery} disabled={pending||cleanupPending} active={open} restoreToken={resetToken} onBusyChange={setGalleryBusy} itemName={draft.name||t("unidentifiedItemName")}/>
+          <MultiPhotoDraft key={"gallery:"+resetToken} value={gallery} onChange={setGallery} disabled={pending||cleanupPending} active={open} restoreToken={resetToken} onBusyChange={setGalleryBusy} itemName={draft.name||t("unidentifiedItemName")}/>
+          {aiEnabled?(()=>{const photo=gallery.photos.find(photo=>photo.id===gallery.primaryId);return photo?.selected&&!photo.pending?<DraftIdentification key={"identification:"+resetToken} file={photo.selected} photoId={photo.id} active={open&&!blocked&&!storedDraft&&!attempted} endpoint={base+"/identify-draft"} current={draft} onApply={patch=>setDraft(old=>({...old,...patch}))}/>:null;})():null}
           <div className="photo-add-fields">
             <label className="field"><span>{t("itemName")}</span><input name="name" value={draft.name} placeholder={t("itemNamePlaceholder")} maxLength={160} onChange={update("name")}/></label>
             <label className="field"><span>{t("itemModel")}</span><input name="model" value={draft.model} placeholder={t("itemModelPlaceholder")} maxLength={160} onChange={update("model")}/></label>

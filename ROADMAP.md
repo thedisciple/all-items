@@ -4,7 +4,7 @@
 
 - **Completed implementation:** M0–M4C, including P1/P2 authentication and deployment foundations; milestone reports distinguish synthetic checks from uncompleted physical/security acceptance.
 - **Current:** M4E — final private-beta engineering and release acceptance, following M4D synchronization/immutable releases. Clean synthetic preparation, observed service identity, persistent reauthentication budgets and interruption safeguards are implemented. Independent security review, approved first activation, physical/network/Telegram and reboot acceptance remain pending. See [release workflow](docs/architecture/release-workflow.md) and [security gate](docs/architecture/p2-threat-model.md). No merge, service change or invitations are implied.
-- **Local development:** M5A — opt-in saved-photo identification with human-reviewed application, independently of beta activation. See [local identification](docs/architecture/local-identification.md). M4E test-server loss and cancellation ECONNRESET remain beta blockers; targeted green reruns do not resolve them.
+- **Local development:** M5A saved-photo hypotheses, M5B owner-attested citations and M5C accepted-photo review during creation. ZIP7 is current, with 2-6 import support. See [creation review](docs/architecture/draft-identification.md). M4E runtime and beta acceptance gates remain open.
 - **Future:** DIY recommendations, cross-inventory projects, shared inventories, marketplace, gamification, WebMCP and optional themes/integrations. Historical progress files are evidence snapshots, not the task queue.
 
 See [the opportunity register](docs/product/opportunity-register.md) for detailed concepts, dependencies, risk, complexity, and priority. Checkmarks describe implemented and verified work only.
@@ -120,7 +120,7 @@ M2D-R2 passed the automated suite in Microsoft Edge on Windows: 25 unit tests an
 - [x] Restore into an empty inventory through private staging, a write transaction, integrity checks, rollback cleanup, and next-attempt interruption cleanup
 - [x] Verify a synthetic full-fidelity round trip and isolated Edge export/import flow
 
-Historical M3.2 contract: revision 3 export with revision 2 recovery. Current contract: revision 6 with tested revision 2–5 importers; revision 1/unknown revisions are unsupported. Import creates a separate inventory and never silently merges or replaces populated data. M4B.2 installation backups and restore drills are implemented; styled XLSX remains a separate future spreadsheet export.
+Historical M3.2 contract: revision 3 export with revision 2 recovery. Current contract: revision 7 with tested revision 2–6 importers; revision 1/unknown revisions are unsupported. Import creates a separate inventory and never silently merges or replaces populated data. M4B.2 installation backups and restore drills are implemented; styled XLSX remains a separate future spreadsheet export.
 
 ### M3.2-R1 Consolidation and pre-workspace architecture — COMPLETE
 
@@ -231,7 +231,7 @@ The local first slice identifies explicitly selected saved photos and returns ed
 Human review preserves existing fields/source photos; provider failure leaves ordinary editing available. Datasheets, project recommendations, cloud accounts and model downloads remain separate future work.
 
 - [ ] Multi-object detection and broader photo identification evaluation beyond the saved-item first slice
-- [ ] Preserve original markings; use cited, verified datasheet references
+- [x] Preserve original markings and support owner-attested source citations (M5B); automatic datasheet discovery/extraction remains future work
 - [ ] Optional cloud providers/BYOK and separately evaluated eligible integrations; local Ollama first slice is implemented above
 - [ ] Inventory curator, DIY project discovery, compatibility analysis, missing-component identification, and MCP integrations
 
@@ -285,3 +285,7 @@ AI identification, marketplace, sharing, synchronization, achievements, rankings
 ## M5B ? Owner-attested primary-source review
 
 Saved-item manual lookup query (marking excluded), reviewed HTTPS citation and identity snapshot, atomic confirmation/removal with stale protection. Identity changes remove current evidence and downgrade to user-confirmed; generic create/edit cannot elevate status. ZIP7 carries evidence; 2?6 remain importable. No automatic external requests, models, scraping, cloud, DIY or beta activation. M4E runtime/security/physical/network/Telegram/reboot gates remain open.
+
+## M5C — Accepted photo to reviewed creation draft
+
+Optional inline review in Add Item uses one accepted primary display photo, explicitly analyzed and normalized on both sides. Selected suggestions change only normal browser draft fields; one existing Save creates the item/gallery/stock/receipt. SourceReview new sessions initialize from latest saved props; active sessions retain their bound revision and inputs until explicit restart. No migration or archive change; current ZIP7 and 2-6 importers retained. Automated research, batch intake, providers, DIY and beta promotion remain out of scope.

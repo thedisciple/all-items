@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — M5C
+
+- Added opt-in accepted-primary-photo identification inside Add Item, editable local suggestions and selected-field draft transfer before one normal save.
+- Added authenticated, bounded draft-image inference with the shared saved-photo lock/quotas and no staging or durable proposal. Cancellation/input identity guards reject superseded responses.
+- Fixed source-review refresh/session binding and reset of query, description and confirmation for a new review. ZIP7, source invalidation, receipt/recovery semantics and open beta gates remain unchanged.
+
 ## Unreleased ? M5B
 
 - Added manual owner-attested source review on saved items, independent of photos/Ollama; no external fetching.
