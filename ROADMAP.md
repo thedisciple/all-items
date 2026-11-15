@@ -281,3 +281,7 @@ AI identification, marketplace, sharing, synchronization, achievements, rankings
 - [ ] Optional bundled light/dark/accent themes with readable contrast, local preference scope and reduced-motion behavior
 - [ ] Human-reviewed AI photo identification after M4B, provider adapters and explicit local/cloud consent; never overwrite original markings automatically
 - [ ] Preserve the independent project, marketplace, Telegram/MCP and optional organization proposals; implement only through separately scoped milestones
+
+## M5B ? Owner-attested primary-source review
+
+Saved-item manual lookup query (marking excluded), reviewed HTTPS citation and identity snapshot, atomic confirmation/removal with stale protection. Identity changes remove current evidence and downgrade to user-confirmed; generic create/edit cannot elevate status. ZIP7 carries evidence; 2?6 remain importable. No automatic external requests, models, scraping, cloud, DIY or beta activation. M4E runtime/security/physical/network/Telegram/reboot gates remain open.

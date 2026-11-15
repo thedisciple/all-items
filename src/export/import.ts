@@ -1,3 +1,4 @@
+import {validateEvidenceRecord} from "@/items/source-evidence";
 import { assertPrivatePath } from "@/media/private-paths";
 import { withInventoryOperation } from "@/items/operation-lock";
 import { assertUniqueInventoryName, inventoryName } from "@/items/inventories";
@@ -21,6 +22,7 @@ const locationSchema = z.object({ id, workspace_id: id, name: z.string().min(1).
 const stockSchema = z.object({ id, item_id: id, location_id: id.nullable(), quantity: z.number().int().min(0).max(1_000_000), created_at: timestamp, updated_at: timestamp });
 const mediaSchema = z.object({ id, isPrimary: z.boolean(), displayOrder: z.number().int().nonnegative(), originalFilename: z.string().max(255), mimeType: z.literal("image/webp"), width: z.number().int().positive().max(12_000), height: z.number().int().positive().max(12_000), cropData: nullableText, createdAt: timestamp, imagePath: z.string(), thumbnailPath: z.string(), sourcePath: z.string().nullable() });
 const itemSchema = z.object({
+  source_evidence: z.string().max(12000).nullable().default(null),
   primaryMediaId: id.nullable(),
   id, workspace_id: id, inventory_number: z.string().regex(/^INV-\d{6,}$/), name: z.string().max(160), model: z.string().max(160).nullable(), brand: z.string().max(120).nullable(),
   category: z.string().max(80).nullable(), categories: z.array(z.string().min(1).max(80)).max(20), original_marking:z.string().max(160).nullable(), notes:z.string().max(2000).nullable(), description:z.string().max(4000).nullable(),
@@ -124,6 +126,7 @@ async function validatedArchive(input: Uint8Array) {
     return { ...item, asking_price_exponent: 2, primaryMediaId: media.find(photo => photo.isPrimary)?.id ?? null, mediaAssets: media.map((photo, displayOrder) => ({ ...photo, displayOrder })) };
   }) } : records;
   const inventory = validatedRecords(adapted);
+  for(const item of inventory.items)validateEvidenceRecord(item);
   if (manifest.version < 4 && inventory.workspace.id !== ORIGINAL_INVENTORY_ID) throw new ImportError("Legacy archive inventory identity is invalid.");
   const promotions: Promotion[] = [];
   for (const item of inventory.items) for (const media of item.mediaAssets) {
@@ -282,7 +285,7 @@ async function persistInventoryInTransaction(client: Executor, inventory: Portab
   for (const category of inventory.customCategories) await client.execute({sql:"INSERT INTO custom_category_presentation(workspace_id,category,emoji) VALUES(?,?,?)",args:[workspaceId,category.category,category.emoji]});
   for (const location of inventory.locations) await insertRow(client, "locations", ["id", "workspace_id", "name", "created_at"], location);
   for (const item of inventory.items) {
-    await insertRow(client, "items", ["id", "workspace_id", "name", "model", "inventory_number", "brand", "category", "original_marking", "notes", "description", "identification_status", "tracking_mode", "sale_intent", "asking_price_minor", "asking_currency", "asking_price_exponent", "created_at", "updated_at"], item);
+    await insertRow(client, "items", ["id", "workspace_id", "name", "model", "inventory_number", "brand", "category", "original_marking", "notes", "description", "identification_status", "tracking_mode", "sale_intent", "asking_price_minor", "asking_currency", "asking_price_exponent", "created_at", "updated_at", "source_evidence"], item);
     for (const category of item.categories) await insertRow(client, "item_categories", ["item_id", "category"], { item_id: item.id, category });
     for (const stock of item.stock) await insertRow(client, "stock_entries", ["id", "item_id", "location_id", "quantity", "created_at", "updated_at"], stock);
     for (const media of item.mediaAssets) await insertRow(client, "media_assets", ["id", "item_id", "storage_path", "thumbnail_path", "source_storage_path", "crop_data", "original_filename", "mime_type", "width", "height", "created_at", "is_primary", "display_order"], {

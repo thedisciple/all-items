@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased ? M5B
+
+- Added manual owner-attested source review on saved items, independent of photos/Ollama; no external fetching.
+- Added migration 0016, a single citation/identity snapshot, transactional stale checks and identity invalidation; blocked generic verification elevation while retaining legacy rows.
+- Added ZIP7 source evidence with explicit 2?6 compatibility; installation backups preserve it, CSV omits citations. No live migration or deployment.
+
 ## Unreleased — M5A
 
 - Added default-off local saved-photo identification through installed Ollama vision models, unavailable through beta proxy mode; no downloads, external providers or migration.

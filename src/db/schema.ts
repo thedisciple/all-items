@@ -26,6 +26,7 @@ export const inventoryImportOperations = sqliteTable("inventory_import_operation
 });
 
 export const items = sqliteTable("items", {
+  sourceEvidence: text("source_evidence"),
   id: text("id").primaryKey(),
   workspaceId: text("workspace_id").notNull().references(() => workspaces.id),
   name: text("name").notNull(),
