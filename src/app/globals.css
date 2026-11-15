@@ -1002,3 +1002,19 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .account-panel { position: absolute; right: 0; top: calc(100% + 8px); z-index: 50; width: min(230px,calc(100vw - 32px)); padding: 14px; display: grid; gap: 12px; background: #1d2119; border: 1px solid var(--control-border); border-radius: var(--control-radius); overflow-wrap: anywhere; }
 .account-panel button { width: 100%; }
 @media (min-width: 761px) { .inventory-view .item-grid-row { display: flex; flex-wrap: wrap; } .inventory-view .item-identity { flex: 1 1 150px; } .inventory-view .item-categories { flex: 1 1 180px; } .inventory-view .item-stock { flex: 0 1 110px; } }
+
+/* Local identification reuses the existing controls; native dialog provides focus containment. */
+.item-edit-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.ai-identification { margin-bottom: 1rem; }
+.ai-review-dialog { color: var(--foreground, #ededed); background: var(--panel, #171a18); border: 1px solid #465047; border-radius: 16px; padding: 20px; width: min(640px, calc(100vw - 24px)); max-width: calc(100vw - 24px); max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px); overflow-y: auto; box-sizing: border-box; }
+.ai-review-dialog::backdrop { background: #0009; }
+.ai-review-dialog .dialog-heading { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.ai-review-dialog h2 { font-size: 1.15rem; margin: 0; }
+.ai-review-dialog p, .ai-review-dialog li, .ai-field small { overflow-wrap: anywhere; }
+.ai-photo-choices { display: flex; flex-wrap: wrap; gap: 12px; margin-block: 12px; }
+.ai-photo-choices label { display: flex; align-items: center; gap: 6px; }
+.ai-photo-choices img { width: 64px; height: 64px; object-fit: contain; }
+.ai-field { display: grid; min-width: 0; gap: 6px; padding-block: 12px; border-bottom: 1px solid #465047; }
+.ai-use, .ai-categories label { display: flex; align-items: center; gap: 8px; min-height: 40px; }
+.ai-categories { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.ai-review-dialog .dialog-actions { position: sticky; bottom: -20px; background: var(--panel, #171a18); padding-block: 12px; gap: 8px; flex-wrap: wrap; }

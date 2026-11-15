@@ -13,11 +13,12 @@ import { DestructiveConfirmation } from "@/app/components/destructive-confirmati
 import { removeItem } from "@/app/actions";
 import { listCollections, listItemCollections } from "@/items/collections";
 import { priceDecimal } from "@/items/currencies";
-import { getItem } from "@/items/service";
+import { getItem,getItemRevision } from "@/items/service";
 import { listItemPhotos } from "@/media/service";
 import { getLocale } from "@/i18n/server";
 import { translate } from "@/i18n/messages";
 import { AppHeader } from "@/app/components/app-header";
+import {aiConfiguration} from '@/ai/config';
 
 export const dynamic = "force-dynamic";
 type Props = { params: Promise<{ id: string; inventoryId: string }>; searchParams: Promise<{ from?: string;returnTo?:string }> };
@@ -55,7 +56,7 @@ export default async function ItemPage({ params, searchParams }: Props) {
         <section className="photo-detail-panel" aria-label={t("photo")}>
           <PhotoGallery itemId={id} photos={photos} itemName={item.name || t("unidentifiedItemName")}/>
         </section>
-        <ItemEditForm initialPriceExponent={item.asking_price_exponent} itemId={id} initial={draft} initialRows={item.stock} returnTo={returnTo}/>
+        <ItemEditForm aiRevision={aiConfiguration()&&photos.length?await getItemRevision(context,id):''} aiPhotos={aiConfiguration()?photos:[]} initialPriceExponent={item.asking_price_exponent} itemId={id} initial={draft} initialRows={item.stock} returnTo={returnTo}/>
         <CollectionMembership itemId={id} collections={collections.map(({ id: collectionId, name }) => ({ id: collectionId, name }))} memberships={memberships}/>
         <DestructiveConfirmation action={removeItem} label={t("itemDelete")} description={t("itemDeleteWarning")} fields={{ id }}/>
       </div>

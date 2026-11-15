@@ -16,6 +16,8 @@ import type { Presentation } from "@/items/inventory-presentation";
 import { useExitEditor, useItemExit } from "./item-exit";
 
 import { recoverableAction } from "./recoverable-action";
+import {ItemIdentification} from './item-identification';
+import type {ItemPhotoDTO} from '@/media/service';
 
 const safeUpdate = recoverableAction<ActionFeedback>(updateItemAction,{status:"error",message:"itemUpdateGeneric"});
 const idle: ActionFeedback = { status: "idle", message: "" };
@@ -25,12 +27,13 @@ type Draft = {
   askingCurrency: string; description: string; notes: string;
 };
 
-export function ItemEditForm({ itemId, initial, initialRows, returnTo, initialPriceExponent = 2 }: { initialPriceExponent?: number; itemId: string; initial: Draft; initialRows: { location: string | null; quantity: number }[]; returnTo: string }) {
+export function ItemEditForm({ itemId, initial, initialRows, returnTo, initialPriceExponent = 2,aiPhotos=[],aiRevision='' }: { aiRevision?:string; aiPhotos?:ItemPhotoDTO[]; initialPriceExponent?: number; itemId: string; initial: Draft; initialRows: { location: string | null; quantity: number }[]; returnTo: string }) {
   const { locale, t } = useI18n();
   const [draft, setDraft] = useState(initial);
   const [categoryDraft, setCategoryDraft] = useState<Presentation[]>([]);
   const initialStock = initialRows.length ? initialRows.map(row => ({ location: row.location ?? "", quantity: String(row.quantity) })) : [{ location: "", quantity: initial.trackingMode === "unique" ? "1" : "0" }];
   const [rows, setRows] = useState<StockDraft[]>(initialStock);
+  const [aiBusy,setAiBusy]=useState(false);
   const dirty = JSON.stringify(draft) !== JSON.stringify(initial) || categoryDraft.some(entry => draft.categories.includes(entry.category)) || stockDraftSignature(rows) !== stockDraftSignature(initialStock);
   const [feedback, action, pending] = useActionState(safeUpdate, idle);
   const router = useRouter();
@@ -43,6 +46,8 @@ export function ItemEditForm({ itemId, initial, initialRows, returnTo, initialPr
 
   return <form ref={formRef} aria-busy={pending} onSubmit={event => { event.preventDefault(); if (!pending) { const data = new FormData(event.currentTarget); startTransition(() => action(data)); } }} className="detail-panel item-edit-form">
     <input type="hidden" name="id" value={itemId}/><input type="hidden" name="returnTo" value={returnTo}/>
+    {aiPhotos.length?<ItemIdentification itemId={itemId} photos={aiPhotos} revision={aiRevision} current={draft} dirty={dirty||pending} onBusy={setAiBusy} onApplied={values=>setDraft(old=>({...old,...values}))}/>:null}
+    <fieldset disabled={aiBusy} className="item-edit-fields">
     <div className="section-heading"><div><h2>{t("details")}</h2></div></div>
     <div className="detail-grid basic-item-fields">
       <label className="field"><span>{t("itemName")}{initial.name ? " *" : ""}</span><input required={Boolean(initial.name)} placeholder={t("unidentifiedItemName")} maxLength={160} name="name" value={draft.name} onChange={field("name")}/></label>
@@ -64,5 +69,6 @@ export function ItemEditForm({ itemId, initial, initialRows, returnTo, initialPr
       <button type="button" className="quiet-button" disabled={pending} onClick={() => { setDraft(initial); setRows(initialStock); setCategoryDraft([]); }}>{t("cancel")}</button>
       {feedback.status === "error" && feedback.message ? <p className="inline-status error-status" role="alert">{feedback.message ? t(feedback.message, feedback.values) : ""}</p> : null}
     </div>
+    </fieldset>
   </form>;
 }
